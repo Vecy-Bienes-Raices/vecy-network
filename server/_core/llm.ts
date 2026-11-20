@@ -28,24 +28,26 @@ export const getGeminiKeys = getAllAvailableKeys;
 export const getActiveRoundRobinKey = getActiveKey;
 export const getActiveFailoverKey = getActiveKey;
 
-// Modelos de alto razonamiento cognitivo (Nivel ARGON — gemini-3.8-flash prioritario, con fallback instantáneo a gemini-3.5-flash-lite y gemini-flash-lite-latest operativos a $0 COP)
+// Modelos de alto razonamiento cognitivo (serie 3.8 / 3.5 / 3.1 / 4 Carbon verificados con la API de Vecy APP)
 export const HIGH_REASONING_MODELS = [
   "gemini-3.8-flash",
-  "gemini-flash-latest",
+  "gemini-3.5-flash",
   "gemini-3.5-flash-lite",
   "gemini-flash-lite-latest",
-  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
+  "gemini-4-carbon",
   "gemini-3.1-pro-preview",
-  "gemini-4-argon",
 ];
 
-// Modelos mecánicos secundarios para tareas rápidas de bajo cómputo
+// Modelos mecánicos secundarios para tareas rápidas de bajo cómputo y mínimo consumo de crédito prepago
 export const MECHANICAL_MODELS = [
+  "gemini-3.5-flash-lite",
   "gemini-flash-lite-latest",
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
   "gemini-flash-latest",
   "gemini-3.8-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
 ];
 
 // Modelos ordenados por prioridad de fallback ligero (priorizando modelos Flash-Lite gratuitos de baja latencia)
@@ -226,11 +228,17 @@ async function invokeGemini(
 
   for (const currentModel of targetModels) {
     let modelUnavailable = false;
+    const keysTriedThisModel = new Set<string>();
     // Intentar a través de las claves del Pool (Nivel 1 Gratis -> Nivel 2 Pago de Emergencia)
     for (let keyAttempt = 0; keyAttempt < totalAttempts; keyAttempt++) {
       if (modelUnavailable) break;
-      const activeKeyInfo = geminiKeyManager.getActiveKey({ allowPaidFailover: effectiveAllowPaid });
+      const activeKeyInfo = geminiKeyManager.getActiveKey({
+        allowPaidFailover: effectiveAllowPaid,
+        model: currentModel
+      });
       const activeKey = activeKeyInfo.key;
+      if (keysTriedThisModel.has(activeKey)) break;
+      keysTriedThisModel.add(activeKey);
       const keyNum = activeKeyInfo.index;
       const tierTag = activeKeyInfo.isPaid ? "Nivel 2 Pago 🚨" : `Nivel 1 Gratis #${keyNum}`;
 
@@ -307,18 +315,18 @@ async function invokeGemini(
             continue;
           }
 
-          // Error 402: Créditos prepagados agotados en la clave de pago de Google Cloud Billing -> Pausar por 1 hora
+          // Error 402: Créditos prepagados agotados en la clave de pago de Google Cloud Billing -> Pausar por 15 min para reintento automático posterior y continuar rotando claves gratuitas
           // NOTA CRÍTICA: status !== 429 para no confundir "check your plan and billing details" de cuota 429 con 402 agotado
           if (status === 402 || (status !== 429 && /prepayment credits are depleted|credit balance is too low|insufficient funds/i.test(String(errorMsg || "")))) {
-            console.warn(`[JanIA-LLM] ⚠️ Clave de pago (${tierTag}) con créditos agotados (402). Pausando por 1 hora para no frenar el servicio.`);
-            geminiKeyManager.markKeyCooldown(activeKey, 3600, "Depleted Billing Credits (402)");
+            console.warn(`[JanIA-LLM] ⚠️ Clave de pago (${tierTag}) con créditos agotados (402). Pausando temporalmente y rotando en círculo entre claves gratuitas.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 900, "Depleted Billing Credits (402)");
             break; // Saltar de inmediato al pool gratuito
           }
 
-          // Error 403: Cuenta de facturación suspendida o impago en Google Cloud Billing -> Pausar por 1 hora para no bloquear la cascada
+          // Error 403: Cuenta de facturación suspendida o impago en Google Cloud Billing -> Pausar temporalmente y seguir en pool gratuito
           if (status === 403 || /billing account|outstanding balance|permission denied|issues with your billing/i.test(String(errorMsg || ""))) {
-            console.warn(`[JanIA-LLM] ⚠️ Clave (${tierTag}) con error 403 / facturación pendiente (${errorMsg}). Pausando por 1 hora.`);
-            geminiKeyManager.markKeyCooldown(activeKey, 3600, `Billing/Forbidden (403): ${errorMsg}`);
+            console.warn(`[JanIA-LLM] ⚠️ Clave (${tierTag}) con error 403 / facturación pendiente (${errorMsg}). Pausando temporalmente y rotando en pool gratuito.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 900, `Billing/Forbidden (403): ${errorMsg}`);
             break;
           }
 
@@ -330,20 +338,20 @@ async function invokeGemini(
               modelUnavailable = true;
               break;
             }
-            geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturación de Modelo (429)");
+            geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturación de Modelo (429)", currentModel);
             break; // Saltar a la siguiente clave del Failover
           }
 
-          // 503: Servidor saturado en Google -> Pausar esta clave por 45s y pasar a la siguiente
+          // 503: Servidor saturado en Google -> Pausar únicamente (clave, modelo) por 45s sin bloquear otros modelos sanos
           if (status === 503) {
-            geminiKeyManager.markKeyCooldown(activeKey, 45, "Google Server Saturation (503 UNAVAILABLE)");
+            geminiKeyManager.markKeyCooldown(activeKey, 45, "Google Server Saturation (503 UNAVAILABLE)", currentModel);
             break; // Saltar a la siguiente clave del Failover
           }
 
-          // Timeout de Axios (>25s) -> Pausar esta clave por 60s para no retrasar los sockets de WhatsApp
+          // Timeout de Axios (>25s) -> Pausar únicamente (clave, modelo) por 60s para no retrasar ni bloquear otros modelos
           if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            geminiKeyManager.markKeyCooldown(activeKey, 60, "Timeout > 25s");
-            console.warn(`[JanIA-LLM] ⏱️ Timeout de 25s excedido en Clave (${tierTag}). Conmutando a siguiente clave de inmediato.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 60, "Timeout > 25s", currentModel);
+            console.warn(`[JanIA-LLM] ⏱️ Timeout de 25s excedido en Clave (${tierTag}) para ${currentModel}. Conmutando a siguiente clave/modelo de inmediato.`);
             break;
           }
 
@@ -360,20 +368,25 @@ async function invokeGemini(
     }
   }
 
-  // Si falló con tools, intento final de rescate sin tools antes de arrojar error
+  // Si falló con tools, intento final de rescate sin tools rotando modelos sanos de alta disponibilidad
   if (payload.tools) {
-    console.warn("[JanIA-LLM] 🛡️ Intento final de rescate: ejecutando sin herramientas...");
+    console.warn("[JanIA-LLM] 🛡️ Intento final de rescate: ejecutando sin herramientas sobre modelos sanos...");
     delete payload.tools;
-    try {
-      const rescueKey = geminiKeyManager.getActiveKey().key;
-      const rescueUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${rescueKey}`;
-      const rescueRes = await axios.post(rescueUrl, payload, { timeout: inTest ? 600 : 20000 });
-      const text = rescueRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text && text.trim()) {
-        return { choices: [{ message: { content: text } }] };
+    for (const rescueModel of ["gemini-3.5-flash", "gemini-3.5-flash-lite"]) {
+      try {
+        const rescueKeyInfo = geminiKeyManager.getActiveKey({
+          allowPaidFailover: false,
+          model: rescueModel
+        });
+        const rescueUrl = `https://generativelanguage.googleapis.com/v1beta/models/${rescueModel}:generateContent?key=${rescueKeyInfo.key}`;
+        const rescueRes = await axios.post(rescueUrl, payload, { timeout: inTest ? 600 : 15000 });
+        const text = rescueRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text && text.trim()) {
+          return { choices: [{ message: { content: text } }] };
+        }
+      } catch (rescueErr: any) {
+        console.warn(`[JanIA-LLM] Intento de rescate (${rescueModel}) falló:`, rescueErr?.message);
       }
-    } catch (rescueErr: any) {
-      console.error("[JanIA-LLM] Intento de rescate falló:", rescueErr?.message);
     }
   }
 

@@ -184,7 +184,18 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.30 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.31 — Noviembre 2026
+
+### Novedades v34.31 (Modelos Modernos Eco-Eficientes `Vecy APP`, Cooldown por `(Clave, Modelo)` y Rotación Circular Continua — Doctrina Eduardo A. Rivera):
+- **Cooldown Granular y Rotación Circular (`server/_core/geminiKeyManager.ts`):**
+  1. Implementado `keyModelCooldowns` (`${key}::${model}`) junto al `keyCooldowns` global para evitar que un `503`/`429`/timeout en un modelo específico bloquee las mismas claves en `gemini-3.5-flash` o `gemini-3.5-flash-lite`.
+  2. Garantizada la rotación circular continua entre las 4 claves gratuitas cuando la clave de pago entra en pausa temporal `402`/`403` (`900s`).
+- **Pilas Modernas Eco-Eficientes Verificadas en `Vecy APP` (`server/_core/llm.ts`, `vision.ts`, `voiceTranscription.ts`):**
+  1. `HIGH_REASONING_MODELS`: `["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-4-carbon", "gemini-3.1-pro-preview"]` (cambia rápido a `gemini-3.5-flash` en `~1s` si `3.8-flash` satura).
+  2. `MECHANICAL_MODELS`, `vision.ts` y `voiceTranscription.ts` optimizados con `gemini-3.5-flash-lite`, `gemini-flash-lite-latest`, `gemini-3.5-flash` y `gemini-3.1-flash-lite` (retirando `gemini-2.5-flash` / `gemini-3.6-flash`), más rescate final rotado en `llm.ts`.
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-rotacion-gemini-modelo-por-clave-v34-31`, **Suite 217 (4/4)**, `npm run check` (0 errores), `npm run build` limpio, `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 764/764 tests en verde** (`$0 COP`), versión `v34.31` (`34.31.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.30 — Noviembre 2026
 
 ### Novedades v34.30 (Doctrina Permuta Notarial, Anti-Secuestro Calculadora, Blindaje `[Geocoding-Vereda]` `'Bogotá, D.C.'` y DM Sin Duplicación de Pregunta — Doctrina Eduardo A. Rivera):
 - **Doctrina Permuta Notarial y Anti-Secuestro Calculadora (`server/_core/notarialExpenseService.ts`, `server/_core/jania/handlers/dmHandler.ts`):**

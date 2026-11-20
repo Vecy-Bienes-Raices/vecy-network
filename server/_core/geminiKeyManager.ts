@@ -25,6 +25,7 @@ export interface ActiveKeyResult {
 
 export interface GetActiveKeyOptions {
   allowPaidFailover?: boolean;
+  model?: string;
 }
 
 export interface LlmUsageStats {
@@ -38,7 +39,12 @@ export interface LlmUsageStats {
 }
 
 const keyCooldowns = new Map<string, number>();
+const keyModelCooldowns = new Map<string, number>();
 let roundRobinFreeIndex = 0;
+
+function getKeyModelCooldownKey(cleanKey: string, model: string): string {
+  return `${cleanKey}::${model}`;
+}
 
 function getBogotaDateKey(): string {
   return new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
@@ -256,25 +262,43 @@ export function assertKeyAllowedForExecution(key: string): void {
 }
 
 /**
- * Registra un periodo de enfriamiento (cooldown) para una clave tras un error 429 o saturación.
+ * Registra un periodo de enfriamiento (cooldown) para una clave tras un error 429, 503 o saturación.
+ * Si se especifica `model`, el enfriamiento aplica únicamente al par `(clave, modelo)` para no bloquear otros modelos sanos.
  */
-export function markKeyCooldown(key: string, seconds: number = 60, reason: string = "Rate Limit (429)"): void {
+export function markKeyCooldown(
+  key: string,
+  seconds: number = 60,
+  reason: string = "Rate Limit (429)",
+  model?: string
+): void {
   const clean = sanitizeKey(key);
   if (!clean) return;
-  keyCooldowns.set(clean, Date.now() + seconds * 1000);
+  const expiresAt = Date.now() + seconds * 1000;
+  if (model) {
+    keyModelCooldowns.set(getKeyModelCooldownKey(clean, model), expiresAt);
+  } else {
+    keyCooldowns.set(clean, expiresAt);
+  }
   const isPaid = isPaidKey(clean);
   const keyLabel = isPaid ? "Nivel 2 Pago 🚨" : "Nivel 1 Gratis";
-  console.warn(`[JanIA-GeminiManager] 🛡️ Clave Gemini ${keyLabel} (...${clean.slice(-6)}) en cooldown por ${seconds}s debido a ${reason}.`);
+  const modelTag = model ? ` [${model}]` : "";
+  console.warn(`[JanIA-GeminiManager] 🛡️ Clave Gemini ${keyLabel}${modelTag} (...${clean.slice(-6)}) en cooldown por ${seconds}s debido a ${reason}.`);
 }
 
 /**
- * Verifica si una clave se encuentra actualmente en periodo de enfriamiento.
+ * Verifica si una clave (u opcionalmente el par clave + modelo) se encuentra actualmente en periodo de enfriamiento.
  */
-export function isKeyInCooldown(key: string): boolean {
+export function isKeyInCooldown(key: string, model?: string): boolean {
   const clean = sanitizeKey(key);
-  const cd = keyCooldowns.get(clean);
-  if (!cd) return false;
-  return Date.now() < cd;
+  if (!clean) return false;
+  const now = Date.now();
+  const globalCd = keyCooldowns.get(clean) || 0;
+  if (now < globalCd) return true;
+  if (model) {
+    const modelCd = keyModelCooldowns.get(getKeyModelCooldownKey(clean, model)) || 0;
+    if (now < modelCd) return true;
+  }
+  return false;
 }
 
 /**
@@ -282,6 +306,7 @@ export function isKeyInCooldown(key: string): boolean {
  */
 export function clearAllCooldowns(): void {
   keyCooldowns.clear();
+  keyModelCooldowns.clear();
 }
 
 /**
@@ -291,13 +316,13 @@ export function getActiveKey(options?: GetActiveKeyOptions): ActiveKeyResult {
   const freeKeys = getFreeKeys();
   const now = Date.now();
   const allowPaidFailover = options?.allowPaidFailover !== false;
+  const model = options?.model;
 
-  // Filtrar claves gratuitas disponibles (que no estén en cooldown)
+  // Filtrar claves gratuitas disponibles (que no estén en cooldown global ni para este modelo)
   const availableFree: { key: string; index: number }[] = [];
   for (let i = 0; i < freeKeys.length; i++) {
     const k = freeKeys[i];
-    const cd = keyCooldowns.get(k) || 0;
-    if (now >= cd) {
+    if (!isKeyInCooldown(k, model)) {
       availableFree.push({ key: k, index: i + 1 });
     }
   }
@@ -335,9 +360,8 @@ export function getActiveKey(options?: GetActiveKeyOptions): ActiveKeyResult {
         `[JanIA-GeminiManager] 🛡️ Tope diario de GEMINI_PAID_KEY alcanzado (${usageTelemetry.tier2PaidCalls}/${getPaidDailyCap()}). Permaneciendo en pool gratuito Nivel 1.`
       );
     } else {
-      const paidCooldown = keyCooldowns.get(paidKey) || 0;
-      if (now >= paidCooldown) {
-        console.warn("[JanIA-GeminiManager] 🚨 Nivel 2 de Emergencia: Todas las claves gratuitas (4/4) en cooldown (429). Activando GEMINI_PAID_KEY como respaldo...");
+      if (!isKeyInCooldown(paidKey, model)) {
+        console.warn("[JanIA-GeminiManager] 🚨 Nivel 2 de Emergencia: Todas las claves gratuitas (4/4) en cooldown. Activando GEMINI_PAID_KEY como respaldo...");
         return {
           key: paidKey,
           isPaid: true,
@@ -348,23 +372,15 @@ export function getActiveKey(options?: GetActiveKeyOptions): ActiveKeyResult {
     }
   }
 
-  // Retorno Automático / Espera: Si todo está en cooldown, seleccionar la clave gratuita que primero se descongele
+  // Retorno Automático / Rotación circular continua entre las claves gratuitas cuando todo está saturado
   if (freeKeys.length === 0) {
     throw new Error("No hay ninguna clave de Gemini configurada en el entorno.");
   }
 
-  let bestKey = freeKeys[0];
-  let minCooldown = Infinity;
-  let bestIdx = 1;
-  for (let i = 0; i < freeKeys.length; i++) {
-    const k = freeKeys[i];
-    const cd = keyCooldowns.get(k) || 0;
-    if (cd < minCooldown) {
-      minCooldown = cd;
-      bestKey = k;
-      bestIdx = i + 1;
-    }
-  }
+  const chosenFallbackIdx = roundRobinFreeIndex % freeKeys.length;
+  roundRobinFreeIndex = (roundRobinFreeIndex + 1) % freeKeys.length;
+  const bestKey = freeKeys[chosenFallbackIdx];
+  const bestIdx = chosenFallbackIdx + 1;
 
   return {
     key: bestKey,

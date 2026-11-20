@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.31 — Noviembre 2026
+- **Modelos Modernos Eco-Eficientes (`Vecy APP`), Cooldown Granular `(Clave, Modelo)` y Rotación Circular Continua:**
+  - `server/_core/geminiKeyManager.ts`: implementado `keyModelCooldowns` (`${key}::${model}`) además de `keyCooldowns` global para impedir que fallos `503`/`429`/timeout de `gemini-3.8-flash` bloqueen esas mismas claves en `gemini-3.5-flash` o `gemini-3.5-flash-lite`; rotación circular continua entre las 4 claves gratuitas si la clave de pago entra en pausa `402`/`403` (`900s`).
+  - `server/_core/llm.ts`, `server/_core/jania/vision.ts` & `server/_core/voiceTranscription.ts`: pilas actualizadas con modelos modernos verificados (`gemini-3.5-flash-lite`, `gemini-flash-lite-latest`, `gemini-3.5-flash`, `gemini-3.1-flash-lite`, `gemini-3.8-flash`, `gemini-4-carbon`), retiro de `gemini-2.5-flash` / `gemini-3.6-flash` y rescate final rotado sobre `gemini-3.5-flash`/`gemini-3.5-flash-lite`.
+  - Gobernanza y Pruebas: semilla `seed-rotacion-gemini-modelo-por-clave-v34-31`, **Suite 217 (4/4)** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 764/764 tests en verde**; `npm run build` limpio; versión `v34.31` / `34.31.0`).
+
 ### 🔖 v34.30 — Noviembre 2026
 - **Doctrina Permuta Notarial, Anti-Secuestro Calculadora, Blindaje `[Geocoding-Vereda]` `"Bogotá, D.C."` y DM Sin Duplicación de Cita:**
   - `server/_core/notarialExpenseService.ts` & `server/_core/jania/handlers/dmHandler.ts`: incorporada respuesta doctrinal colombiana para compraventa con permuta de inmueble de menor valor + excedente en dinero (`explainNotarialFigures`), protegidas las preguntas conceptuales/quejas contra caída en formulario `1/2/3` (`extractNotarialExpenseParams`), liberación automática de `pendingNotarialSession` ante quejas/cambios de tema y cierre de satisfacción de liquidación condicionado únicamente a `Boolean(calculatedResult)`.

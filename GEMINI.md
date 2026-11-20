@@ -1,4 +1,14 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.30.0 — 2026-11-19)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.31.0 — 2026-11-20)
+- **JanIA Server & Web Portal:** `v34.31` (`34.31.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 764/764 tests en verde** + **Suite 217 4/4 en verde** | `$0 COP`).
+- **Modelos Modernos Eco-Eficientes (`Vecy APP` Prepagada COP 14,991), Cooldown Granular por `(Clave, Modelo)` y Rotación Circular Continua (`geminiKeyManager.ts` + `llm.ts` + `vision.ts` + `voiceTranscription.ts` — Doctrina Eduardo A. Rivera):**
+  1. **Auditoría en Vivo de Modelos Habilitados (`GET /v1beta/models` sobre `...c7ePwg` y Pool Gratuito):**
+     - Verificado `HTTP 200 OK` en los **38** modelos `generateContent` del proyecto `Vecy APP` tras la recarga prepaga (`COP 14,991` en AI Studio Billing): serie `gemini-3.5-flash-lite` (`678ms`), `gemini-flash-lite-latest` (`745ms`), `gemini-3.5-flash` (`1009ms`), `gemini-3.1-flash-lite` (`1284ms`), `gemini-3.8-flash` (`1890ms`), `gemini-4-carbon` (`2975ms`), etc.
+  2. **Soluciones Aplicadas (`v34.31`):**
+     - **`geminiKeyManager.ts`:** añadido `keyModelCooldowns` para que un enfriamiento por `503`/`429`/timeout sobre un modelo específico (ej. `gemini-3.8-flash`) **no bloquee** el uso inmediato de esa misma clave sobre modelos sanos (`gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`), y rotación circular continua entre las 4 claves gratuitas si la clave de pago entra en pausa `402`/`403` (`900s`) hasta su reactivación.
+     - **`llm.ts`, `vision.ts` & `voiceTranscription.ts`:** `HIGH_REASONING_MODELS` (`gemini-3.8-flash` -> `gemini-3.5-flash` -> `gemini-3.5-flash-lite` -> `gemini-flash-lite-latest` -> `gemini-3.1-flash-lite` -> `gemini-flash-latest` -> `gemini-4-carbon` -> `gemini-3.1-pro-preview`), `MECHANICAL_MODELS` (`gemini-3.5-flash-lite` primero para máximo ahorro), rescate final sobre `gemini-3.5-flash`/`gemini-3.5-flash-lite` y retiro de `gemini-2.5-flash` / `gemini-3.6-flash` en Visión y Voz.
+  3. **Gobernanza y Regresión:** Semilla `seed-rotacion-gemini-modelo-por-clave-v34-31` y **Suite 217 (4/4)** (**6/6 archivos, 764/764 tests en verde** | `$0 COP`).
+
+### 📦 HISTÓRICO RECIENTE (v34.30.0 — 2026-11-19)
 - **JanIA Server & Web Portal:** `v34.30` (`34.30.0`) consolidado y validado al 100% (`npm run check`: 0 errores | `npm run build` limpio | `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 760/760 tests en verde** + **Suite 216 4/4 en verde** | `$0 COP`).
 - **Corrección de Respuestas Incoherentes Reportadas en Producción (18–19 Nov 2026): Doctrina Permuta Notarial, Anti-Secuestro de Calculadora, Blindaje `[Geocoding-Vereda]` `"Bogotá, D.C."` y DM Limpio Sin Cita Duplicada (`notarialExpenseService.ts` + `dmHandler.ts` + `geography.ts` + `whatsapp-match.ts` — Doctrina Eduardo A. Rivera):**
   1. **Diagnóstico Real de Casos en VPS (`13.140.149.144`):**

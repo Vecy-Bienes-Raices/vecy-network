@@ -974,6 +974,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.30: Respuesta doctrinal exacta en permuta con menor valor, anti-trampa pendingNotarialSession, corrección CAPA 0.5/0.6 'Bogotá, D.C.' y DM limpio sin quoted en mensajes únicos.",
     createdAt: "2026-11-20T04:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-rotacion-gemini-modelo-por-clave-v34-31",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Modelos Modernos Eco-Eficientes Vecy APP y Cooldown por Par (Clave, Modelo) + Rotación Circular (v34.31)",
+    directive:
+      "Los cooldowns de saturación (503, 429 o timeout) aplican por par (clave, modelo) en geminiKeyManager y llm/vision para que una saturación puntual de gemini-3.8-flash jamás bloquee el uso inmediato de gemini-3.5-flash, gemini-3.5-flash-lite, gemini-3.1-flash-lite o gemini-flash-lite-latest sobre las mismas claves. Si la clave de pago entra en pausa 402/403 temporal (900s), las 4 claves gratuitas rotan en círculo continuo e ininterrumpido. Tareas cotidianas/visión/voz priorizan gemini-3.5-flash-lite y gemini-3.5-flash para cuidar los créditos prepagos.",
+    rawText:
+      "Blindaje v34.31: Lista de modelos verificada contra Vecy APP (serie 3.5/3.8/3.1/4-carbon sin 2.5 obsoletos), cooldown granular (clave, modelo) y rotación circular continua.",
+    createdAt: "2026-11-20T05:00:00.000Z",
+    active: true
   }
 ];
 

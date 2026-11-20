@@ -7,6 +7,17 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-20] — JanIA v34.31: Catálogo Vivo Gemini `Vecy APP` (Recarga COP 14,991), Modelos Modernos Eco-Eficientes y Cooldown por Par `(Clave, Modelo)` + Rotación Circular Continua (Doctrina Eduardo A. Rivera — v34.31 - 34.31.0)
+
+#### 1. Solicitud de Eduardo A. Rivera y Verificación en Vivo
+- **Diagnóstico Previo y Recarga:** tras detectar el error `402` (*prepayment credits depleted*) y comprobar las 4 claves gratuitas funcionando `200 OK` en `gemini-3.5-flash` / `gemini-flash-lite-latest` mientras `gemini-3.8-flash` presentaba saturación puntual (`503`/timeout), Eduardo recargó **COP 14,991** en Google AI Studio Billing (`Vecy APP`) y pidió listar los modelos permitidos y configurar los más modernos y eficientes sin desperdiciar crédito.
+- **Benchmark en Vivo (`...c7ePwg`):** confirmados **`HTTP 200 OK`** en `gemini-3.5-flash-lite` (`678ms`), `gemini-flash-lite-latest` (`745ms`), `gemini-3.5-flash` (`1009ms`), `gemini-3.1-flash-lite` (`1284ms`), `gemini-3.8-flash` (`1890ms`), `gemini-flash-latest` (`2098ms`), `gemini-4-carbon` (`2975ms`), `gemini-4-argon` (`5357ms`) y `gemini-3.7-flash` (`6139ms`).
+
+#### 2. Acciones Ejecutadas en `v34.31`
+1. **Cooldown por Par `(Clave, Modelo)` y Rotación Circular (`geminiKeyManager.ts`, `llm.ts`, `vision.ts`):** evitado el bloqueo global de claves sanas por fallos `503`/`429`/timeout de un solo modelo; garantizada rotación circular continua de las 4 claves gratuitas si la clave de pago pausa por `402`/`403` (`900s`).
+2. **Pilas Eco-Eficientes Modernas (`llm.ts`, `vision.ts`, `voiceTranscription.ts`):** `gemini-3.5-flash-lite` primero para tareas mecánicas/voz, `gemini-3.5-flash` para visión y 2º escalón en razonamiento complejo tras `gemini-3.8-flash`, integrando `gemini-3.1-flash-lite` y `gemini-4-carbon` y eliminando `gemini-2.5-flash` obsoleto.
+3. **Gobernanza y Validación:** bump `v34.31` (`34.31.0`), semilla `seed-rotacion-gemini-modelo-por-clave-v34-31`, **Suite 217 (4/4)**, `npm run check` (**0 errores**), `NODE_ENV=test npx vitest run --testTimeout=35000` (**6/6 archivos, 764/764 tests en verde** | `$0 COP`) y `npm run build` limpio.
+
 ### 📅 [2026-11-19] — JanIA v34.30: Auditoría y Corrección de Respuestas Incoherentes (Caso Patricia Muñoz Permuta Notarial, `[Geocoding-Vereda]` `'Bogotá, D.C.'` y Caso Miguel Arbeláez DM Quote) (Doctrina Eduardo A. Rivera — v34.30 - 34.30.0)
 
 #### 1. Solicitud Directa de Eduardo A. Rivera y Diagnóstico en Contabo VPS

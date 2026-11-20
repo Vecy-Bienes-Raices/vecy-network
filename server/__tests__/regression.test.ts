@@ -15519,9 +15519,105 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-fix-notarial-permuta-geocoding-vereda-dm-quote-v34-30"
       );
       expect(seed30?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.30");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[0-9]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.30.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[0-9]|[4-9]\d)\.\d+$/);
+    });
+  });
+
+  describe("Suite 217 — Modelos Modernos Eco-Eficientes Vecy APP, Cooldown por Par (Clave, Modelo) y Rotación Circular Continua (v34.31)", () => {
+    it("1. Cooldown granular por (clave, modelo): saturar gemini-3.8-flash no bloquea la misma clave en gemini-3.5-flash ni gemini-3.5-flash-lite", async () => {
+      const { geminiKeyManager } = await import("../_core/geminiKeyManager");
+      geminiKeyManager.clearAllCooldowns();
+      const freeKeys = geminiKeyManager.getFreeKeys();
+      expect(freeKeys.length).toBeGreaterThanOrEqual(2);
+
+      // Poner todas las claves gratuitas en cooldown SOLO para gemini-3.8-flash
+      for (const fk of freeKeys) {
+        geminiKeyManager.markKeyCooldown(fk, 60, "Simulated 503", "gemini-3.8-flash");
+        expect(geminiKeyManager.isKeyInCooldown(fk, "gemini-3.8-flash")).toBe(true);
+        // Esas mismas claves DEBEN seguir operativas en gemini-3.5-flash y gemini-3.5-flash-lite
+        expect(geminiKeyManager.isKeyInCooldown(fk, "gemini-3.5-flash")).toBe(false);
+        expect(geminiKeyManager.isKeyInCooldown(fk, "gemini-3.5-flash-lite")).toBe(false);
+      }
+
+      const activeOnHealthyModel = geminiKeyManager.getActiveKey({ model: "gemini-3.5-flash" });
+      expect(activeOnHealthyModel.isPaid).toBe(false);
+      expect(freeKeys).toContain(activeOnHealthyModel.key);
+
+      // En entorno test, si todas las claves gratuitas están saturadas en gemini-3.8-flash, JAMÁS debe escalar a la clave de pago
+      expect(() => geminiKeyManager.getActiveKey({ model: "gemini-3.8-flash" })).toThrow(/SEGURIDAD TEST/);
+      geminiKeyManager.clearAllCooldowns();
+    });
+
+    it("2. Si todas las claves gratuitas están en cooldown en producción y la de pago falla 402/403, rota en círculo entre todas las claves gratuitas sin repetir siempre la misma", async () => {
+      const prevNodeEnv = process.env.NODE_ENV;
+      const prevVitest = process.env.VITEST;
+      const prevWorkerId = process.env.VITEST_WORKER_ID;
+      const prevPaid = process.env.GEMINI_PAID_KEY;
+      const { geminiKeyManager } = await import("../_core/geminiKeyManager");
+      geminiKeyManager.clearAllCooldowns();
+      try {
+        process.env.NODE_ENV = "production";
+        delete process.env.VITEST;
+        delete process.env.VITEST_WORKER_ID;
+        process.env.GEMINI_PAID_KEY = "AQ.Ab8RN6Kik_MOCK_PROD_PAID_KEY_c7ePwg";
+        const freeKeys = geminiKeyManager.getFreeKeys();
+        for (const fk of freeKeys) {
+          geminiKeyManager.markKeyCooldown(fk, 60, "Simulated 429", "gemini-3.5-flash");
+        }
+        geminiKeyManager.markKeyCooldown(
+          "AQ.Ab8RN6Kik_MOCK_PROD_PAID_KEY_c7ePwg",
+          900,
+          "Depleted Billing Credits (402)"
+        );
+        const picked1 = geminiKeyManager.getActiveKey({ allowPaidFailover: true, model: "gemini-3.5-flash" });
+        const picked2 = geminiKeyManager.getActiveKey({ allowPaidFailover: true, model: "gemini-3.5-flash" });
+        expect(picked1.isPaid).toBe(false);
+        expect(picked2.isPaid).toBe(false);
+        expect(picked1.key).not.toBe(picked2.key);
+      } finally {
+        process.env.NODE_ENV = prevNodeEnv;
+        if (prevVitest === undefined) delete process.env.VITEST;
+        else process.env.VITEST = prevVitest;
+        if (prevWorkerId === undefined) delete process.env.VITEST_WORKER_ID;
+        else process.env.VITEST_WORKER_ID = prevWorkerId;
+        if (prevPaid === undefined) delete process.env.GEMINI_PAID_KEY;
+        else process.env.GEMINI_PAID_KEY = prevPaid;
+        geminiKeyManager.clearAllCooldowns();
+      }
+    });
+
+    it("3. Pilas de modelos modernos eco-eficientes en llm, vision y voiceTranscription (sin 2.5 obsoletos)", async () => {
+      const fs = await import("fs");
+      const { HIGH_REASONING_MODELS, MECHANICAL_MODELS } = await import("../_core/llm");
+      expect(HIGH_REASONING_MODELS[0]).toBe("gemini-3.8-flash");
+      expect(HIGH_REASONING_MODELS[1]).toBe("gemini-3.5-flash");
+      expect(HIGH_REASONING_MODELS).toContain("gemini-3.1-flash-lite");
+      expect(HIGH_REASONING_MODELS).toContain("gemini-4-carbon");
+      expect(MECHANICAL_MODELS[0]).toBe("gemini-3.5-flash-lite");
+
+      const visionSrc = fs.readFileSync("server/_core/jania/vision.ts", "utf-8");
+      expect(visionSrc).toContain('"gemini-3.5-flash"');
+      expect(visionSrc).not.toContain('"gemini-2.5-flash"');
+      expect(visionSrc).toContain("isKeyInCooldown(apiKey, model)");
+
+      const voiceSrc = fs.readFileSync("server/_core/voiceTranscription.ts", "utf-8");
+      expect(voiceSrc).toContain('"gemini-3.5-flash-lite"');
+      expect(voiceSrc).toContain('"gemini-3.1-flash-lite"');
+    });
+
+    it("4. Verifica semilla de gobernanza v34.31 y versión v34.31 (34.31.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed31 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-rotacion-gemini-modelo-por-clave-v34-31"
+      );
+      expect(seed31?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.31");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.31.0");
     });
   });
 });

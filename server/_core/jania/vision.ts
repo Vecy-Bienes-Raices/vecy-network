@@ -80,14 +80,14 @@ export async function extractFlyerVision(imageBufferBase64: string, explicitMime
     };
   }
 
-  // Modelos estables y de alta disponibilidad ordenados por velocidad y cuota (v34.28)
+  // Modelos modernos verificados en Vecy APP ordenados por velocidad, precisión en flyers y menor consumo de créditos (v34.31)
   const models = [
-    "gemini-flash-lite-latest",
-    "gemini-flash-latest",
-    "gemini-3.8-flash",
-    "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
-    "gemini-2.5-flash"
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-flash-latest"
   ];
 
   const prompt = `Eres la IA experta en visión documental y extracción de flyers inmobiliarios de VECY Bienes Raíces en toda Colombia.
@@ -147,7 +147,7 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
   for (const model of models) {
     for (let i = 0; i < candidateKeys.length; i++) {
       const apiKey = candidateKeys[i];
-      if (geminiKeyManager.isKeyInCooldown(apiKey)) continue;
+      if (geminiKeyManager.isKeyInCooldown(apiKey, model)) continue;
       assertKeyAllowedForExecution(apiKey); // Blindaje inmutable: nunca ejecutar clave de pago en tests
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -184,8 +184,10 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
         }
       } catch (err: any) {
         const status = err.response?.status;
-        if (status === 429 || status === 503) {
-          geminiKeyManager.markKeyCooldown(apiKey, 60, `Vision HTTP ${status}`);
+        if (status === 402 || status === 403) {
+          geminiKeyManager.markKeyCooldown(apiKey, 900, `Vision Billing HTTP ${status}`);
+        } else if (status === 429 || status === 503) {
+          geminiKeyManager.markKeyCooldown(apiKey, 60, `Vision HTTP ${status}`, model);
         }
         console.warn(`[JanIA-Vision] ⚠️ Intento con ${model} (Key #${i + 1}) falló (${status || err.message}). Pasando a fallback.`);
         // Si la clave falló por cuota, timeout o red, continuar al siguiente intento sin romper el servidor
