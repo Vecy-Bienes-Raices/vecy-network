@@ -7,6 +7,20 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-19] — JanIA v34.29: Diagnóstico Forense en Contabo VPS (Caída de Escucha WhatsApp 09:40 AM–22:44 PM COL), Fix SQL Enum `requirements.status` (135 fallos) y Resiliencia Anti-PingPong Baileys (Doctrina Eduardo A. Rivera — v34.29 - 34.29.0)
+
+#### 1. Solicitud Directa de Eduardo A. Rivera y Auditoría Forense en Contabo VPS
+- **Consulta Reportada:** Eduardo preguntó por qué entre ayer 18 y hoy 19 de noviembre parecía que JanIA se había apagado o dejado de responder/funcionar.
+- **Hallazgos Reales en Contabo VPS (`13.140.149.144` / `Europe/Berlin CET = COL + 6h`):**
+  1. **No hubo apagado manual ni de código (`jania-server` estuvo `online` en PM2):** sin embargo, desde hoy **19 de noviembre a las 09:40 AM COL (`15:40 CET`)**, tras ráfagas de timeouts en reacciones WhatsApp (`Timeout 10s reacción`) y saturación `503`/`25s` en Gemini Free Tier (más `402 Depleted Billing Credits` en clave de pago `...c7ePwg`), Baileys sufrió **22 cortes en bucle con códigos `500`, `503`, `428`, `408`** hasta el reinicio de PM2 a las **22:44 COL (`04:44 CET`)**. Aunque el servidor HTTP (`/api/health`) y los envíos cron salientes (`18:30 COL`) siguieron funcionando, **Baileys no ingresó mensajes `messages.upsert` ni propiedades/mensajes nuevos a PostgreSQL durante ~13 horas** (`prop #7330` a las `09:40 AM COL`).
+  2. **Puntos ciegos detectados en `whatsapp-match.ts`:** `updateStatusInDb()` guardaba siempre `isReady: true` aun cuando `this.isReady` era `false`, `silentLogger` ocultaba errores internos `error`/`fatal` de Baileys, e `initialize()` carecía de bloqueo anti-reentrada (`isInitializing`/`reconnectTimer`).
+  3. **Bug SQL oculto en `requirements` (`propertiesHandler.ts`):** `saveRequirement` insertaba `status: 'incompleto'` en la columna enum `status` (solo acepta `'active' | 'expired' | 'converted'`), causando **135 fallos de inserción (`22P02`: 94 el 18 Nov + 41 el 19 Nov)**.
+
+#### 2. Acciones Ejecutadas en `v34.29`
+1. **Fix SQL en `propertiesHandler.ts`:** requerimientos incompletos guardados con `status: 'expired'` y `calificacion: 'incompleto'`; verificación ajustada a `(saved as any).calificacion === 'incompleto' || (saved as any).status === 'incompleto'`.
+2. **Blindaje Anti-Reentrada y Observabilidad Baileys (`whatsapp-match.ts`, `index.ts`):** añadido guard `isInitializing` + temporizador único `reconnectTimer`, registro real de `this.isReady` en `pendingSessions`, logging `[BAILEYS-INTERNAL-ERROR]`/`[BAILEYS-INTERNAL-FATAL]`, captura de `lastIncomingMessageAt` / `lastDisconnectCode` / `lastDisconnectReason` y exposición en `GET /api/health`.
+3. **Gobernanza y Validación:** bump `v34.29` (`34.29.0`), semilla `seed-blindaje-baileys-sql-requirements-health-v34-29`, **Suite 215 (3/3)**, `npm run check` (**0 errores**), `npm run build` limpio y `NODE_ENV=test npx vitest run --testTimeout=35000` (**6/6 archivos, 756/756 tests en verde** | `$0 COP`).
+
 ### 📅 [2026-11-18] — JanIA v34.28: Captura Total de Flyers/Imágenes, Todos los Tipos (19 Exactos / 12 DB) y Negocios (Venta, Arriendo y Permuta) y Cobertura 100% Nacional Colombia (Doctrina Eduardo A. Rivera — v34.28 - 34.28.0)
 
 #### 1. Solicitud Directa de Eduardo A. Rivera y Auditoría Forense

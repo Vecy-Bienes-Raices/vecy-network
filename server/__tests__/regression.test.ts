@@ -15375,9 +15375,53 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-flyers-vision-todos-tipos-cobertura-nacional-v34-28"
       );
       expect(seed28?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.28");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:2[8-9]|[3-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.28.0");
+      expect(pkg.version).toMatch(/^34\.(?:2[8-9]|[3-9]\d)\.\d+$/);
+    });
+  });
+
+  describe("Suite 215 — Corrección SQL requirements.status enum, Anti-Reentrada Baileys y Observabilidad /api/health (v34.29)", () => {
+    it("1. propertiesHandler guarda requerimientos incompletos con status válido ('expired') y calificacion 'incompleto' sin romper el enum de PostgreSQL", async () => {
+      const fs = await import("fs");
+      const phSrc = fs.readFileSync("server/_core/jania/handlers/propertiesHandler.ts", "utf-8");
+      expect(phSrc).not.toContain("status: 'incompleto'");
+      expect(phSrc).toContain("status: 'expired'");
+      expect(phSrc).toContain("calificacion: 'incompleto'");
+      expect(phSrc).toContain("(saved as any).calificacion === 'incompleto'");
+    });
+
+    it("2. WhatsAppMatchBot protege reconexiones simultáneas, refleja this.isReady real, registra errores críticos Baileys y expone getHealthSnapshot en /api/health", async () => {
+      const fs = await import("fs");
+      const { janiaMatchBot } = await import("../_core/whatsapp-match");
+
+      const snap = janiaMatchBot.getHealthSnapshot();
+      expect(snap).toHaveProperty("isReady");
+      expect(snap).toHaveProperty("reconnectAttempts");
+      expect(snap).toHaveProperty("lastIncomingMessageAt");
+      expect(snap).toHaveProperty("lastDisconnectCode");
+
+      const waSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(waSrc).toContain("if (this.isInitializing)");
+      expect(waSrc).toContain("clearTimeout(this.reconnectTimer)");
+      expect(waSrc).toContain("isReady: this.isReady");
+      expect(waSrc).toContain("[BAILEYS-INTERNAL-ERROR]");
+
+      const idxSrc = fs.readFileSync("server/_core/index.ts", "utf-8");
+      expect(idxSrc).toContain("janiaMatchBot?.getHealthSnapshot");
+    });
+
+    it("3. Verifica semilla de gobernanza v34.29 y versión v34.29 (34.29.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed29 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-blindaje-baileys-sql-requirements-health-v34-29"
+      );
+      expect(seed29?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.29");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.29.0");
     });
   });
 });

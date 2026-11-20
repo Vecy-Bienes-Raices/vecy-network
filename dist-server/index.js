@@ -47,7 +47,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v34.28";
+    VECY_VERSION = "v34.29";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -26517,6 +26517,16 @@ var init_founderKnowledgeService = __esm({
         rawText: "Blindaje v34.28: Captura total de flyers sin caption o como documento, resiliencia Vision (JPEG/PNG/WebP, cooldowns, 8 negocios, 19+ tipos), match Casa Campestre <-> Finca, Villa y cobertura nacional DIVIPOLA + IGAC.",
         createdAt: "2026-11-18T15:45:00.000Z",
         active: true
+      },
+      {
+        id: "seed-blindaje-baileys-sql-requirements-health-v34-29",
+        founderName: "Eduardo Rivera",
+        phoneOrJid: "573192919978@s.whatsapp.net",
+        topic: "Fix SQL Enum Requirements ('expired' + calificacion 'incompleto') y Resiliencia Anti-PingPong Baileys + Diagn\xF3stico /api/health (v34.29)",
+        directive: "Todo requerimiento marcado como incompleto se registra en PostgreSQL con status='expired' y calificacion='incompleto' (nunca status='incompleto', que viola el enum status). El cliente Baileys protege initialize() con bloqueo isInitializing y temporizador \xFAnico reconnectTimer, refleja el valor real de this.isReady en pendingSessions, registra errores internos cr\xEDticos en consola sin silenciarlos a ciegas y reporta su estado operativo real (lastIncomingMessageAt, lastDisconnectCode, lastDisconnectReason) en GET /api/health.",
+        rawText: "Blindaje v34.29: Correcci\xF3n SQL 22P02 en requirements incompletos (135 fallos en Nov 18-19), guard anti-reentrada Baileys y visibilidad /api/health.",
+        createdAt: "2026-11-20T04:00:00.000Z",
+        active: true
       }
     ];
   }
@@ -28811,7 +28821,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     console.log(`[JANIA-REQ-INCOMPLETE] \u26D4 Requerimiento incompleto (${completeness.missingReasons.join(", ")}). PROHIBIDO registrar como match viable.`);
     const [saved] = await db.insert(requirements).values({
       ...insertData,
-      status: "incompleto",
+      status: "expired",
       calificacion: "incompleto",
       fechaPrimeraPublicacion: getColombiaNow(),
       fechaUltimaPublicacion: getColombiaNow(),
@@ -30079,7 +30089,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         fechaExtraccion: /* @__PURE__ */ new Date()
       }, userId, realName, flyerBufferToSaveReq, pdfBuffer, pdfMimeType);
       if (saved) {
-        if (saved.status === "incompleto") {
+        if (saved.calificacion === "incompleto" || saved.status === "incompleto") {
           const completeness = evaluateRequirementCompleteness({
             transactionType: extracted.transactionType,
             propertyType: extracted.propertyType,
@@ -46176,6 +46186,21 @@ var init_whatsapp_match = __esm({
       qrFileName = "qr-match.png";
       botName = "JANIA-MATCH";
       isWorkerOnly = false;
+      isInitializing = false;
+      reconnectTimer = null;
+      lastIncomingMessageAt = 0;
+      lastDisconnectCode = null;
+      lastDisconnectReason = null;
+      getHealthSnapshot() {
+        return {
+          isReady: this.isReady,
+          isInitializing: this.isInitializing,
+          reconnectAttempts: this.reconnectAttempts,
+          lastIncomingMessageAt: this.lastIncomingMessageAt || null,
+          lastDisconnectCode: this.lastDisconnectCode,
+          lastDisconnectReason: this.lastDisconnectReason
+        };
+      }
       // Grupos autorizados y configuraciones
       authorizedGroups = [];
       messageBuffers = /* @__PURE__ */ new Map();
@@ -46575,14 +46600,23 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
           const rawPhone = this.sock?.user?.id ? this.sock.user.id.split("@")[0].split(":")[0] : null;
           const phone = rawPhone || "573192919978";
           const jid = this.isWorkerOnly ? "system:bot_status_worker2" : "system:bot_status";
+          const sessionPayload = {
+            isReady: this.isReady,
+            phone,
+            botName: this.botName,
+            lastIncomingMessageAt: this.lastIncomingMessageAt || null,
+            lastDisconnectCode: this.lastDisconnectCode,
+            lastDisconnectReason: this.lastDisconnectReason,
+            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+          };
           await db.insert(pendingSessions).values({
             jid,
-            sessionData: { isReady: true, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() },
+            sessionData: sessionPayload,
             createdAt: /* @__PURE__ */ new Date()
           }).onConflictDoUpdate({
             target: pendingSessions.jid,
             set: {
-              sessionData: { isReady: true, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
+              sessionData: sessionPayload
             }
           });
           console.log(`[${this.botName}-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
@@ -46591,12 +46625,22 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
         }
       }
       async initialize() {
+        if (this.isInitializing) {
+          console.log(`[${this.botName}] \u23F3 Inicializaci\xF3n ya en curso. Omitiendo reentrada simult\xE1nea.`);
+          return;
+        }
+        this.isInitializing = true;
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
         try {
           if (this.sock) {
             try {
               this.sock.ev.removeAllListeners("connection.update");
               this.sock.ev.removeAllListeners("creds.update");
               this.sock.ev.removeAllListeners("messages.upsert");
+              this.sock.ev.removeAllListeners("group.join-request");
               if (typeof this.sock.end === "function") {
                 this.sock.end(void 0);
               } else if (this.sock.ws && typeof this.sock.ws.close === "function") {
@@ -46654,8 +46698,15 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
           } catch (e) {
           }
           console.log(`[${this.botName}] Estableciendo conexi\xF3n por WebSocket...`);
+          const formatBaileysLogArgs = (args) => {
+            try {
+              return args.map((a) => typeof a === "string" ? a : a?.message || (typeof a === "object" ? JSON.stringify(a).slice(0, 180) : String(a))).join(" ").slice(0, 260);
+            } catch {
+              return "";
+            }
+          };
           const silentLogger = {
-            level: "silent",
+            level: "error",
             log: () => {
             },
             trace: () => {
@@ -46666,9 +46717,13 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             },
             warn: () => {
             },
-            error: () => {
+            error: (...args) => {
+              const msg = formatBaileysLogArgs(args);
+              if (msg) console.error(`[BAILEYS-INTERNAL-ERROR] ${msg}`);
             },
-            fatal: () => {
+            fatal: (...args) => {
+              const msg = formatBaileysLogArgs(args);
+              console.error(`[BAILEYS-INTERNAL-FATAL] ${msg}`);
             },
             child: () => silentLogger
           };
@@ -46758,6 +46813,8 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
           this.setupEventListeners(saveCreds);
         } catch (err) {
           console.error(`[${this.botName}] Error cr\xEDtico al inicializar el cliente Baileys:`, err);
+        } finally {
+          this.isInitializing = false;
         }
       }
       setupEventListeners(saveCreds) {
@@ -46792,17 +46849,25 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
           if (connection === "close") {
             const error = lastDisconnect?.error;
             const statusCode = error?.output?.statusCode;
+            const disconnectReason = error?.message || error?.data?.reason || "unknown";
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 403;
             this.isReady = false;
+            this.lastDisconnectCode = statusCode ?? "undefined";
+            this.lastDisconnectReason = String(disconnectReason).slice(0, 200);
             this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
             if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
-              console.error(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] Sesi\xF3n cerrada o desvinculada por WhatsApp (error ${statusCode}). Deteniendo reconexi\xF3n autom\xE1tica por seguridad.`);
+              console.error(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] Sesi\xF3n cerrada o desvinculada por WhatsApp (error ${statusCode}: ${this.lastDisconnectReason}). Deteniendo reconexi\xF3n autom\xE1tica por seguridad.`);
               return;
+            }
+            if (this.reconnectTimer) {
+              clearTimeout(this.reconnectTimer);
+              this.reconnectTimer = null;
             }
             this.reconnectAttempts++;
             if (this.reconnectAttempts > 3) {
-              console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados. Pausando reconexi\xF3n por 45 segundos para proteger el n\xFAmero +573192919978...`);
-              setTimeout(() => {
+              console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados (${statusCode}: ${this.lastDisconnectReason}). Pausando reconexi\xF3n por 45 segundos para proteger el n\xFAmero +573192919978...`);
+              this.reconnectTimer = setTimeout(() => {
+                this.reconnectTimer = null;
                 this.reconnectAttempts = 0;
                 this.initialize();
               }, 45e3);
@@ -46813,15 +46878,24 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             const isConflict = statusCode === 440;
             const jitter = Math.floor(Math.random() * 3e3);
             const delayMs = isConflict ? 2e4 + jitter : this.reconnectAttempts * 4e3 + jitter;
-            console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ANTI-BAN] Conexi\xF3n Baileys pausada (c\xF3digo: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs / 1e3)}s...`);
+            console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ANTI-BAN] Conexi\xF3n Baileys pausada (c\xF3digo: ${statusCode}, motivo: ${this.lastDisconnectReason}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs / 1e3)}s...`);
             if (shouldReconnect) {
-              setTimeout(() => this.initialize(), delayMs);
+              this.reconnectTimer = setTimeout(() => {
+                this.reconnectTimer = null;
+                this.initialize();
+              }, delayMs);
             }
           } else if (connection === "open") {
             console.log(`
 \u{1F680} ${this.botName} \u{1F50C}\u{1F498} \u2014 BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
             this.isReady = true;
             this.reconnectAttempts = 0;
+            this.lastDisconnectCode = null;
+            this.lastDisconnectReason = null;
+            if (this.reconnectTimer) {
+              clearTimeout(this.reconnectTimer);
+              this.reconnectTimer = null;
+            }
             this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
             this.discoverAndSyncNewsletters().catch((err) => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
             this.approvePendingGroupRequests().catch((err) => console.warn(`[${this.botName}] Info aprobaci\xF3n grupos:`, err?.message));
@@ -46844,6 +46918,9 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
         });
         this.sock.ev.on("messages.upsert", async (m) => {
           if (m.type !== "notify" && m.type !== "append") return;
+          if (m.messages && m.messages.length > 0) {
+            this.lastIncomingMessageAt = Date.now();
+          }
           for (const msg of m.messages) {
             if (!msg.key || !msg.message) continue;
             if (msg.key.id && msg.message) {
@@ -60378,7 +60455,12 @@ async function startServer() {
   app.use(express2.json({ limit: "50mb" }));
   app.use(express2.urlencoded({ limit: "50mb", extended: true }));
   app.get("/api/health", (_req, res) => {
-    res.status(200).json({ status: "ok", uptime: process.uptime(), timestamp: Date.now() });
+    res.status(200).json({
+      status: "ok",
+      uptime: process.uptime(),
+      timestamp: Date.now(),
+      whatsapp: janiaMatchBot?.getHealthSnapshot?.() || null
+    });
   });
   registerOAuthRoutes(app);
   const webhookGetHandler = (req, res) => {

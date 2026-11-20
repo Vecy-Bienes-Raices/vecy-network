@@ -950,6 +950,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.28: Captura total de flyers sin caption o como documento, resiliencia Vision (JPEG/PNG/WebP, cooldowns, 8 negocios, 19+ tipos), match Casa Campestre <-> Finca, Villa y cobertura nacional DIVIPOLA + IGAC.",
     createdAt: "2026-11-18T15:45:00.000Z",
     active: true
+  },
+  {
+    id: "seed-blindaje-baileys-sql-requirements-health-v34-29",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Fix SQL Enum Requirements ('expired' + calificacion 'incompleto') y Resiliencia Anti-PingPong Baileys + Diagnóstico /api/health (v34.29)",
+    directive:
+      "Todo requerimiento marcado como incompleto se registra en PostgreSQL con status='expired' y calificacion='incompleto' (nunca status='incompleto', que viola el enum status). El cliente Baileys protege initialize() con bloqueo isInitializing y temporizador único reconnectTimer, refleja el valor real de this.isReady en pendingSessions, registra errores internos críticos en consola sin silenciarlos a ciegas y reporta su estado operativo real (lastIncomingMessageAt, lastDisconnectCode, lastDisconnectReason) en GET /api/health.",
+    rawText:
+      "Blindaje v34.29: Corrección SQL 22P02 en requirements incompletos (135 fallos en Nov 18-19), guard anti-reentrada Baileys y visibilidad /api/health.",
+    createdAt: "2026-11-20T04:00:00.000Z",
+    active: true
   }
 ];
 

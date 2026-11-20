@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.29 — Noviembre 2026
+- **Diagnóstico VPS Nov 18–19, Fix SQL `requirements.status` Enum y Resiliencia Anti-PingPong Baileys + `/api/health`:**
+  - `server/_core/jania/handlers/propertiesHandler.ts`: corregido `saveRequirement` de `status: 'incompleto'` (error PostgreSQL `22P02` en 135 inserciones entre Nov 18 y Nov 19) a `status: 'expired'` + `calificacion: 'incompleto'`, y actualizada la comprobación post-guardado a `calificacion === 'incompleto'`.
+  - `server/_core/whatsapp-match.ts` & `server/_core/index.ts`: implementado bloqueo `isInitializing` y temporizador único `reconnectTimer` para evitar reconexiones concurrentes ante cortes Baileys `500`/`503`/`428`; corregido `updateStatusInDb()` para persistir `isReady: this.isReady` real; activado log `[BAILEYS-INTERNAL-ERROR]`/`[BAILEYS-INTERNAL-FATAL]`; añadido `getHealthSnapshot()` (`lastIncomingMessageAt`, `lastDisconnectCode`, `lastDisconnectReason`) expuesto en `GET /api/health`.
+  - Gobernanza y Pruebas: semilla `seed-blindaje-baileys-sql-requirements-health-v34-29`, **Suite 215 (3/3)** en `regression.test.ts` (`npm run check`: 0 errores; `npm run build` limpio; `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 756/756 tests en verde**; versión `v34.29` / `34.29.0`).
+
 ### 🔖 v34.28 — Noviembre 2026
 - **Captura Integral de Flyers/Imágenes, Todos los Tipos y Negocios (Venta, Arriendo, Permuta) y Cobertura 100% Nacional Colombia:**
   - `server/_core/whatsapp-match.ts`: protegido `hasImageOrDocMedia` contra `isShortCourtesy` (para no descartar flyers sin pie de foto o texto < 6 chars), enrutados adjuntos `documentMessage` con MIME `image/*` hacia `imageBuffer`, añadido unwrap de `associatedChildMessage`/`editedMessage` y eliminado envenenamiento de `flyerVisionData` cuando Vision falla.

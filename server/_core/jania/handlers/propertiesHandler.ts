@@ -1448,7 +1448,7 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     console.log(`[JANIA-REQ-INCOMPLETE] ⛔ Requerimiento incompleto (${completeness.missingReasons.join(', ')}). PROHIBIDO registrar como match viable.`);
     const [saved] = await db.insert(requirements).values({
       ...insertData,
-      status: 'incompleto' as any,
+      status: 'expired',
       calificacion: 'incompleto',
       fechaPrimeraPublicacion: getColombiaNow(),
       fechaUltimaPublicacion: getColombiaNow(),
@@ -2971,7 +2971,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       }, userId, realName, flyerBufferToSaveReq, pdfBuffer, pdfMimeType);
 
       if (saved) {
-        if ((saved as any).status === 'incompleto') {
+        if ((saved as any).calificacion === 'incompleto' || (saved as any).status === 'incompleto') {
           const completeness = evaluateRequirementCompleteness({
             transactionType: extracted.transactionType,
             propertyType: extracted.propertyType,

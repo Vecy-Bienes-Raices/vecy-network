@@ -184,7 +184,17 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.28 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.29 — Noviembre 2026
+
+### Novedades v34.29 (Diagnóstico VPS Nov 18–19, Fix SQL `requirements.status` Enum y Resiliencia Anti-PingPong Baileys + `/api/health` — Doctrina Eduardo A. Rivera):
+- **Corrección SQL Enum `requirements.status` (`server/_core/jania/handlers/propertiesHandler.ts`):**
+  1. Reemplazado `status: 'incompleto'` por `status: 'expired'` manteniendo `calificacion: 'incompleto'` (eliminando los `135` errores PostgreSQL `22P02` acumulados el 18 y 19 de noviembre) y actualizada la validación en línea `2974` a `calificacion === 'incompleto'`.
+- **Resiliencia Baileys y Visibilidad Real (`server/_core/whatsapp-match.ts`, `server/_core/index.ts`):**
+  1. Añadido bloqueo `isInitializing` y temporizador único `reconnectTimer` en `initialize()` / `connection.update` para erradicar reconexiones concurrentes tras cortes `500`/`503`/`428`.
+  2. Corregido `updateStatusInDb()` para reportar `isReady: this.isReady` real (en lugar de `true` fijo), habilitado logging `[BAILEYS-INTERNAL-ERROR]`/`[BAILEYS-INTERNAL-FATAL]` en lugar de silenciamiento total, añadido `lastIncomingMessageAt` / `lastDisconnectCode` / `lastDisconnectReason` y expuesto `getHealthSnapshot()` en `GET /api/health`.
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-blindaje-baileys-sql-requirements-health-v34-29`, **Suite 215 (3/3)**, `npm run check` (0 errores), `npm run build` limpio, `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 756/756 tests en verde** (`$0 COP`), versión `v34.29` (`34.29.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.28 — Noviembre 2026
 
 ### Novedades v34.28 (Captura Total de Flyers/Imágenes, Todos los Tipos y Negocios Venta/Arriendo/Permuta y Cobertura 100% Nacional Colombia — Doctrina Eduardo A. Rivera):
 - **Captura Integral de Imágenes y Flyers WhatsApp (`whatsapp-match.ts`, `vision.ts`, `types.ts`, `propertiesHandler.ts`):**

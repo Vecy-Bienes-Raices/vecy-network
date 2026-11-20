@@ -214,6 +214,22 @@ export class JaniaMatchBot {
   public qrFileName: string = 'qr-match.png';
   public botName: string = 'JANIA-MATCH';
   public isWorkerOnly: boolean = false;
+  private isInitializing: boolean = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastIncomingMessageAt: number = 0;
+  private lastDisconnectCode: number | string | null = null;
+  private lastDisconnectReason: string | null = null;
+
+  public getHealthSnapshot() {
+    return {
+      isReady: this.isReady,
+      isInitializing: this.isInitializing,
+      reconnectAttempts: this.reconnectAttempts,
+      lastIncomingMessageAt: this.lastIncomingMessageAt || null,
+      lastDisconnectCode: this.lastDisconnectCode,
+      lastDisconnectReason: this.lastDisconnectReason,
+    };
+  }
 
   // Grupos autorizados y configuraciones
   private authorizedGroups: string[] = [];
@@ -716,17 +732,27 @@ export class JaniaMatchBot {
       const phone = rawPhone || "573192919978";
       const jid = this.isWorkerOnly ? "system:bot_status_worker2" : "system:bot_status";
 
+      const sessionPayload = {
+        isReady: this.isReady,
+        phone,
+        botName: this.botName,
+        lastIncomingMessageAt: this.lastIncomingMessageAt || null,
+        lastDisconnectCode: this.lastDisconnectCode,
+        lastDisconnectReason: this.lastDisconnectReason,
+        updatedAt: new Date().toISOString(),
+      };
+
       await db
         .insert(pendingSessions)
         .values({
           jid,
-          sessionData: { isReady: true, phone, botName: this.botName, updatedAt: new Date().toISOString() },
+          sessionData: sessionPayload,
           createdAt: new Date(),
         })
         .onConflictDoUpdate({
           target: pendingSessions.jid,
           set: {
-            sessionData: { isReady: true, phone, botName: this.botName, updatedAt: new Date().toISOString() },
+            sessionData: sessionPayload,
           },
         });
 
@@ -737,6 +763,15 @@ export class JaniaMatchBot {
   }
 
   public async initialize() {
+    if (this.isInitializing) {
+      console.log(`[${this.botName}] ⏳ Inicialización ya en curso. Omitiendo reentrada simultánea.`);
+      return;
+    }
+    this.isInitializing = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     try {
       // 🛡️ Limpieza determinista del socket y listeners anteriores antes de crear uno nuevo
       if (this.sock) {
@@ -744,6 +779,7 @@ export class JaniaMatchBot {
           this.sock.ev.removeAllListeners('connection.update');
           this.sock.ev.removeAllListeners('creds.update');
           this.sock.ev.removeAllListeners('messages.upsert');
+          this.sock.ev.removeAllListeners('group.join-request' as any);
           if (typeof (this.sock as any).end === 'function') {
             (this.sock as any).end(undefined);
           } else if (this.sock.ws && typeof this.sock.ws.close === 'function') {
@@ -814,15 +850,31 @@ export class JaniaMatchBot {
       } catch (e) { }
 
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
+      const formatBaileysLogArgs = (args: any[]) => {
+        try {
+          return args
+            .map((a) => (typeof a === 'string' ? a : a?.message || (typeof a === 'object' ? JSON.stringify(a).slice(0, 180) : String(a))))
+            .join(' ')
+            .slice(0, 260);
+        } catch {
+          return '';
+        }
+      };
       const silentLogger: any = {
-        level: 'silent',
+        level: 'error',
         log: () => { },
         trace: () => { },
         debug: () => { },
         info: () => { },
         warn: () => { },
-        error: () => { },
-        fatal: () => { },
+        error: (...args: any[]) => {
+          const msg = formatBaileysLogArgs(args);
+          if (msg) console.error(`[BAILEYS-INTERNAL-ERROR] ${msg}`);
+        },
+        fatal: (...args: any[]) => {
+          const msg = formatBaileysLogArgs(args);
+          console.error(`[BAILEYS-INTERNAL-FATAL] ${msg}`);
+        },
         child: () => silentLogger
       };
 
@@ -919,6 +971,8 @@ export class JaniaMatchBot {
       this.setupEventListeners(saveCreds);
     } catch (err: any) {
       console.error(`[${this.botName}] Error crítico al inicializar el cliente Baileys:`, err);
+    } finally {
+      this.isInitializing = false;
     }
   }
 
@@ -959,20 +1013,29 @@ export class JaniaMatchBot {
       if (connection === 'close') {
         const error = lastDisconnect?.error as Boom;
         const statusCode = error?.output?.statusCode;
+        const disconnectReason = error?.message || (error as any)?.data?.reason || 'unknown';
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 403;
 
         this.isReady = false;
+        this.lastDisconnectCode = statusCode ?? 'undefined';
+        this.lastDisconnectReason = String(disconnectReason).slice(0, 200);
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
 
         if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
-          console.error(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Sesión cerrada o desvinculada por WhatsApp (error ${statusCode}). Deteniendo reconexión automática por seguridad.`);
+          console.error(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Sesión cerrada o desvinculada por WhatsApp (error ${statusCode}: ${this.lastDisconnectReason}). Deteniendo reconexión automática por seguridad.`);
           return;
+        }
+
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
         }
 
         this.reconnectAttempts++;
         if (this.reconnectAttempts > 3) {
-          console.warn(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados. Pausando reconexión por 45 segundos para proteger el número +573192919978...`);
-          setTimeout(() => {
+          console.warn(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados (${statusCode}: ${this.lastDisconnectReason}). Pausando reconexión por 45 segundos para proteger el número +573192919978...`);
+          this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
             this.reconnectAttempts = 0;
             this.initialize();
           }, 45000);
@@ -987,15 +1050,24 @@ export class JaniaMatchBot {
         const jitter = Math.floor(Math.random() * 3000);
         const delayMs = isConflict ? (20000 + jitter) : ((this.reconnectAttempts * 4000) + jitter);
 
-        console.warn(`[${this.botName}] 🛡️ [ANTI-BAN] Conexión Baileys pausada (código: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs / 1000)}s...`);
+        console.warn(`[${this.botName}] 🛡️ [ANTI-BAN] Conexión Baileys pausada (código: ${statusCode}, motivo: ${this.lastDisconnectReason}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs / 1000)}s...`);
 
         if (shouldReconnect) {
-          setTimeout(() => this.initialize(), delayMs);
+          this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.initialize();
+          }, delayMs);
         }
       } else if (connection === 'open') {
         console.log(`\n🚀 ${this.botName} 🔌💘 — BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
         this.isReady = true;
         this.reconnectAttempts = 0; // Resetear intentos al conectar exitosamente
+        this.lastDisconnectCode = null;
+        this.lastDisconnectReason = null;
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
         this.discoverAndSyncNewsletters().catch(err => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
         // 👥 Auto-aprobación inmediata de solicitudes pendientes de ingreso a grupos oficiales
@@ -1025,6 +1097,9 @@ export class JaniaMatchBot {
     this.sock.ev.on('messages.upsert', async (m: { messages: proto.IWebMessageInfo[], type: string }) => {
       // Permitir tanto mensajes en vivo ('notify') como mensajes encolados durante micro-reconexiones ('append')
       if (m.type !== 'notify' && m.type !== 'append') return;
+      if (m.messages && m.messages.length > 0) {
+        this.lastIncomingMessageAt = Date.now();
+      }
 
       for (const msg of m.messages) {
         if (!msg.key || !msg.message) continue;

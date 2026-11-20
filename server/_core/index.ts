@@ -52,7 +52,12 @@ async function startServer() {
 
   // 🩺 Endpoint de salud ultra-liviano (0ms, 0 overhead de BD) para watchdog y supervisores
   app.get("/api/health", (_req, res) => {
-    res.status(200).json({ status: "ok", uptime: process.uptime(), timestamp: Date.now() });
+    res.status(200).json({
+      status: "ok",
+      uptime: process.uptime(),
+      timestamp: Date.now(),
+      whatsapp: janiaMatchBot?.getHealthSnapshot?.() || null,
+    });
   });
 
   // OAuth callback under /api/oauth/callback
