@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import { Bot, X, Send, Sparkles, Calculator, CalendarCheck, Loader2, MessageSquare, UserCheck } from 'lucide-react';
+import { Bot, X, Send, Sparkles, Calculator, CalendarCheck, Loader2, MessageSquare, UserCheck, Building2, CheckCircle2, FileText } from 'lucide-react';
 
 interface AgentProToolsWidgetProps {
   agent: {
@@ -47,12 +47,39 @@ export default function AgentProToolsWidget({
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputMsg, setInputMsg] = useState('');
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
+  const [showVisitorForm, setShowVisitorForm] = useState(false);
+  const [visitorName, setVisitorName] = useState('');
+  const [visitorEmail, setVisitorEmail] = useState('');
+  const [visitorPhone, setVisitorPhone] = useState('');
+  const [statusAnnouncement, setStatusAnnouncement] = useState('');
+
+  type ChatBubble = {
+    role: 'user' | 'assistant';
+    content: string;
+    matchedProperties?: Array<{
+      id: number;
+      name: string;
+      transactionType: string | null;
+      priceCop: number;
+      city: string | null;
+      zone: string | null;
+      bedrooms: number | null;
+      isOwnProperty: boolean;
+    }>;
+    notarialSummary?: string | null;
+    financialSummary?: string | null;
+    leadId?: number | null;
+    visitBooked?: boolean;
+    appointmentCode?: string | null;
+    blockedByQuota?: boolean;
+  };
+
+  const [messages, setMessages] = useState<ChatBubble[]>([
     {
       role: 'assistant',
       content:
         aiConfig.welcomeMessage ||
-        `¡Hola! Soy ${botName}, tu asistente de inteligencia artificial en ${agencyName}. ¿En qué te puedo colaborar hoy sobre nuestros inmuebles o agendamiento de visitas?`,
+        `¡Hola! Soy ${botName}, tu asistente de inteligencia artificial en ${agencyName}. ¿En qué te puedo colaborar hoy sobre nuestros inmuebles, cálculos notariales o agendamiento de visitas?`,
     },
   ]);
 
@@ -62,17 +89,25 @@ export default function AgentProToolsWidget({
   const [interestRateEA, setInterestRateEA] = useState(Number(roiConfig.defaultInterestRateEA || 11.5));
 
   const chatMutation = trpc.agent.chatWithCustomAgent.useMutation({
-    onSuccess: (data) => {
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+    onSuccess: (data: any) => {
+      const bubble: ChatBubble = {
+        role: 'assistant',
+        content: data.reply,
+        matchedProperties: Array.isArray(data.matchedProperties) ? data.matchedProperties : [],
+        notarialSummary: data.notarialSummary ?? null,
+        financialSummary: data.financialSummary ?? null,
+        leadId: data.leadId ?? null,
+        visitBooked: Boolean(data.visitBooked),
+        appointmentCode: data.appointmentCode ?? null,
+        blockedByQuota: Boolean(data.blockedByQuota),
+      };
+      setMessages((prev) => [...prev, bubble]);
+      setStatusAnnouncement(`${data.botName || botName} respondió a tu consulta.`);
     },
     onError: () => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `Con gusto te atendemos de inmediato en nuestro WhatsApp directo ${theme.contactPhone || agent?.phone || '+57 316 6569719'}.`,
-        },
-      ]);
+      const fallback = `Con gusto te atendemos de inmediato en nuestro WhatsApp directo ${theme.contactPhone || agent?.phone || '+57 316 6569719'}.`;
+      setMessages((prev) => [...prev, { role: 'assistant', content: fallback }]);
+      setStatusAnnouncement('Respuesta de respaldo enviada por el asistente.');
     },
   });
 
@@ -83,11 +118,16 @@ export default function AgentProToolsWidget({
     const nextHistory = [...messages, { role: 'user' as const, content: text }];
     setMessages(nextHistory);
     setInputMsg('');
+    setStatusAnnouncement(`${botName} está consultando el inventario...`);
     chatMutation.mutate({
       agentUserId: agent.id,
       message: text,
       propertyContext,
-      history: nextHistory.slice(-6),
+      propertyId,
+      visitorName: visitorName.trim() || undefined,
+      visitorEmail: visitorEmail.trim() || undefined,
+      visitorPhone: visitorPhone.trim() || undefined,
+      history: nextHistory.slice(-6).map((m) => ({ role: m.role, content: m.content })),
     });
   };
 
@@ -270,6 +310,11 @@ export default function AgentProToolsWidget({
                 </button>
               </div>
 
+              {/* Región viva accesible */}
+              <div role="status" aria-live="polite" className="sr-only">
+                {statusAnnouncement}
+              </div>
+
               {/* Mensajes */}
               <div className="p-4 h-72 overflow-y-auto space-y-3 bg-zinc-950 text-xs">
                 {messages.map((m, idx) => (
@@ -278,14 +323,55 @@ export default function AgentProToolsWidget({
                     className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${
+                      className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 leading-relaxed space-y-2 ${
                         m.role === 'user'
                           ? 'text-white font-medium'
                           : 'bg-zinc-900 text-zinc-200 border border-white/10'
                       }`}
                       style={m.role === 'user' ? { backgroundColor: primaryColor } : undefined}
                     >
-                      {m.content}
+                      <p>{m.content}</p>
+
+                      {m.role === 'assistant' && m.matchedProperties && m.matchedProperties.length > 0 && (
+                        <div className="pt-1.5 border-t border-white/10 space-y-1.5">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" /> Inmuebles encontrados ({m.matchedProperties.length})
+                          </div>
+                          {m.matchedProperties.slice(0, 3).map((p) => (
+                            <a
+                              key={p.id}
+                              href={`/propiedad/${p.id}`}
+                              className="block p-2 rounded-lg bg-black/40 border border-white/10 hover:border-amber-400/40 transition-colors"
+                            >
+                              <div className="font-bold text-[11px] text-white truncate">{p.name}</div>
+                              <div className="text-[10px] text-zinc-400 flex items-center justify-between gap-2">
+                                <span>{p.zone || p.city || 'Colombia'}</span>
+                                <span className="text-amber-300 font-semibold">
+                                  ${Math.round(p.priceCop || 0).toLocaleString('es-CO')}
+                                </span>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      {m.role === 'assistant' && (m.notarialSummary || m.financialSummary) && (
+                        <div className="text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 flex items-start gap-1.5">
+                          <FileText className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                          <span>{m.notarialSummary || m.financialSummary}</span>
+                        </div>
+                      )}
+
+                      {m.role === 'assistant' && (m.visitBooked || m.leadId) && (
+                        <div className="text-[10px] text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded-lg px-2 py-1.5 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>
+                            {m.visitBooked && m.appointmentCode
+                              ? `Visita pre-agendada (${m.appointmentCode})`
+                              : `Contacto registrado en CRM (#${m.leadId})`}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -299,24 +385,93 @@ export default function AgentProToolsWidget({
                 )}
               </div>
 
-              {/* Botón rápido a Vecy Agenda Pro del Suscriptor */}
+              {/* Panel opcional datos de contacto para agendar visita desde el chat */}
+              {showVisitorForm && (
+                <div className="px-3 py-2.5 bg-zinc-900/95 border-t border-white/10 space-y-2 text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-300">Tus datos para visitas / cotizaciones</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowVisitorForm(false)}
+                      className="text-zinc-400 hover:text-white text-[10px]"
+                    >
+                      Ocultar
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    <div>
+                      <label htmlFor={`widget-name-${agent.id}`} className="sr-only">Tu nombre</label>
+                      <input
+                        id={`widget-name-${agent.id}`}
+                        type="text"
+                        autoComplete="name"
+                        value={visitorName}
+                        onChange={(e) => setVisitorName(e.target.value)}
+                        placeholder="Tu nombre completo"
+                        className="w-full bg-black border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div>
+                        <label htmlFor={`widget-phone-${agent.id}`} className="sr-only">Tu WhatsApp</label>
+                        <input
+                          id={`widget-phone-${agent.id}`}
+                          type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          value={visitorPhone}
+                          onChange={(e) => setVisitorPhone(e.target.value)}
+                          placeholder="WhatsApp (ej. 316...)"
+                          className="w-full bg-black border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor={`widget-email-${agent.id}`} className="sr-only">Tu correo</label>
+                        <input
+                          id={`widget-email-${agent.id}`}
+                          type="email"
+                          autoComplete="email"
+                          value={visitorEmail}
+                          onChange={(e) => setVisitorEmail(e.target.value)}
+                          placeholder="tu@correo.com"
+                          className="w-full bg-black border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Botón rápido a Vecy Agenda Pro del Suscriptor y datos de visita */}
               <div className="px-3 py-2 bg-zinc-900/90 border-t border-white/5 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowVisitorForm((v) => !v)}
+                  className="py-1.5 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-zinc-200 border border-white/10"
+                >
+                  {visitorPhone || visitorEmail ? 'Datos listos ✓' : 'Mis datos'}
+                </button>
                 <a
                   href={propertyId ? `/agenda/${propertyId}?agentId=${agent.id}` : `/agenda?agentId=${agent.id}`}
                   className="flex-1 py-1.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-amber-400 flex items-center justify-center gap-1.5 border border-amber-500/20"
                 >
                   <CalendarCheck className="w-3.5 h-3.5" />
-                  <span>Agendar Cita en Agenda Pro</span>
+                  <span>Agenda Pro</span>
                 </a>
               </div>
 
               {/* Input */}
               <form onSubmit={handleSend} className="p-3 bg-zinc-900 border-t border-white/10 flex items-center gap-2">
+                <label htmlFor={`widget-msg-${agent.id}`} className="sr-only">Mensaje para {botName}</label>
                 <input
+                  id={`widget-msg-${agent.id}`}
                   type="text"
                   value={inputMsg}
                   onChange={(e) => setInputMsg(e.target.value)}
-                  placeholder={`Pregúntale a ${botName}...`}
+                  onKeyDown={(e) => {
+                    if (e.nativeEvent.isComposing) return;
+                  }}
+                  placeholder={`Pregúntale a ${botName} o agenda visita...`}
                   className="flex-1 bg-black border border-white/15 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/40"
                 />
                 <button
@@ -324,6 +479,7 @@ export default function AgentProToolsWidget({
                   disabled={chatMutation.isPending || !inputMsg.trim()}
                   className="p-2.5 rounded-xl text-white disabled:opacity-40 cursor-pointer"
                   style={{ backgroundColor: primaryColor }}
+                  aria-label="Enviar mensaje"
                 >
                   <Send className="w-4 h-4" />
                 </button>

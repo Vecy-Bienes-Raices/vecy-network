@@ -1940,6 +1940,57 @@ export function ensureVecyDailyFooter(text: string): string {
   return res;
 }
 
+export interface DailyEditorialPillar {
+  key: string;
+  label: string;
+  angle: string;
+}
+
+export const DAILY_EDITORIAL_PILLARS_V34_41: DailyEditorialPillar[] = [
+  {
+    key: "noticias_sector",
+    label: "Noticias y Pulso del Sector Inmobiliario Colombiano",
+    angle: "Conecta la tipología del día con la dinámica actual del mercado colombiano, tasas hipotecarias y oportunidades de cierre rápido.",
+  },
+  {
+    key: "ensenanzas_corretaje_legal",
+    label: "Enseñanzas Prácticas de Corretaje, Avalúos ACM y Derecho Notarial",
+    angle: "Entrega consejos accionables sobre redacción de requerimientos completos para lograr Match >= 85%, revisión preventiva de CTL SNR y protección de honorarios bajo Ley 527.",
+  },
+  {
+    key: "avances_ia_proptech",
+    label: "Avances de Inteligencia Artificial Aplicada a Finca Raíz en vecygroup.com",
+    angle: "Explica cómo ya operan en https://vecygroup.com el Importador por URL en 2 pasos (con fotos propias), el CRM Kanban, correos IA, Agente JanIA Privado RAG y Suite Legal SaaS.",
+  },
+  {
+    key: "propuesta_vecy_planes",
+    label: "Propuesta Colaborativa VECY (40/20/40) y Planes Transparentes ($0 a < $200.000 COP/mes)",
+    angle: "Resalta que la red y Plan Semilla son $0 COP, los planes Pro/Growth/Élite IA valen entre $69.900 y $189.900 COP/mes y el portal marca blanca potencia la Bolsa Colaborativa.",
+  },
+  {
+    key: "sinergia_grupos_comunidad",
+    label: "Sinergia de Grupos Oficiales + Externos y Participación con @JanIA",
+    angle: "Recuerda cómo citar o arrobar a @JanIA en Grupo 2/3, el silencio respetuoso con reacción 👍 (Oferta) / 📝 (Demanda) en Grupo 1 y grupos externos hacia las tiendas de vecygroup.com, invitando a compartir.",
+  },
+];
+
+export function getDailyEditorialPillar(dayOfMonth: number): DailyEditorialPillar {
+  const idx = Math.abs((dayOfMonth || 1) - 1) % DAILY_EDITORIAL_PILLARS_V34_41.length;
+  return DAILY_EDITORIAL_PILLARS_V34_41[idx];
+}
+
+export function buildDailyRoutineGuidanceBlock(dayOfMonth: number = 1): string {
+  const pillar = getDailyEditorialPillar(dayOfMonth);
+  return (
+    `- ENFOQUE TEMÁTICO DE ALTO INTERÉS VECY v34.41 (Pilar Rotativo del Día: "${pillar.label}"):\n` +
+    `  * ${pillar.angle}\n` +
+    `  * Recuerda con claridad a los colegas cómo participar con @JanIA en https://vecygroup.com y WhatsApp:\n` +
+    `    - Citar o arrobar a @JanIA para resolver dudas legales, tributarias, avalúos ACM o sobre el ecosistema.\n` +
+    `    - En Grupo 1 y grupos externos, JanIA ingesta sin ruido de texto y reacciona con 👍 (OFERTA) o 📝 (DEMANDA), enviando cada publicación a la base central, Mesa de Coincidencias (Match >= 85%), VECY TIENDA (/ofertas) y Tienda de Requerimientos (/demandas).\n` +
+    `    - Invita activamente a publicar requerimientos completos (tipo, negocio, ciudad/barrio, presupuesto COP, área m², alcobas exactas, baños, garajes y forma de pago) y a compartir noticias o experiencias en comunidad.`
+  );
+}
+
 /**
  * Enriquece (resume y actualiza) el tema del día con el LLM en TEXTO PURO.
  * Si el LLM falla o devuelve algo inválido, se usa el texto curado del calendario.
@@ -1949,6 +2000,7 @@ export async function generateCalendarDailyText(tip: DailyTipItem): Promise<{ to
   const sanitize = (t: string) =>
     ensureVecyDailyFooter(enforceVecyBrand(enforceGreetingAccuracy(enforceJanIAIdentity(t), timeInfo.period)));
   const fallback = { topicTitle: tip.topicTitle, captionText: sanitize(tip.captionText), themeKey: tip.themeKey };
+  const routineGuidance = buildDailyRoutineGuidanceBlock(tip.dayOfMonth);
 
   const systemPrompt = `Eres JanIA, la inteligencia artificial y aliada de élite inmobiliaria de VECY BIENES RAÍCES en Colombia. Tono femenino, cálido, colombiano, sumamente profesional, visionario, persuasivo y ameno.
 MISIÓN EDUCATIVA Y DE ASESORÍA INMOBILIARIA INTEGRAL (DOCTRINA EDUARDO A. RIVERA):
@@ -2004,7 +2056,8 @@ REGLAS INQUEBRANTABLES:
 - Inicia con "${timeInfo.greeting}" (hora Bogotá: ${timeInfo.hour}:${String(timeInfo.min).padStart(2, '0')}).
 - Mensaje RESUMIDO, CONTUNDENTE Y AMENO para WhatsApp: 160-200 palabras, títulos en *negrita*, 3-4 viñetas de enseñanza práctica.
 - Respeta el tema base del día; refréscalo con un ángulo práctico y visionario del mercado colombiano actual.
-- Cierra invitando a escribir al chat privado de JanIA (${VECY_DM_LINK}) para casos privados y a debatir en el grupo.
+${routineGuidance}
+- Cierra invitando a escribir al chat privado de JanIA (${VECY_DM_LINK}) para casos privados, explorar https://vecygroup.com y participar en los grupos.
 - Termina SIEMPRE con estas tres líneas exactas:
 _VECY_
 _BIENES RAÍCES_

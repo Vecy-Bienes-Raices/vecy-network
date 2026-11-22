@@ -22,6 +22,7 @@ import { resolveNameAndGender } from "../../nameAndGenderResolver";
 import { invokeLLM, classifyLlmReasoningComplexity } from "../../llm";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { stripLeadingGreetingsAndCourtesies, extractAcmAttributesFromText } from "./dmHandler";
+import { formatFounderTeachingsForPrompt } from "../founderKnowledgeService";
 import {
   appendGroupSatisfactionClosing,
   isExplicitGroupAcmRequest,
@@ -426,11 +427,13 @@ export async function processCirculoMessage(
       `Tu objetivo en este grupo (foro abierto de la comunidad) es conversar sobre temas libres del sector inmobiliario, foros, debates y experiencias del día a día del negocio, además del proyecto VECY BIENES RAÍCES, su modelo colaborativo, tecnología y debate con competidores, de forma sincera, verídica y de alto nivel:\n\n` +
       `## DIRECTRICES DE INFORMACIÓN Y SINCERIDAD SOBRE VECY BIENES RAÍCES:\n` +
       `Explica claramente y con la verdad absoluta el estado del proyecto y sus características:\n` +
-      `- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/imágenes con datos comerciales, extrae la información de las fichas técnicas automáticamente a partir de enlaces de portales, ejecuta el matching de coincidencias comerciales de forma instantánea a nivel nacional, y gestiona el flujo de confirmación de contacto bilateral privada (Double Opt-In) por DM mediante respuestas rápidas.\n` +
-      `- **Lo que está en desarrollo**: El portal web oficial privado (https://vecy-bienes-raices.vercel.app/) se encuentra en fases continuas de integración. Módulos como CRM de leads y digitalización de contratos formalizados se desplegarán en fases posteriores.\n` +
-      `- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma y el matching de JanIA en WhatsApp es 100% gratuita por lanzamiento para empoderar a la comunidad.\n` +
-      `- **Tecnología del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en código propietario y base de datos SQL de alto rendimiento, entrenado a diario para encontrar MATCH en los grupos.\n` +
-      `- **𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 es el único centro de Match**: Recuerda que el grupo especializado 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 es el canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos.\n\n` +
+      `- **Lo que ya está activo hoy en https://vecygroup.com (v34.41)**:\n` +
+      `  1) Los asesores publican ofertas y demandas en 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 y grupos aliados externos: JanIA transcribe notas de voz, aplica OCR a imágenes/flyers, lee PDFs/enlaces, reacciona con 👍/👌/🔀 si es OFERTA o 📝/✏️/🔄 si es DEMANDA, indexa todo en PostgreSQL y dispara la Mesa de Coincidencias (Match >= 85%) con confirmación Double Opt-In por DM.\n` +
+      `  2) En el portal web https://vecygroup.com ya operan: Portal Marca Blanca (/s/:slug y *.vecygroup.com), VECY TIENDA (/ofertas), Tienda de Requerimientos blindada (/demandas), Importador Inteligente por URL en 2 pasos (carga manual obligatoria de fotos y videos propios en /uploads, sin copiar multimedia de terceros), CRM Kanban Multi-Tenant, Gestor Automatizado de Correos IA, Agente JanIA Privado (RAG sobre inventario + WhatsApp Cloud BYO-Number) y Suite Legal SaaS (Estudios CTL/SNR, verificación de identidad y avalúos ACM).\n` +
+      `- **Qué entra en el lanzamiento final**: Activación definitiva de la pasarela comercial Wompi en modo producción. El ingreso comunitario es gratuito (Plan Semilla $0) y los planes SaaS opcionales van de $0 a menos de $200.000 COP/mes (Agente Pro $69.900, Inmobiliaria Growth $129.900, Élite IA $189.900).\n` +
+      `- **Cómo participar y mejorar el Match (>= 85%)**: En Grupo 2 y Grupo 3 puedes consultar citando o arrobando a **@JanIA** (ej. @JanIA). Invita a publicar requerimientos completos (tipo, negocio, ciudad + barrio, presupuesto máximo COP, área mínima m², habitaciones exactas, baños, garajes y forma de pago) para maximizar la precisión del Match.\n` +
+      `- **Complementariedad de Grupos Oficiales y Externos**: Grupo 1 y grupos externos alimentan en silencio la base central y las tiendas para generar cruces sin ruido comercial; Grupo 2 resuelve derecho notarial, tributario, avalúos ACM y marketing; Grupo 3 es el foro abierto de comunidad y evolución PropTech.\n` +
+      `- **𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 es el canal oficial de Ofertas y Demandas en WhatsApp**: Redirecciona allá con cortesía cualquier publicación comercial.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN:\n` +
       `1. **DEBATE_COMPETIDOR**: Si mencionan a Ubicapp o Cristian Samboni. Debate con altura técnica, datos y cortesía.\n` +
       `2. **INMUEBLE o REQUERIMIENTO**: Redirecciona a 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 con amabilidad.\n` +
@@ -492,8 +495,12 @@ export async function processCirculoMessage(
   * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos técnicos superiores sin agresividad.
   * Stickers 3D Expresivos de JanIA: Cuando haya humor, entusiasmo, gratitud o indignación simpática contra "dinosaurios inmobiliarios", puedes cerrar "response" con [STICKER:ternura], [STICKER:gracias_ternura], [STICKER:gracias_alegre], [STICKER:ok], [STICKER:mmm], [STICKER:jajaja], [STICKER:ush], [STICKER:queee] o [STICKER:oh_por_dios]. El sistema lo limpia y envía como sticker real.`;
 
+    const dynamicTeachings = formatFounderTeachingsForPrompt();
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-      { role: "system", content: systemPrompt }
+      {
+        role: "system",
+        content: dynamicTeachings ? `${systemPrompt}\n\n${dynamicTeachings}` : systemPrompt,
+      },
     ];
 
     for (const h of circuloHistory.slice(-6)) {

@@ -7,6 +7,18 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-22] — JanIA v34.41: PASO 5 — Agente JanIA Privado por Suscripción, Suite Legal SaaS y Base/Rutina de JanIA (v34.41 - 34.41.0)
+
+#### 1. Solicitud / Alcance PASO 5
+- Implementar de forma 100% aditiva (sin modificar `server/_core/whatsapp-match.ts` ni romper las 812 pruebas existentes): migración `0017` con `agent_jania_channels`, `agent_legal_tool_logs` y cuotas IA/Legales; **Agente JanIA Privado RAG + WhatsApp Cloud API BYO-Number**; **Suite Legal SaaS** en `/agent-dashboard`; actualización de conocimiento y rutina diaria de **JanIA** (`v34.41`), pruebas Vitest offline (`$0 COP`) y despliegue en VPS + migración en PostgreSQL.
+
+#### 2. Acciones Ejecutadas en `v34.41`
+1. **Migración `0017_private_jania_channels_and_legal_quotas.sql` + `drizzle/schema.ts` + `planEntitlements.ts`:** creadas tablas `agent_jania_channels` (canales `web_widget` y `whatsapp_cloud_api` con secretos `AES-256-GCM`) y `agent_legal_tool_logs`; añadidas cuotas y entitlements `maxAiMessagesMonth`/`aiMessagesUsed`, `whatsappCloudByoEnabled`, `maxCtlStudiesMonth`/`ctlStudiesUsed`, `maxIdentityChecksMonth`/`identityChecksUsed` y `maxValuationsMonth`/`valuationsUsed` (`$0` a `$189.900 <= $200.000 COP/mes`).
+2. **Agente JanIA Privado RAG & WhatsApp Cloud BYO-Number (`privateJaniaService.ts`, `whatsappCloudTenantService.ts`, `index.ts`, `routers/agent.ts`, `AgentProToolsWidget.tsx`, `PrivateJaniaChannelPanel.tsx`):** consultas RAG aisladas por tenant en PostgreSQL (inventario propio vs. red), liquidación notarial/financiera real, captura de leads CRM y reserva de visitas; webhook `/api/whatsapp/webhook` con verificación HMAC-SHA256 `X-Hub-Signature-256` y deduplicación por `wamid` sin interferir con Baileys.
+3. **Suite Legal SaaS (`AgentCtlStudyTool.tsx`, `AgentDashboard.tsx`, `AgentProptechSuite.tsx`, `index.css`):** pestaña e integración en Proptech Suite con consumo auditable para Estudios de Títulos SNR/CTL (PDF membretado), verificación de identidad/antecedentes y avalúos ACM Fitto y Corvini, usando `<progress>` nativo sin agrupar pseudo-elementos WebKit/Moz y sin formularios anidados.
+4. **Base de Conocimiento y Rutina Diaria (`founderKnowledgeService.ts`, `circuloHandler.ts`, `consultingHandler.ts`, `cronService.ts`):** 3 semillas activas `v34.41` y 5 pilares rotativos (`DAILY_EDITORIAL_PILLARS_V34_41`) explicando funciones activas en `https://vecygroup.com` vs. lanzamiento final (Wompi prod), participación con `@JanIA`, reacciones `👍` vs `📝`, requisitos para Match `>= 85%` y complementariedad entre grupos oficiales y externos.
+5. **Pruebas y Gobernanza:** creada `server/__tests__/paso5PrivateJaniaAndLegalSuite.test.ts` (9/9) y **Suite 227** en `regression.test.ts`, validado `npm run check` (0 errores), `NODE_ENV=test npx vitest run --testTimeout=35000` (`9/9 archivos, 823/823 tests en verde` | `$0 COP`), `npm run build` limpio, bump oficial a `v34.41` (`34.41.0`) en `package.json`, `shared/const.ts` y bitácoras.
+
 ### 📅 [2026-11-22] — JanIA v34.40: PASO 4 — CRM Inmobiliario Kanban Multi-Tenant y Gestor Automatizado de Correos con IA (v34.40 - 34.40.0)
 
 #### 1. Solicitud / Alcance PASO 4

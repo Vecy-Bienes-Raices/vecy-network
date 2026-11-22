@@ -330,6 +330,14 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.41 — Noviembre 2026
+- **PASO 5 — Agente JanIA Privado por Suscripción, Suite Legal SaaS y Base/Rutina de JanIA (`v34.41.0`):**
+  - `drizzle/0017_private_jania_channels_and_legal_quotas.sql`, `drizzle/schema.ts`, `server/_core/planEntitlements.ts`: tablas `agent_jania_channels` (cifrado `AES-256-GCM`) y `agent_legal_tool_logs`, plus cuotas IA/legales (`maxAiMessagesMonth`, `whatsappCloudByoEnabled`, `maxCtlStudiesMonth`, `maxIdentityChecksMonth`, `maxValuationsMonth`) respetando planes COP `$0`–`$189.900 <= $200.000/mes`.
+  - `server/_core/privateJaniaService.ts`, `server/_core/whatsappCloudTenantService.ts`, `server/_core/index.ts`, `server/routers/agent.ts`, `AgentProToolsWidget.tsx`, `PrivateJaniaChannelPanel.tsx`: RAG multi-tenant estricto sobre inventario real PostgreSQL + cálculos notariales/hipotecarios + CRM/Agenda + enrutamiento BYO-Number en `/api/whatsapp/webhook` con HMAC-SHA256 y cero cambios en `server/_core/whatsapp-match.ts`.
+  - `client/src/components/proptech/AgentCtlStudyTool.tsx`, `AgentDashboard.tsx`, `AgentProptechSuite.tsx`, `client/src/index.css`: Suite Legal SaaS auditable (CTL SNR con PDF, Identidad/Antecedentes y Avalúos ACM) con medidores `<progress>` accesibles y formularios independientes.
+  - `founderKnowledgeService.ts`, `circuloHandler.ts`, `consultingHandler.ts`, `cronService.ts`: conocimiento vivo de `https://vecygroup.com`, `@JanIA`, emojis `👍`/`📝`, Match `>= 85%` y pilares diarios `DAILY_EDITORIAL_PILLARS_V34_41`.
+  - Gobernanza y Pruebas: `server/__tests__/paso5PrivateJaniaAndLegalSuite.test.ts` (9/9) y **Suite 227** en `regression.test.ts`, `9/9 archivos, 823/823 tests en verde` (`$0 COP`), bump `v34.41` (`34.41.0`).
+
 ### 🔖 v34.40 — Noviembre 2026
 - **PASO 4 — CRM Inmobiliario Kanban Multi-Tenant y Gestor Automatizado de Correos con IA:**
   - `drizzle/0016_crm_kanban_and_email_automation.sql` + `drizzle/schema.ts`: extensión aditiva de `leads` y nuevas tablas `crm_activities`, `email_accounts`, `email_templates`, `email_sequences`, `email_sequence_enrollments` y `email_messages`.

@@ -23,6 +23,7 @@ import { VECY_OFFICIAL_GROUPS } from "../../../../shared/const";
 import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 import { JANIA_ARGON_COGNITIVE_CORE } from "../prompts";
 import { stripLeadingGreetingsAndCourtesies, extractAcmAttributesFromText } from "./dmHandler";
+import { formatFounderTeachingsForPrompt } from "../founderKnowledgeService";
 import {
   isExplicitLegalPdfRequest,
   maybeGenerateLegalDocPdfForDm,
@@ -795,8 +796,12 @@ Se ha adjuntado un documento PDF. Analízalo con tus capacidades nativas:
       messageToProcess += `\n[SISTEMA - NOTA DE VOZ REQUERIDA Y LÍMITE DE DURACIÓN ÁGIL]: El usuario te envió esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versión hablada resumida, directa, muy fluida, profesional, cálida y natural de tu respuesta (máximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, viñetas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma ágil e instantánea sin saturar la conexión. En "response" coloca la versión completa formateada en texto.`;
     }
 
+    const dynamicTeachings = formatFounderTeachingsForPrompt();
+    const fullConsultingSystemPrompt = dynamicTeachings
+      ? `${systemPrompt}\n\n${dynamicTeachings}`
+      : systemPrompt;
     const messages: any[] = [
-      { role: "system", content: systemPrompt }
+      { role: "system", content: fullConsultingSystemPrompt }
     ];
 
     for (const h of history) {

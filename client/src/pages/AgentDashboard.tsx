@@ -6,16 +6,18 @@ import {
   Copy, Check, Shield, Plus, Search, BarChart3, Zap, Sparkles,
   Loader2, Globe, FileText, Palette, Bot, CalendarCheck, EyeOff,
   Download, Share2, ExternalLink, TrendingUp, QrCode, Calculator, Wand2, FileSignature,
-  Users, Mail
+  Users, Mail, FileCheck2
 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import UnifiedPublishModal from "@/components/publish/UnifiedPublishModal";
 import AgentProptechSuite from "@/components/AgentProptechSuite";
+import AgentCtlStudyTool from "@/components/proptech/AgentCtlStudyTool";
+import PrivateJaniaChannelPanel from "@/components/proptech/PrivateJaniaChannelPanel";
 import CrmKanbanBoard from "@/components/crm/CrmKanbanBoard";
 import EmailAutomationPanel from "@/components/crm/EmailAutomationPanel";
 
-type DashboardTab = "properties" | "crm" | "email_automation" | "links" | "branding" | "pro_tools" | "analytics" | "claim" | "publish";
+type DashboardTab = "properties" | "crm" | "email_automation" | "links" | "branding" | "pro_tools" | "legal_suite" | "analytics" | "claim" | "publish";
 type PersonalityOption = "normal" | "audaz" | "profesional" | "extrovertida" | "seria" | "cordial";
 
 const PERSONALITY_OPTIONS: Array<{ id: PersonalityOption; label: string; desc: string }> = [
@@ -37,6 +39,7 @@ export default function AgentDashboard() {
       t === "email_automation" ||
       t === "branding" ||
       t === "pro_tools" ||
+      t === "legal_suite" ||
       t === "links" ||
       t === "analytics" ||
       t === "claim" ||
@@ -390,6 +393,7 @@ export default function AgentDashboard() {
     { id: "email_automation", label: "Correos IA & Secuencias", icon: Mail },
     { id: "branding", label: "Mi Sitio & Marca (Wasi IA)", icon: Palette },
     { id: "pro_tools", label: "Herramientas Pro & Agente IA", icon: Bot },
+    { id: "legal_suite", label: "Suite Legal SaaS", icon: FileCheck2 },
     { id: "links", label: "Enlaces & Marca Blanca", icon: Zap, count: stealthLinks?.length },
     { id: "analytics", label: "Métricas SEO & Puntos", icon: TrendingUp, count: affiliateStats?.vPoints },
     { id: "claim", label: "Captar de la Red", icon: Plus },
@@ -808,8 +812,9 @@ export default function AgentDashboard() {
           {/* TAB 3: HERRAMIENTAS PRO PERSONALIZABLES (AGENDA PRO + AGENTE IA)   */}
           {/* ══════════════════════════════════════════════════════════════════ */}
           {activeTab === "pro_tools" && (
-            <form onSubmit={handleSaveBrandAndTools} className="space-y-8 animate-fade-in">
-              {/* HERRAMIENTA PRO 1: VECY AGENDA PRO MARCA PROPIA */}
+            <div className="space-y-8 animate-fade-in">
+              <form onSubmit={handleSaveBrandAndTools} className="space-y-8">
+                {/* HERRAMIENTA PRO 1: VECY AGENDA PRO MARCA PROPIA */}
               <div className="panel-card p-8 border border-primary/30 space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
                   <div className="flex items-center gap-3">
@@ -1168,17 +1173,21 @@ export default function AgentDashboard() {
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={updateBrandMutation.isPending}
-                  className="btn-gold px-8 py-3.5 text-xs font-black uppercase tracking-widest cursor-pointer"
-                >
-                  {updateBrandMutation.isPending ? "Guardando Herramientas..." : "Guardar y Activar Mis 7 Herramientas Pro"}
-                </button>
-              </div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={updateBrandMutation.isPending}
+                    className="btn-gold px-8 py-3.5 text-xs font-black uppercase tracking-widest cursor-pointer"
+                  >
+                    {updateBrandMutation.isPending ? "Guardando Herramientas..." : "Guardar y Activar Mis 7 Herramientas Pro"}
+                  </button>
+                </div>
+              </form>
 
-              {/* CONSOLA EN VIVO PARA USAR LAS 4 NUEVAS HERRAMIENTAS DIRECTAMENTE EN EL DASHBOARD */}
+              {/* PANEL AGENTE JANIA PRIVADO (RAG + WHATSAPP CLOUD BYO-NUMBER) */}
+              <PrivateJaniaChannelPanel />
+
+              {/* CONSOLA EN VIVO PARA USAR LAS HERRAMIENTAS PROPTECH EN EL DASHBOARD */}
               <div className="pt-4">
                 <AgentProptechSuite
                   agentUserId={myBrand?.id}
@@ -1190,7 +1199,7 @@ export default function AgentDashboard() {
                   isDashboardPreview={true}
                 />
               </div>
-            </form>
+            </div>
           )}
 
           {/* ══════════════════════════════════════════════════════════════════ */}
@@ -1679,6 +1688,10 @@ export default function AgentDashboard() {
 
           {activeTab === "email_automation" && (
             <EmailAutomationPanel />
+          )}
+
+          {activeTab === "legal_suite" && (
+            <AgentCtlStudyTool />
           )}
 
         </div>

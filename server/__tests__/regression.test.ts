@@ -16444,9 +16444,60 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-paso4-crm-kanban-email-automation-ia-v34-40"
       );
       expect(seed40?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.40");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:4[0-9]|[5-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.40.0");
+      expect(pkg.version).toMatch(/^34\.(?:4[0-9]|[5-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 227: PASO 5 — AGENTE JANIA PRIVADO RAG / WHATSAPP CLOUD BYO & SUITE LEGAL SAAS (v34.41)
+  // =========================================================================
+  describe("Suite 227: PASO 5 Agente JanIA Privado RAG, Suite Legal SaaS y Rutina v34.41", () => {
+    it("1. Verifica migración 0017, esquema agent_jania_channels/agent_legal_tool_logs, webhook Cloud y UI Suite Legal", async () => {
+      const fs = await import("fs");
+      const mig0017 = fs.readFileSync("drizzle/0017_private_jania_channels_and_legal_quotas.sql", "utf-8");
+      const schemaSrc = fs.readFileSync("drizzle/schema.ts", "utf-8");
+      const indexSrc = fs.readFileSync("server/_core/index.ts", "utf-8");
+      const agentRouterSrc = fs.readFileSync("server/routers/agent.ts", "utf-8");
+      const agentDashSrc = fs.readFileSync("client/src/pages/AgentDashboard.tsx", "utf-8");
+      const suiteSrc = fs.readFileSync("client/src/components/AgentProptechSuite.tsx", "utf-8");
+
+      expect(mig0017).toContain('CREATE TABLE IF NOT EXISTS "agent_jania_channels"');
+      expect(mig0017).toContain('CREATE TABLE IF NOT EXISTS "agent_legal_tool_logs"');
+      expect(schemaSrc).toContain("export const agentJaniaChannels");
+      expect(schemaSrc).toContain("export const agentLegalToolLogs");
+      expect(indexSrc).toContain("routeWhatsAppCloudWebhookPost");
+      expect(indexSrc).toContain("verifyWhatsAppCloudWebhookGet");
+      expect(agentRouterSrc).toContain("upsertPrivateJaniaChannel");
+      expect(agentRouterSrc).toContain("runCtlTitleStudy");
+      expect(agentRouterSrc).toContain("runAgentIdentityCheck");
+      expect(agentRouterSrc).toContain("runAgentValuation");
+      expect(agentDashSrc).toContain("AgentCtlStudyTool");
+      expect(agentDashSrc).toContain("PrivateJaniaChannelPanel");
+      expect(suiteSrc).toContain("AgentCtlStudyTool");
+    });
+
+    it("2. Verifica versión oficial v34.41 (34.41.0), semillas v34.41 y cero acoplamiento a whatsapp-match.ts", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed41A = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-paso5-jania-privada-suite-legal-vecygroup-v34-41"
+      );
+      const seed41B = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-guia-participacion-jania-emojis-match-85-v34-41"
+      );
+      const privateJaniaSrc = fs.readFileSync("server/_core/privateJaniaService.ts", "utf-8");
+      const cloudServiceSrc = fs.readFileSync("server/_core/whatsappCloudTenantService.ts", "utf-8");
+
+      expect(seed41A?.active).toBe(true);
+      expect(seed41B?.active).toBe(true);
+      expect(privateJaniaSrc).not.toContain("whatsapp-match");
+      expect(cloudServiceSrc).not.toContain("whatsapp-match");
+      expect(VECY_VERSION).toBe("v34.41");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.41.0");
     });
   });
 });

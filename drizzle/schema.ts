@@ -682,6 +682,11 @@ export const subscriptionPlans = pgTable("subscription_plans", {
   customDomainEnabled: boolean("custom_domain_enabled").notNull().default(false),
   privateJaniaEnabled: boolean("private_jania_enabled").notNull().default(false),
   emailCampaignsMonthlyQuota: integer("email_campaigns_monthly_quota").notNull().default(0),
+  maxAiMessagesMonth: integer("max_ai_messages_month").notNull().default(0),
+  whatsappCloudByoEnabled: boolean("whatsapp_cloud_byo_enabled").notNull().default(false),
+  maxCtlStudiesMonth: integer("max_ctl_studies_month").notNull().default(0),
+  maxIdentityChecksMonth: integer("max_identity_checks_month").notNull().default(3),
+  maxValuationsMonth: integer("max_valuations_month").notNull().default(5),
   autoRepublishStore: boolean("auto_republish_store").notNull().default(true),
   featuresJson: jsonb("features_json"),
   sortOrder: integer("sort_order").notNull().default(0),
@@ -805,6 +810,10 @@ export const usageQuotas = pgTable("usage_quotas", {
   urlImportsUsed: integer("url_imports_used").default(0).notNull(),
   emailCampaignsUsed: integer("email_campaigns_used").default(0).notNull(),
   privateJaniaMessagesUsed: integer("private_jania_messages_used").default(0).notNull(),
+  aiMessagesUsed: integer("ai_messages_used").default(0).notNull(),
+  ctlStudiesUsed: integer("ctl_studies_used").default(0).notNull(),
+  identityChecksUsed: integer("identity_checks_used").default(0).notNull(),
+  valuationsUsed: integer("valuations_used").default(0).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("uq_usage_quotas_user_period").on(table.userId, table.periodKey),
@@ -1015,3 +1024,69 @@ export const emailMessages = pgTable("email_messages", {
 
 export type EmailMessage = typeof emailMessages.$inferSelect;
 export type InsertEmailMessage = typeof emailMessages.$inferInsert;
+
+/**
+ * Canales privados de JanIA por suscripción (Web Widget RAG + WhatsApp Cloud API BYO-Number) — PASO 5 (v34.41)
+ */
+export const agentJaniaChannels = pgTable("agent_jania_channels", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  channelType: varchar("channel_type", { length: 30 }).default("web_widget").notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
+  assistantName: varchar("assistant_name", { length: 120 }).default("Sofía IA").notNull(),
+  personaGender: varchar("persona_gender", { length: 20 }).default("female").notNull(),
+  personaTone: varchar("persona_tone", { length: 40 }).default("profesional").notNull(),
+  systemPromptOverride: text("system_prompt_override"),
+  welcomeMessage: text("welcome_message"),
+  includeOwnInventory: boolean("include_own_inventory").default(true).notNull(),
+  includeNetworkInventory: boolean("include_network_inventory").default(true).notNull(),
+  allowCrmCapture: boolean("allow_crm_capture").default(true).notNull(),
+  allowVisitScheduling: boolean("allow_visit_scheduling").default(true).notNull(),
+  allowNotarialCalc: boolean("allow_notarial_calc").default(true).notNull(),
+  wabaId: varchar("waba_id", { length: 120 }),
+  phoneNumberId: varchar("phone_number_id", { length: 120 }),
+  displayPhoneNumber: varchar("display_phone_number", { length: 40 }),
+  accessTokenEncrypted: text("access_token_encrypted"),
+  appSecretEncrypted: text("app_secret_encrypted"),
+  webhookVerifyTokenEncrypted: text("webhook_verify_token_encrypted"),
+  webhookVerifyTokenHash: varchar("webhook_verify_token_hash", { length: 64 }),
+  lastVerifiedAt: timestamp("last_verified_at"),
+  lastInboundAt: timestamp("last_inbound_at"),
+  lastError: text("last_error"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_agent_jania_channels_user_type").on(table.userId, table.channelType),
+  index("idx_agent_jania_channels_agency_id").on(table.agencyId),
+  index("idx_agent_jania_channels_active_type").on(table.channelType, table.isActive),
+]);
+
+export type AgentJaniaChannel = typeof agentJaniaChannels.$inferSelect;
+export type InsertAgentJaniaChannel = typeof agentJaniaChannels.$inferInsert;
+
+/**
+ * Trazabilidad auditable de herramientas legales y técnicas SaaS (Estudio CTL, Identidad, Avalúos ACM) — PASO 5 (v34.41)
+ */
+export const agentLegalToolLogs = pgTable("agent_legal_tool_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  toolType: varchar("tool_type", { length: 40 }).notNull(),
+  referenceCode: varchar("reference_code", { length: 120 }),
+  subjectLabel: varchar("subject_label", { length: 255 }),
+  verdictOrStatus: varchar("verdict_or_status", { length: 60 }),
+  summaryText: text("summary_text"),
+  pdfUrl: text("pdf_url"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_agent_legal_tool_logs_user_id").on(table.userId),
+  index("idx_agent_legal_tool_logs_agency_id").on(table.agencyId),
+  index("idx_agent_legal_tool_logs_tool_type").on(table.toolType),
+  index("idx_agent_legal_tool_logs_created_at").on(table.createdAt),
+]);
+
+export type AgentLegalToolLog = typeof agentLegalToolLogs.$inferSelect;
+export type InsertAgentLegalToolLog = typeof agentLegalToolLogs.$inferInsert;

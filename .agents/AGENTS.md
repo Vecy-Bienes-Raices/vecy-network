@@ -184,7 +184,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.40 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.41 — Noviembre 2026
+
+### Novedades v34.41 (PASO 5 — Agente JanIA Privado RAG / WhatsApp Cloud BYO-Number, Suite Legal SaaS y Base/Rutina de JanIA):
+- **Base de Datos y Cuotas IA / Legales (`drizzle/0017_private_jania_channels_and_legal_quotas.sql`, `drizzle/schema.ts`, `planEntitlements.ts`):**
+  1. Nuevas tablas `agent_jania_channels` (web widget y WhatsApp Cloud API BYO-Number con credenciales cifradas `AES-256-GCM`) y `agent_legal_tool_logs`, más cuotas mensuales `maxAiMessagesMonth` / `aiMessagesUsed`, `whatsappCloudByoEnabled`, `maxCtlStudiesMonth` / `ctlStudiesUsed`, `maxIdentityChecksMonth` / `identityChecksUsed` y `maxValuationsMonth` / `valuationsUsed` (`$0` a `$189.900 COP/mes <= $200.000`).
+- **Agente JanIA Privado & BYO-Number (`privateJaniaService.ts`, `whatsappCloudTenantService.ts`, `server/_core/index.ts`, `routers/agent.ts`, `AgentProToolsWidget.tsx`, `PrivateJaniaChannelPanel.tsx`):**
+  1. RAG multi-tenant estricto sobre inventario propio o colaborativo en PostgreSQL, liquidación notarial/crédito, captura en CRM y agendamiento de visitas respetando cuotas de mensajes IA.
+  2. Webhook `/api/whatsapp/webhook` verifica firma `X-Hub-Signature-256` de Meta y enruta canales WhatsApp Cloud API BYO-Number (Élite IA) sin modificar `server/_core/whatsapp-match.ts`.
+- **Suite Legal SaaS (`AgentCtlStudyTool.tsx`, `AgentDashboard.tsx`, `AgentProptechSuite.tsx`):** consola auditable para Estudios CTL/SNR (`ctlTitleStudyService.ts` + PDF), Identidad/Antecedentes (`executeIdentityVerification`) y Avalúos ACM (`executeMarketValuationSurvey`).
+- **Base de Conocimiento y Rutina Diaria (`founderKnowledgeService.ts`, `circuloHandler.ts`, `consultingHandler.ts`, `cronService.ts`):** 3 semillas `v34.41` y 5 pilares diarios sobre estado real de `https://vecygroup.com` vs. lanzamiento final, `@JanIA`, reacciones `👍` vs `📝`, Match `>= 85%` y sinergia de grupos oficiales y externos.
+- **Gobernanza y Validación:** `paso5PrivateJaniaAndLegalSuite.test.ts` (9/9), **Suite 227** en `regression.test.ts`, `9/9 archivos, 823/823 tests en verde` (`$0 COP`), bump `v34.41` (`34.41.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.40 — Noviembre 2026
 
 ### Novedades v34.40 (PASO 4 — CRM Inmobiliario Kanban Multi-Tenant y Gestor Automatizado de Correos con IA):
 - **Base de Datos y Cuotas (`drizzle/0016_crm_kanban_and_email_automation.sql`, `drizzle/schema.ts`, `planEntitlements.ts`):**

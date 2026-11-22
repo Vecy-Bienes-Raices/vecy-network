@@ -2,11 +2,37 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { eq, and, desc, isNull, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
-import { agencies, properties, referralLinks, users } from "../../drizzle/schema";
+import {
+  agencies,
+  agentJaniaChannels,
+  agentLegalToolLogs,
+  properties,
+  referralLinks,
+  users,
+} from "../../drizzle/schema";
 import { extractTenantSlugFromHost, isCustomWhiteLabelHost, normalizeHostname } from "../../shared/whitelabel";
 import { TRPCError } from "@trpc/server";
 import { invokeLLM } from "../_core/llm";
 import crypto from "crypto";
+import {
+  decryptChannelSecret,
+  encryptChannelSecret,
+  executePrivateJaniaTurn,
+  hashVerifyToken,
+} from "../_core/privateJaniaService";
+import {
+  assertCanConfigureWhatsAppCloudByo,
+  assertCanUseLegalTool,
+  assertCanUsePrivateJania,
+  getAiAndLegalQuotasSummary,
+  getUserEffectiveEntitlements,
+  incrementUsageQuota,
+} from "../_core/planEntitlements";
+import { resolveUserTenantScope } from "../_core/crmService";
+import { analyzeCtlFromWhatsAppInput } from "../_core/ctlTitleStudyService";
+import { persistWebGeneratedPdf } from "../_core/jania/handlers/webChatService";
+import { executeIdentityVerification } from "./agenda";
+import { executeMarketValuationSurvey } from "../_core/valuation";
 
 export const PERSONALITY_PROMPTS: Record<string, string> = {
   normal: "Mantén un tono equilibrado, claro, amable y servicial. Responde con precisión y naturalidad.",
@@ -423,76 +449,48 @@ export const agentRouter = router({
       return updated[0];
     }),
 
-  // Public: Chat con el Widget de Agente IA Personalizable del Suscriptor
+  // Public: Chat con el Widget Privado de JanIA del Suscriptor (RAG Inventario + Notarial + CRM/Agenda)
   chatWithCustomAgent: publicProcedure
     .input(z.object({
       agentUserId: z.number(),
       message: z.string().min(1).max(1500),
       propertyContext: z.string().optional(),
+      propertyId: z.number().int().positive().optional(),
+      visitorName: z.string().max(160).optional(),
+      visitorEmail: z.string().email().optional().or(z.literal("")),
+      visitorPhone: z.string().max(40).optional(),
       history: z.array(z.object({
         role: z.enum(["user", "assistant"]),
         content: z.string(),
       })).optional(),
     }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      const agentRows = await db.select()
-        .from(users)
-        .where(eq(users.id, input.agentUserId))
-        .limit(1);
-
-      const agentUser = agentRows[0];
-      const theme = (agentUser?.themeConfig as any) || {};
-      const tools = (agentUser?.activeTools as any) || {};
-      const aiConfig = tools.aiAgentWidget || {};
-
-      const botName = aiConfig.agentName || (aiConfig.gender === "male" ? "Mateo IA" : "Sofía IA");
-      const genderLabel = aiConfig.gender === "male" ? "un asesor inmobiliario masculino" : "una asesora inmobiliaria femenina";
-      const agencyName = theme.agencyName || agentUser?.name || "nuestra Agencia Inmobiliaria aliada de Vecy Network";
-      const contactPhone = theme.contactPhone || agentUser?.phone || "+57 316 6569719";
-      const contactEmail = theme.contactEmail || agentUser?.email || "";
-      const personalityKey = aiConfig.personality || "profesional";
-      const personalityDirective = PERSONALITY_PROMPTS[personalityKey] || PERSONALITY_PROMPTS.profesional;
-      const customUserPrompt = aiConfig.customPrompt ? `\nINSTRUCCIONES PERSONALIZADAS DE LA AGENCIA:\n${aiConfig.customPrompt}` : "";
-
-      const systemPrompt = `Eres ${botName}, ${genderLabel} con inteligencia artificial al servicio exclusivo de "${agencyName}".
-PERSONALIDAD ACTIVA (${personalityKey.toUpperCase()}): ${personalityDirective}
-${customUserPrompt}
-
-DATOS OFICIALES DE CONTACTO DE LA AGENCIA:
-- Agencia / Bróker: ${agencyName}
-- WhatsApp / Teléfono directo: ${contactPhone}
-${contactEmail ? `- Correo: ${contactEmail}` : ""}
-${input.propertyContext ? `\nCONTEXTO DEL INMUEBLE O PÁGINA ACTUAL:\n${input.propertyContext}` : ""}
-
-REGLAS DE ORO:
-1. Responde en máximo 3 a 4 oraciones concisas, persuasivas y útiles en español colombiano.
-2. Ayuda al visitante a resolver dudas sobre los inmuebles, financiación, ubicación, agendamiento de visitas y trámites.
-3. Invita siempre de forma natural a agendar visita en línea o escribir al WhatsApp directo (${contactPhone}).`;
-
       try {
-        const messagesPayload: any[] = [
-          { role: "system", content: systemPrompt },
-          ...(input.history || []).slice(-6).map(m => ({ role: m.role, content: m.content })),
-          { role: "user", content: input.message },
-        ];
-        const llmRes = await invokeLLM({ messages: messagesPayload });
-        const replyText = typeof llmRes?.choices?.[0]?.message?.content === "string"
-          ? llmRes.choices[0].message.content
-          : `¡Hola! Soy ${botName} de ${agencyName}. Con gusto te asesoro sobre este inmueble y agendamos tu visita. También puedes escribirnos directamente al WhatsApp ${contactPhone}.`;
-
+        const res = await executePrivateJaniaTurn({
+          agentUserId: input.agentUserId,
+          channelType: "web_widget",
+          message: input.message,
+          propertyContext: input.propertyContext,
+          propertyId: input.propertyId,
+          history: input.history,
+          visitorName: input.visitorName || undefined,
+          visitorEmail: input.visitorEmail || undefined,
+          visitorPhone: input.visitorPhone || undefined,
+        });
+        return res;
+      } catch (err: any) {
         return {
-          reply: replyText,
-          botName,
-          agencyName,
-        };
-      } catch (err) {
-        return {
-          reply: `¡Hola! Soy ${botName} de ${agencyName}. Estoy lista para ayudarte a agendar tu visita o brindarte todos los detalles técnicos en nuestro WhatsApp directo ${contactPhone}.`,
-          botName,
-          agencyName,
+          reply: "Estoy lista para asesorarte con el portafolio de la agencia o agendar tu visita personalizada.",
+          botName: "Sofía IA",
+          agencyName: "Agencia Asociada VECY",
+          matchedProperties: [],
+          notarialSummary: null,
+          financialSummary: null,
+          leadId: null,
+          visitBooked: false,
+          appointmentCode: null,
+          blockedByQuota: false,
+          quota: { used: 0, limit: 0, remaining: 0, periodKey: "" },
         };
       }
     }),
@@ -1067,6 +1065,450 @@ SEGUNDA — DISTRIBUCIÓN COLABORATIVA Y NO ELUSIÓN: Las partes intervinientes 
         success: true,
         leadId: captured.lead?.id ?? null,
         created: captured.created,
+      };
+    }),
+
+  // Protected: Consultar canales privados de JanIA (web_widget + whatsapp_cloud_api) y cuotas del plan
+  getPrivateJaniaChannels: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    const rows = await db
+      .select()
+      .from(agentJaniaChannels)
+      .where(eq(agentJaniaChannels.userId, ctx.user.id));
+
+    const quotas = await getAiAndLegalQuotasSummary(ctx.user.id, ctx.user.role);
+    const baseAppUrl = (
+      process.env.APP_URL ||
+      process.env.PUBLIC_BASE_URL ||
+      process.env.VITE_APP_URL ||
+      "https://vecygroup.com"
+    ).replace(/\/+$/, "");
+
+    return {
+      quotas,
+      webhookUrl: `${baseAppUrl}/api/whatsapp/webhook`,
+      channels: rows.map((ch) => ({
+        id: ch.id,
+        channelType: ch.channelType as "web_widget" | "whatsapp_cloud_api",
+        isActive: ch.isActive,
+        assistantName: ch.assistantName,
+        personaGender: ch.personaGender,
+        personaTone: ch.personaTone,
+        systemPromptOverride: ch.systemPromptOverride || "",
+        welcomeMessage: ch.welcomeMessage || "",
+        includeOwnInventory: ch.includeOwnInventory,
+        includeNetworkInventory: ch.includeNetworkInventory,
+        allowCrmCapture: ch.allowCrmCapture,
+        allowVisitScheduling: ch.allowVisitScheduling,
+        allowNotarialCalc: ch.allowNotarialCalc,
+        wabaId: ch.wabaId || "",
+        phoneNumberId: ch.phoneNumberId || "",
+        displayPhoneNumber: ch.displayPhoneNumber || "",
+        hasAccessToken: Boolean(ch.accessTokenEncrypted),
+        hasAppSecret: Boolean(ch.appSecretEncrypted),
+        hasVerifyToken: Boolean(ch.webhookVerifyTokenEncrypted || ch.webhookVerifyTokenHash),
+        lastVerifiedAt: ch.lastVerifiedAt,
+        lastInboundAt: ch.lastInboundAt,
+        lastError: ch.lastError,
+        updatedAt: ch.updatedAt,
+      })),
+    };
+  }),
+
+  // Protected: Configurar o actualizar canal privado de JanIA (cifrado AES-256-GCM para BYO-Number)
+  upsertPrivateJaniaChannel: protectedProcedure
+    .input(z.object({
+      channelType: z.enum(["web_widget", "whatsapp_cloud_api"]),
+      isActive: z.boolean().default(true),
+      assistantName: z.string().min(2).max(120).default("Sofía IA"),
+      personaGender: z.enum(["female", "male"]).default("female"),
+      personaTone: z.enum(["normal", "audaz", "profesional", "extrovertida", "seria", "cordial"]).default("profesional"),
+      systemPromptOverride: z.string().max(4000).optional().nullable(),
+      welcomeMessage: z.string().max(600).optional().nullable(),
+      includeOwnInventory: z.boolean().default(true),
+      includeNetworkInventory: z.boolean().default(true),
+      allowCrmCapture: z.boolean().default(true),
+      allowVisitScheduling: z.boolean().default(true),
+      allowNotarialCalc: z.boolean().default(true),
+      wabaId: z.string().max(120).optional().nullable(),
+      phoneNumberId: z.string().max(120).optional().nullable(),
+      displayPhoneNumber: z.string().max(40).optional().nullable(),
+      accessToken: z.string().max(2000).optional().nullable(),
+      appSecret: z.string().max(500).optional().nullable(),
+      webhookVerifyToken: z.string().max(300).optional().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      if (input.channelType === "whatsapp_cloud_api") {
+        await assertCanConfigureWhatsAppCloudByo(ctx.user.id, ctx.user.role);
+      } else {
+        const ent = await getUserEffectiveEntitlements(ctx.user.id, ctx.user.role);
+        if (!ent.isAdmin && !ent.plan.privateJaniaEnabled) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `El Agente JanIA Privado requiere plan Inmobiliaria Growth o Élite IA. Tu plan actual es ${ent.plan.name}.`,
+          });
+        }
+      }
+
+      const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
+      const primaryAgencyId =
+        scope.defaultAgencyId ?? scope.agencyIdsAsManager[0] ?? scope.agencyIdsAsMember[0] ?? null;
+      const [existing] = await db
+        .select()
+        .from(agentJaniaChannels)
+        .where(
+          and(
+            eq(agentJaniaChannels.userId, ctx.user.id),
+            eq(agentJaniaChannels.channelType, input.channelType),
+          ),
+        )
+        .limit(1);
+
+      const cleanAccessToken = input.accessToken?.trim() || "";
+      const cleanAppSecret = input.appSecret?.trim() || "";
+      const cleanVerifyToken = input.webhookVerifyToken?.trim() || "";
+
+      const accessTokenEncrypted = cleanAccessToken
+        ? encryptChannelSecret(cleanAccessToken)
+        : existing?.accessTokenEncrypted ?? null;
+      const appSecretEncrypted = cleanAppSecret
+        ? encryptChannelSecret(cleanAppSecret)
+        : existing?.appSecretEncrypted ?? null;
+      const webhookVerifyTokenEncrypted = cleanVerifyToken
+        ? encryptChannelSecret(cleanVerifyToken)
+        : existing?.webhookVerifyTokenEncrypted ?? null;
+      const webhookVerifyTokenHash = cleanVerifyToken
+        ? hashVerifyToken(cleanVerifyToken)
+        : existing?.webhookVerifyTokenHash ?? null;
+
+      if (input.channelType === "whatsapp_cloud_api" && input.isActive) {
+        if (!input.phoneNumberId?.trim() || !accessTokenEncrypted || !webhookVerifyTokenHash) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Para activar WhatsApp Cloud API BYO-Number debes suministrar Phone Number ID, Access Token y Verify Token.",
+          });
+        }
+      }
+
+      const values = {
+        userId: ctx.user.id,
+        agencyId: primaryAgencyId,
+        channelType: input.channelType,
+        isActive: input.isActive,
+        assistantName: input.assistantName.trim(),
+        personaGender: input.personaGender,
+        personaTone: input.personaTone,
+        systemPromptOverride: input.systemPromptOverride?.trim() || null,
+        welcomeMessage: input.welcomeMessage?.trim() || null,
+        includeOwnInventory: input.includeOwnInventory,
+        includeNetworkInventory: input.includeNetworkInventory,
+        allowCrmCapture: input.allowCrmCapture,
+        allowVisitScheduling: input.allowVisitScheduling,
+        allowNotarialCalc: input.allowNotarialCalc,
+        wabaId: input.wabaId?.trim() || null,
+        phoneNumberId: input.phoneNumberId?.trim() || null,
+        displayPhoneNumber: input.displayPhoneNumber?.trim() || null,
+        accessTokenEncrypted,
+        appSecretEncrypted,
+        webhookVerifyTokenEncrypted,
+        webhookVerifyTokenHash,
+        lastError: null,
+        updatedAt: new Date(),
+      };
+
+      if (existing) {
+        await db
+          .update(agentJaniaChannels)
+          .set(values)
+          .where(eq(agentJaniaChannels.id, existing.id));
+      } else {
+        await db.insert(agentJaniaChannels).values(values);
+      }
+
+      return {
+        success: true,
+        channelType: input.channelType,
+        hasSecretRoundTrip: Boolean(accessTokenEncrypted && decryptChannelSecret(accessTokenEncrypted)),
+      };
+    }),
+
+  // Protected: Probar consulta RAG del Agente JanIA Privado desde el Dashboard
+  testPrivateJaniaRag: protectedProcedure
+    .input(z.object({
+      message: z.string().min(2).max(1500),
+      includeOwnInventory: z.boolean().optional(),
+      includeNetworkInventory: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await assertCanUsePrivateJania(ctx.user.id, ctx.user.role, 1);
+      return await executePrivateJaniaTurn({
+        agentUserId: ctx.user.id,
+        channelType: "web_widget",
+        message: input.message,
+        includeOwnOverride: input.includeOwnInventory,
+        includeNetworkOverride: input.includeNetworkInventory,
+      });
+    }),
+
+  // Protected: Resumen de cuotas legales/IA y trazabilidad histórica del agente/agencia
+  getLegalSuiteSummary: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+    const quotas = await getAiAndLegalQuotasSummary(ctx.user.id, ctx.user.role);
+    const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
+    const primaryAgencyId =
+      scope.defaultAgencyId ?? scope.agencyIdsAsManager[0] ?? scope.agencyIdsAsMember[0] ?? null;
+
+    const logs = await db
+      .select()
+      .from(agentLegalToolLogs)
+      .where(
+        primaryAgencyId
+          ? or(
+              eq(agentLegalToolLogs.userId, ctx.user.id),
+              eq(agentLegalToolLogs.agencyId, primaryAgencyId),
+            )
+          : eq(agentLegalToolLogs.userId, ctx.user.id),
+      )
+      .orderBy(desc(agentLegalToolLogs.createdAt))
+      .limit(25);
+
+    return {
+      quotas,
+      logs,
+    };
+  }),
+
+  // Protected: Estudio de Títulos SNR/CTL desde Dashboard SaaS con control de cuota y PDF membretado
+  runCtlTitleStudy: protectedProcedure
+    .input(z.object({
+      text: z.string().max(60000).optional(),
+      fileBase64: z.string().max(15_000_000).optional(),
+      fileMimeType: z.string().max(120).optional(),
+      fileName: z.string().max(260).optional(),
+      matriculaHint: z.string().max(120).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      if (!input.text?.trim() && !input.fileBase64?.trim()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Adjunta un PDF o imagen del Certificado de Tradición y Libertad, o pega el texto SNR.",
+        });
+      }
+
+      await assertCanUseLegalTool(ctx.user.id, "ctl_study", ctx.user.role);
+      const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
+      const primaryAgencyId =
+        scope.defaultAgencyId ?? scope.agencyIdsAsManager[0] ?? scope.agencyIdsAsMember[0] ?? null;
+
+      const cleanBase64 = input.fileBase64
+        ? input.fileBase64.replace(/^data:[^;]+;base64,/i, "").trim()
+        : undefined;
+      const mime = (input.fileMimeType || "").toLowerCase();
+      const isPdf = mime.includes("pdf") || /\.pdf$/i.test(input.fileName || "");
+
+      const execution = await analyzeCtlFromWhatsAppInput({
+        text: input.text?.trim() || null,
+        pdfBuffer: isPdf ? cleanBase64 : undefined,
+        pdfMimeType: isPdf ? input.fileMimeType || "application/pdf" : undefined,
+        imageBuffer: !isPdf ? cleanBase64 : undefined,
+        requesterName: ctx.user.name || "Asesor VECY",
+      });
+
+      if (!execution.isCtlDocument || !execution.report) {
+        return {
+          success: false,
+          needsMediaGuidance: execution.needsMediaGuidance,
+          message: execution.responseText,
+          report: null,
+          pdfUrl: null,
+          quotas: await getAiAndLegalQuotasSummary(ctx.user.id, ctx.user.role),
+        };
+      }
+
+      const pdfUrl = persistWebGeneratedPdf(execution.pdfBuffer, execution.pdfFileName) || null;
+      await incrementUsageQuota(ctx.user.id, "ctlStudiesUsed", 1);
+
+      const report = execution.report;
+      await db.insert(agentLegalToolLogs).values({
+        userId: ctx.user.id,
+        agencyId: primaryAgencyId,
+        toolType: "ctl_study",
+        referenceCode: report.metadata.matriculaInmobiliaria || input.matriculaHint || null,
+        subjectLabel:
+          report.metadata.direccion ||
+          report.metadata.matriculaInmobiliaria ||
+          input.fileName ||
+          "Estudio de Títulos SNR",
+        verdictOrStatus: report.verdictCode,
+        summaryText: report.whatsappSummary.slice(0, 1200),
+        pdfUrl,
+        metadata: {
+          verdictLabel: report.verdictLabel,
+          sourceType: report.sourceType,
+          annotationsCount: report.auditoriaAnotaciones.length,
+          criticalAlerts: report.alertasCriticasVigentes.length,
+          gravamenesCount: report.gravamenesVigentes.length,
+          limitacionesCount: report.limitacionesVigentes.length,
+        },
+      });
+
+      return {
+        success: true,
+        needsMediaGuidance: false,
+        message: report.whatsappSummary,
+        report,
+        pdfUrl,
+        quotas: await getAiAndLegalQuotasSummary(ctx.user.id, ctx.user.role),
+      };
+    }),
+
+  // Protected: Verificación de Identidad y Antecedentes con control de cuota SaaS
+  runAgentIdentityCheck: protectedProcedure
+    .input(z.object({
+      tipoDocumento: z.enum(["CC", "CE", "NIT", "PAS"]),
+      numeroDocumento: z.string().min(4).max(30),
+      nombreCompleto: z.string().max(180).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await assertCanUseLegalTool(ctx.user.id, "identity_check", ctx.user.role);
+      const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
+      const primaryAgencyId =
+        scope.defaultAgencyId ?? scope.agencyIdsAsManager[0] ?? scope.agencyIdsAsMember[0] ?? null;
+      const cleanDoc = input.numeroDocumento.replace(/[^0-9A-Za-z]/g, "").trim();
+
+      const idRes = await executeIdentityVerification(
+        input.tipoDocumento,
+        cleanDoc,
+        input.nombreCompleto?.trim() || undefined,
+      );
+
+      await incrementUsageQuota(ctx.user.id, "identityChecksUsed", 1);
+
+      const statusBadge = idRes.alertaSeguridad
+        ? "ALERTA"
+        : idRes.valid && idRes.match
+          ? "VERIFICADO"
+          : idRes.valid
+            ? "OBSERVACION"
+            : "INVALIDO";
+
+      await db.insert(agentLegalToolLogs).values({
+        userId: ctx.user.id,
+        agencyId: primaryAgencyId,
+        toolType: "identity_check",
+        referenceCode: `${input.tipoDocumento} ${cleanDoc}`,
+        subjectLabel: idRes.officialName || input.nombreCompleto?.trim() || cleanDoc,
+        verdictOrStatus: statusBadge,
+        summaryText:
+          idRes.advertenciaAntecedentes ||
+          idRes.message ||
+          idRes.error ||
+          "Consulta de identidad y antecedentes completada.",
+        metadata: {
+          valid: idRes.valid,
+          match: idRes.match,
+          hasAntecedentes: Boolean(idRes.hasAntecedentes),
+          alertaSeguridad: Boolean(idRes.alertaSeguridad),
+          nameAutoCorrected: Boolean(idRes.nameAutoCorrected),
+        },
+      });
+
+      return {
+        success: true,
+        statusBadge,
+        result: idRes,
+        quotas: await getAiAndLegalQuotasSummary(ctx.user.id, ctx.user.role),
+      };
+    }),
+
+  // Protected: Avalúo Comercial ACM con control de cuota SaaS y trazabilidad
+  runAgentValuation: protectedProcedure
+    .input(z.object({
+      ciudad: z.string().min(2).max(120),
+      zonaOBarrio: z.string().min(2).max(160),
+      direccionExacta: z.string().max(220).optional(),
+      tipoInmueble: z.string().min(2).max(80).default("Apartamento"),
+      areaM2: z.number().positive().max(1_000_000),
+      antiguedadAnos: z.number().min(0).max(150).optional(),
+      piso: z.number().int().min(1).max(80).optional(),
+      garajes: z.number().int().min(0).max(30).optional(),
+      habitaciones: z.number().int().min(0).max(30).optional(),
+      banos: z.number().int().min(0).max(30).optional(),
+      estrato: z.number().int().min(1).max(6).optional(),
+      tieneAscensor: z.boolean().optional(),
+      esClubHouse: z.boolean().optional(),
+      esRemodelado: z.boolean().optional(),
+      administracionCop: z.number().min(0).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      await assertCanUseLegalTool(ctx.user.id, "valuation", ctx.user.role);
+      const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
+      const primaryAgencyId =
+        scope.defaultAgencyId ?? scope.agencyIdsAsManager[0] ?? scope.agencyIdsAsMember[0] ?? null;
+
+      const survey = executeMarketValuationSurvey({
+        ciudad: input.ciudad,
+        zonaOBarrio: input.zonaOBarrio,
+        barrio: input.zonaOBarrio,
+        direccionExacta: input.direccionExacta,
+        tipoInmueble: input.tipoInmueble,
+        areaM2: input.areaM2,
+        antiguedadAnos: input.antiguedadAnos,
+        piso: input.piso,
+        garajes: input.garajes,
+        habitaciones: input.habitaciones,
+        banos: input.banos,
+        estrato: input.estrato,
+        tieneAscensor: input.tieneAscensor,
+        esClubHouse: input.esClubHouse,
+        esRemodelado: input.esRemodelado,
+        administracionCop: input.administracionCop,
+        userId: String(ctx.user.id),
+      });
+
+      await incrementUsageQuota(ctx.user.id, "valuationsUsed", 1);
+
+      const suggestedFormatted = Math.round(survey.suggestedCommercialValue).toLocaleString("es-CO");
+      const rentFormatted = Math.round(survey.estimatedMonthlyRent).toLocaleString("es-CO");
+      await db.insert(agentLegalToolLogs).values({
+        userId: ctx.user.id,
+        agencyId: primaryAgencyId,
+        toolType: "valuation",
+        referenceCode: `${input.ciudad} · ${input.areaM2}m²`,
+        subjectLabel: `${input.tipoInmueble} · ${input.zonaOBarrio} (${input.ciudad})`,
+        verdictOrStatus: "CALCULADO",
+        summaryText: `Valor comercial sugerido: $${suggestedFormatted} COP · Canon est.: $${rentFormatted} COP/mes · Cap Rate: ${survey.estimatedCapRate}%`,
+        metadata: {
+          suggestedCommercialValue: survey.suggestedCommercialValue,
+          minClosingPrice: survey.minClosingPrice,
+          maxNegotiationPrice: survey.maxNegotiationPrice,
+          homologatedPricePerM2: survey.valorM2Estimado,
+          estimatedMonthlyRent: survey.estimatedMonthlyRent,
+          estimatedCapRate: survey.estimatedCapRate,
+        },
+      });
+
+      return {
+        success: true,
+        valuation: survey,
+        quotas: await getAiAndLegalQuotasSummary(ctx.user.id, ctx.user.role),
       };
     }),
 });

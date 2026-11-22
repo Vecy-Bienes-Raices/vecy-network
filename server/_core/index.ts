@@ -18,6 +18,7 @@ import { textToSpeechMedia } from "./whatsapp-utils";
 import { janiaMatchBot as whatsappBot, janiaMatchBot } from "./whatsapp-match";
 import "./notification";
 import { executeIdentityVerification, identityJobs, AUTHORITATIVE_FAMILY_IDENTITIES, processAndSaveSolicitud } from "../routers/agenda";
+import { verifyWhatsAppCloudWebhookGet, routeWhatsAppCloudWebhookPost } from "./whatsappCloudTenantService";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -47,8 +48,15 @@ async function startServer() {
     next();
   });
 
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
+  // Configure body parser with larger size limit for file uploads (preserva rawBody para HMAC Meta Webhook)
+  app.use(
+    express.json({
+      limit: "50mb",
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // 🩺 Endpoint de salud ultra-liviano (0ms, 0 overhead de BD) para watchdog y supervisores
@@ -65,22 +73,43 @@ async function startServer() {
   registerOAuthRoutes(app);
 
   // Webhook handler compartido (Meta espera recibir en la URL exacta configurada)
-  const webhookGetHandler = (req: any, res: any) => {
-    const mode = req.query["hub.mode"];
-    const token = req.query["hub.verify_token"];
-    const challenge = req.query["hub.challenge"];
-    if (mode === "subscribe" && token === process.env.WEBHOOK_VERIFY_TOKEN) {
-      console.log("[WEBHOOK] Webhook verified successfully.");
-      return res.status(200).send(challenge);
-    } else {
+  const webhookGetHandler = async (req: any, res: any) => {
+    try {
+      const mode = typeof req.query["hub.mode"] === "string" ? req.query["hub.mode"] : undefined;
+      const token = typeof req.query["hub.verify_token"] === "string" ? req.query["hub.verify_token"] : undefined;
+      const challenge = typeof req.query["hub.challenge"] === "string" ? req.query["hub.challenge"] : "";
+      const verification = await verifyWhatsAppCloudWebhookGet({ mode, token, challenge });
+      if (verification.verified) {
+        console.log(
+          "[WEBHOOK] Webhook verified successfully.",
+          verification.matchedTenantUserId ? `tenant=${verification.matchedTenantUserId}` : "global",
+        );
+        return res.status(200).send(verification.challenge ?? challenge);
+      }
       console.warn("[WEBHOOK] Webhook verification failed.");
       return res.sendStatus(403);
+    } catch (err: any) {
+      console.error("[WEBHOOK-ERROR] Error verificando webhook:", err?.message || err);
+      return res.sendStatus(500);
     }
   };
 
   const webhookPostHandler = async (req: any, res: any) => {
     try {
       res.status(200).send("EVENT_RECEIVED");
+      if (req.body && Array.isArray(req.body.entry) && req.body.entry.length > 0) {
+        const signatureHeader =
+          typeof req.headers["x-hub-signature-256"] === "string"
+            ? req.headers["x-hub-signature-256"]
+            : undefined;
+        void routeWhatsAppCloudWebhookPost({
+          payload: req.body,
+          rawBody: req.rawBody,
+          signatureHeader,
+        }).catch((err: any) => {
+          console.error("[WHATSAPP-CLOUD-BYO] Error enrutando webhook entrante:", err?.message || err);
+        });
+      }
     } catch (err: any) {
       console.error("[WEBHOOK-ERROR] Exception in webhook endpoint:", err);
     }

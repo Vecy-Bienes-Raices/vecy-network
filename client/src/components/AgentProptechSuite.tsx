@@ -6,6 +6,7 @@ import {
   ArrowRight, SlidersHorizontal, Download, Building2, DollarSign, Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
+import AgentCtlStudyTool from '@/components/proptech/AgentCtlStudyTool';
 
 interface AgentProptechSuiteProps {
   agentUserId?: number;
@@ -38,7 +39,7 @@ export default function AgentProptechSuite({
   const showStaging = isDashboardPreview || activeTools?.virtualStaging?.enabled !== false;
   const showContracts = isDashboardPreview || activeTools?.contractGenerator?.enabled !== false;
 
-  const [activeTab, setActiveTab] = useState<'qrador' | 'valuator' | 'staging' | 'contracts'>('qrador');
+  const [activeTab, setActiveTab] = useState<'qrador' | 'valuator' | 'staging' | 'contracts' | 'legal_suite'>('qrador');
 
   // ── 1. Estado Buscador Semántico & Curador IA (Estilo Qrador) ──
   const [searchQuery, setSearchQuery] = useState(
@@ -256,6 +257,25 @@ export default function AgentProptechSuite({
             >
               <FileSignature className="w-3.5 h-3.5" />
               Contratos Digitales Ley 527
+            </button>
+          )}
+          {isDashboardPreview && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('legal_suite')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all border ${
+                activeTab === 'legal_suite'
+                  ? 'text-black shadow-lg'
+                  : 'bg-white/5 text-white/70 border-white/10 hover:text-white'
+              }`}
+              style={
+                activeTab === 'legal_suite'
+                  ? { backgroundColor: primaryColor, borderColor: primaryColor }
+                  : undefined
+              }
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Suite Legal SaaS (CTL / ID / ACM)
             </button>
           )}
         </div>
@@ -1003,6 +1023,12 @@ export default function AgentProptechSuite({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {isDashboardPreview && activeTab === 'legal_suite' && (
+        <div className="p-6">
+          <AgentCtlStudyTool />
         </div>
       )}
     </div>

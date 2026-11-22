@@ -14,6 +14,7 @@ import {
 export const MAX_MONTHLY_PLAN_PRICE_COP = 200_000;
 
 export type PlanCode = "free" | "agente_pro" | "inmobiliaria_growth" | "elite_ia";
+export type LegalToolType = "ctl_study" | "identity_check" | "valuation";
 
 export interface SubscriptionPlanDefinition {
   code: PlanCode;
@@ -29,6 +30,11 @@ export interface SubscriptionPlanDefinition {
   privateJaniaEnabled: boolean;
   emailCampaignsMonthlyQuota: number;
   maxEmailsPerMonth: number;
+  maxAiMessagesMonth: number;
+  whatsappCloudByoEnabled: boolean;
+  maxCtlStudiesMonth: number;
+  maxIdentityChecksMonth: number;
+  maxValuationsMonth: number;
   autoRepublishStore: boolean;
   features: string[];
   sortOrder: number;
@@ -51,6 +57,11 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
     privateJaniaEnabled: false,
     emailCampaignsMonthlyQuota: 0,
     maxEmailsPerMonth: 0,
+    maxAiMessagesMonth: 0,
+    whatsappCloudByoEnabled: false,
+    maxCtlStudiesMonth: 0,
+    maxIdentityChecksMonth: 3,
+    maxValuationsMonth: 5,
     autoRepublishStore: true,
     features: [
       "Hasta 5 inmuebles activos",
@@ -77,6 +88,11 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
     privateJaniaEnabled: false,
     emailCampaignsMonthlyQuota: 100,
     maxEmailsPerMonth: 100,
+    maxAiMessagesMonth: 0,
+    whatsappCloudByoEnabled: false,
+    maxCtlStudiesMonth: 5,
+    maxIdentityChecksMonth: 25,
+    maxValuationsMonth: 30,
     autoRepublishStore: true,
     features: [
       "Hasta 40 inmuebles activos y 50 requerimientos",
@@ -84,6 +100,7 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
       "30 importaciones por URL/mes (Wasi, Habi, Fincaraíz, Metrocuadrado, Ciencuadras)",
       "Republicación automática bidireccional en VECY TIENDA",
       "Hasta 100 correos CRM/mes con seguimiento de leads",
+      "5 Estudios de Títulos SNR/CTL + 25 verificaciones de identidad/mes",
     ],
     sortOrder: 2,
     isActive: true,
@@ -103,14 +120,19 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
     privateJaniaEnabled: true,
     emailCampaignsMonthlyQuota: 500,
     maxEmailsPerMonth: 500,
+    maxAiMessagesMonth: 1000,
+    whatsappCloudByoEnabled: false,
+    maxCtlStudiesMonth: 25,
+    maxIdentityChecksMonth: 100,
+    maxValuationsMonth: 120,
     autoRepublishStore: true,
     features: [
       "Inmuebles y requerimientos ilimitados",
       "Subdominio vecygroup.com o dominio propio",
       "Hasta 5 asesores con RBAC multi-tenant",
       "150 importaciones por URL/mes",
-      "Agente JanIA privado para atención y filtrado de tus clientes",
-      "Hasta 500 correos CRM/mes automatizados con IA",
+      "Agente JanIA privado RAG en tu portal (1.000 mensajes IA/mes)",
+      "Hasta 500 correos CRM/mes + 25 Estudios CTL SNR/mes",
     ],
     sortOrder: 3,
     isActive: true,
@@ -130,13 +152,18 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
     privateJaniaEnabled: true,
     emailCampaignsMonthlyQuota: 1500,
     maxEmailsPerMonth: 1500,
+    maxAiMessagesMonth: 5000,
+    whatsappCloudByoEnabled: true,
+    maxCtlStudiesMonth: 100,
+    maxIdentityChecksMonth: 300,
+    maxValuationsMonth: 500,
     autoRepublishStore: true,
     features: [
       "Todo ilimitado: inmuebles, requerimientos e importaciones por URL",
       "Hasta 15 asientos de equipo con roles owner/admin/agent",
-      "Agente JanIA privada dedicada 24/7 en tu portal y WhatsApp",
+      "Agente JanIA privada RAG (5.000 mensajes/mes) + WhatsApp Cloud API propio (BYO-Number)",
       "Hasta 1.500 correos CRM automatizados con IA al mes",
-      "Prioridad alta en Mesa de Coincidencias >= 85% y soporte preferencial",
+      "100 Estudios CTL SNR + 300 verificaciones identidad + 500 avalúos ACM/mes",
     ],
     sortOrder: 4,
     isActive: true,
@@ -192,6 +219,26 @@ export async function listSubscriptionPlans(): Promise<SubscriptionPlanDefinitio
         privateJaniaEnabled: row.privateJaniaEnabled,
         emailCampaignsMonthlyQuota: row.emailCampaignsMonthlyQuota,
         maxEmailsPerMonth: row.emailCampaignsMonthlyQuota,
+        maxAiMessagesMonth:
+          typeof (row as any).maxAiMessagesMonth === "number"
+            ? (row as any).maxAiMessagesMonth
+            : fallback.maxAiMessagesMonth,
+        whatsappCloudByoEnabled:
+          typeof (row as any).whatsappCloudByoEnabled === "boolean"
+            ? (row as any).whatsappCloudByoEnabled
+            : fallback.whatsappCloudByoEnabled,
+        maxCtlStudiesMonth:
+          typeof (row as any).maxCtlStudiesMonth === "number"
+            ? (row as any).maxCtlStudiesMonth
+            : fallback.maxCtlStudiesMonth,
+        maxIdentityChecksMonth:
+          typeof (row as any).maxIdentityChecksMonth === "number"
+            ? (row as any).maxIdentityChecksMonth
+            : fallback.maxIdentityChecksMonth,
+        maxValuationsMonth:
+          typeof (row as any).maxValuationsMonth === "number"
+            ? (row as any).maxValuationsMonth
+            : fallback.maxValuationsMonth,
         autoRepublishStore: row.autoRepublishStore,
         features: normalizeFeaturesJson(row.featuresJson, fallback.features),
         sortOrder: row.sortOrder,
@@ -220,6 +267,10 @@ export interface UserEntitlementsSnapshot {
     urlImportsUsed: number;
     emailCampaignsUsed: number;
     privateJaniaMessagesUsed: number;
+    aiMessagesUsed: number;
+    ctlStudiesUsed: number;
+    identityChecksUsed: number;
+    valuationsUsed: number;
   };
   defaultAgencyId: number | null;
 }
@@ -246,6 +297,10 @@ export async function getUserEffectiveEntitlements(
         urlImportsUsed: 0,
         emailCampaignsUsed: 0,
         privateJaniaMessagesUsed: 0,
+        aiMessagesUsed: 0,
+        ctlStudiesUsed: 0,
+        identityChecksUsed: 0,
+        valuationsUsed: 0,
       },
       defaultAgencyId: null,
     };
@@ -323,6 +378,13 @@ export async function getUserEffectiveEntitlements(
       urlImportsUsed: quotaRow?.urlImportsUsed ?? 0,
       emailCampaignsUsed: quotaRow?.emailCampaignsUsed ?? 0,
       privateJaniaMessagesUsed: quotaRow?.privateJaniaMessagesUsed ?? 0,
+      aiMessagesUsed: Math.max(
+        quotaRow?.aiMessagesUsed ?? 0,
+        quotaRow?.privateJaniaMessagesUsed ?? 0,
+      ),
+      ctlStudiesUsed: quotaRow?.ctlStudiesUsed ?? 0,
+      identityChecksUsed: quotaRow?.identityChecksUsed ?? 0,
+      valuationsUsed: quotaRow?.valuationsUsed ?? 0,
     },
     defaultAgencyId,
   };
@@ -439,14 +501,199 @@ export async function getEmailQuotaSummary(userId: number, role?: string) {
   };
 }
 
+export function checkAiMessageQuotaLimit(params: {
+  isAdmin: boolean;
+  privateJaniaEnabled: boolean;
+  maxAiMessagesMonth: number;
+  used: number;
+  requestedCount?: number;
+}): { allowed: boolean; remaining: number; reason?: string } {
+  const requested = Math.max(1, params.requestedCount ?? 1);
+  if (params.isAdmin) {
+    return { allowed: true, remaining: Number.POSITIVE_INFINITY };
+  }
+  if (!params.privateJaniaEnabled || params.maxAiMessagesMonth === 0) {
+    return {
+      allowed: false,
+      remaining: 0,
+      reason:
+        "Tu plan actual no incluye Agente JanIA Privado. Actualiza a Vecy Inmobiliaria Growth o Élite IA en /planes.",
+    };
+  }
+  if (params.maxAiMessagesMonth < 0) {
+    return { allowed: true, remaining: Number.POSITIVE_INFINITY };
+  }
+  const remaining = Math.max(0, params.maxAiMessagesMonth - Math.max(0, params.used));
+  if (remaining < requested) {
+    return {
+      allowed: false,
+      remaining,
+      reason: `Alcanzaste tu cuota mensual de ${params.maxAiMessagesMonth} mensajes IA (${params.used}/${params.maxAiMessagesMonth} usados). Mejora tu plan en /planes.`,
+    };
+  }
+  return { allowed: true, remaining };
+}
+
+export async function assertCanUsePrivateJania(
+  userId: number,
+  role?: string,
+  requestedCount: number = 1,
+): Promise<UserEntitlementsSnapshot> {
+  const ent = await getUserEffectiveEntitlements(userId, role);
+  const check = checkAiMessageQuotaLimit({
+    isAdmin: ent.isAdmin,
+    privateJaniaEnabled: ent.plan.privateJaniaEnabled,
+    maxAiMessagesMonth: ent.plan.maxAiMessagesMonth,
+    used: ent.usage.aiMessagesUsed,
+    requestedCount,
+  });
+  if (!check.allowed) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: check.reason || "Cuota mensual de mensajes IA agotada.",
+    });
+  }
+  return ent;
+}
+
+export async function assertCanConfigureWhatsAppCloudByo(
+  userId: number,
+  role?: string,
+): Promise<UserEntitlementsSnapshot> {
+  const ent = await getUserEffectiveEntitlements(userId, role);
+  if (ent.isAdmin || ent.plan.whatsappCloudByoEnabled) {
+    return ent;
+  }
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: `La conexión de WhatsApp Cloud API con número propio (BYO-Number) es exclusiva del plan Vecy Élite IA. Tu plan actual es ${ent.plan.name}.`,
+  });
+}
+
+export function checkLegalToolQuotaLimit(params: {
+  isAdmin: boolean;
+  toolType: LegalToolType;
+  maxAllowed: number;
+  used: number;
+  requestedCount?: number;
+}): { allowed: boolean; remaining: number; reason?: string } {
+  const requested = Math.max(1, params.requestedCount ?? 1);
+  const labels: Record<LegalToolType, string> = {
+    ctl_study: "Estudios de Títulos SNR/CTL",
+    identity_check: "Verificaciones de Identidad y Antecedentes",
+    valuation: "Avalúos Comerciales ACM",
+  };
+  if (params.isAdmin || params.maxAllowed < 0) {
+    return { allowed: true, remaining: Number.POSITIVE_INFINITY };
+  }
+  if (params.maxAllowed === 0) {
+    return {
+      allowed: false,
+      remaining: 0,
+      reason: `Tu plan actual no incluye ${labels[params.toolType]} en la Suite Legal SaaS. Mejora tu plan en /planes.`,
+    };
+  }
+  const remaining = Math.max(0, params.maxAllowed - Math.max(0, params.used));
+  if (remaining < requested) {
+    return {
+      allowed: false,
+      remaining,
+      reason: `Alcanzaste tu cuota mensual de ${params.maxAllowed} ${labels[params.toolType]} (${params.used}/${params.maxAllowed} usados). Mejora tu plan en /planes.`,
+    };
+  }
+  return { allowed: true, remaining };
+}
+
+export async function assertCanUseLegalTool(
+  userId: number,
+  toolType: LegalToolType,
+  role?: string,
+): Promise<UserEntitlementsSnapshot> {
+  const ent = await getUserEffectiveEntitlements(userId, role);
+  const maxAllowed =
+    toolType === "ctl_study"
+      ? ent.plan.maxCtlStudiesMonth
+      : toolType === "identity_check"
+        ? ent.plan.maxIdentityChecksMonth
+        : ent.plan.maxValuationsMonth;
+  const used =
+    toolType === "ctl_study"
+      ? ent.usage.ctlStudiesUsed
+      : toolType === "identity_check"
+        ? ent.usage.identityChecksUsed
+        : ent.usage.valuationsUsed;
+
+  const check = checkLegalToolQuotaLimit({
+    isAdmin: ent.isAdmin,
+    toolType,
+    maxAllowed,
+    used,
+  });
+  if (!check.allowed) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: check.reason || "Cuota mensual de Suite Legal agotada.",
+    });
+  }
+  return ent;
+}
+
+export async function getAiAndLegalQuotasSummary(userId: number, role?: string) {
+  const ent = await getUserEffectiveEntitlements(userId, role);
+  const aiLimit = ent.isAdmin ? -1 : ent.plan.privateJaniaEnabled ? ent.plan.maxAiMessagesMonth : 0;
+  const ctlLimit = ent.isAdmin ? -1 : ent.plan.maxCtlStudiesMonth;
+  const idLimit = ent.isAdmin ? -1 : ent.plan.maxIdentityChecksMonth;
+  const valLimit = ent.isAdmin ? -1 : ent.plan.maxValuationsMonth;
+
+  const computeRemaining = (limit: number, used: number) =>
+    limit < 0 ? -1 : Math.max(0, limit - used);
+
+  return {
+    planCode: ent.plan.code,
+    planName: ent.plan.name,
+    isAdmin: ent.isAdmin,
+    periodKey: ent.periodKey,
+    privateJaniaEnabled: ent.isAdmin || ent.plan.privateJaniaEnabled,
+    whatsappCloudByoEnabled: ent.isAdmin || ent.plan.whatsappCloudByoEnabled,
+    aiMessages: {
+      limit: aiLimit,
+      used: ent.usage.aiMessagesUsed,
+      remaining: computeRemaining(aiLimit, ent.usage.aiMessagesUsed),
+    },
+    ctlStudies: {
+      limit: ctlLimit,
+      used: ent.usage.ctlStudiesUsed,
+      remaining: computeRemaining(ctlLimit, ent.usage.ctlStudiesUsed),
+    },
+    identityChecks: {
+      limit: idLimit,
+      used: ent.usage.identityChecksUsed,
+      remaining: computeRemaining(idLimit, ent.usage.identityChecksUsed),
+    },
+    valuations: {
+      limit: valLimit,
+      used: ent.usage.valuationsUsed,
+      remaining: computeRemaining(valLimit, ent.usage.valuationsUsed),
+    },
+  };
+}
+
 export async function incrementUsageQuota(
   userId: number,
-  field: "urlImportsUsed" | "emailCampaignsUsed" | "privateJaniaMessagesUsed",
+  field:
+    | "urlImportsUsed"
+    | "emailCampaignsUsed"
+    | "privateJaniaMessagesUsed"
+    | "aiMessagesUsed"
+    | "ctlStudiesUsed"
+    | "identityChecksUsed"
+    | "valuationsUsed",
   amount: number = 1,
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
   const periodKey = getPeriodKey();
+  const isAiField = field === "privateJaniaMessagesUsed" || field === "aiMessagesUsed";
 
   const existing = await db
     .select()
@@ -460,12 +707,23 @@ export async function incrementUsageQuota(
       periodKey,
       urlImportsUsed: field === "urlImportsUsed" ? amount : 0,
       emailCampaignsUsed: field === "emailCampaignsUsed" ? amount : 0,
-      privateJaniaMessagesUsed: field === "privateJaniaMessagesUsed" ? amount : 0,
+      privateJaniaMessagesUsed: isAiField ? amount : 0,
+      aiMessagesUsed: isAiField ? amount : 0,
+      ctlStudiesUsed: field === "ctlStudiesUsed" ? amount : 0,
+      identityChecksUsed: field === "identityChecksUsed" ? amount : 0,
+      valuationsUsed: field === "valuationsUsed" ? amount : 0,
     });
     return;
   }
 
   const current = existing[0];
+  const nextAiCount = isAiField
+    ? Math.max(current.aiMessagesUsed, current.privateJaniaMessagesUsed) + amount
+    : current.aiMessagesUsed;
+  const nextPrivateJaniaCount = isAiField
+    ? Math.max(current.aiMessagesUsed, current.privateJaniaMessagesUsed) + amount
+    : current.privateJaniaMessagesUsed;
+
   await db
     .update(usageQuotas)
     .set({
@@ -473,10 +731,14 @@ export async function incrementUsageQuota(
         field === "urlImportsUsed" ? current.urlImportsUsed + amount : current.urlImportsUsed,
       emailCampaignsUsed:
         field === "emailCampaignsUsed" ? current.emailCampaignsUsed + amount : current.emailCampaignsUsed,
-      privateJaniaMessagesUsed:
-        field === "privateJaniaMessagesUsed"
-          ? current.privateJaniaMessagesUsed + amount
-          : current.privateJaniaMessagesUsed,
+      privateJaniaMessagesUsed: nextPrivateJaniaCount,
+      aiMessagesUsed: nextAiCount,
+      ctlStudiesUsed:
+        field === "ctlStudiesUsed" ? current.ctlStudiesUsed + amount : current.ctlStudiesUsed,
+      identityChecksUsed:
+        field === "identityChecksUsed" ? current.identityChecksUsed + amount : current.identityChecksUsed,
+      valuationsUsed:
+        field === "valuationsUsed" ? current.valuationsUsed + amount : current.valuationsUsed,
       updatedAt: new Date(),
     })
     .where(eq(usageQuotas.id, current.id));

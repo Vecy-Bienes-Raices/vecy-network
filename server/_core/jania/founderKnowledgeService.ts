@@ -1094,6 +1094,42 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "PASO 4 v34.40: CRM Inmobiliario Kanban + Gestor Automatizado de Correos con IA, migración 0016, cifrado SMTP AES-256-GCM, aislamiento multi-tenant y cron 5min.",
     createdAt: "2026-11-22T20:15:00.000Z",
     active: true
+  },
+  {
+    id: "seed-paso5-jania-privada-suite-legal-vecygroup-v34-41",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "PASO 5 — Estado Real Activo en vecygroup.com, JanIA Privada, Suite Legal SaaS y Planes < $200.000 COP (v34.41)",
+    directive:
+      "Al explicar el proyecto VECY BIENES RAÍCES en https://vecygroup.com, distingue con transparencia total: (1) ACTIVO HOY EN PRODUCCIÓN: Portal Marca Blanca para agentes/agencias (/s/:slug y *.vecygroup.com), VECY TIENDA (/ofertas), Tienda de Requerimientos con contacto blindado (/demandas), Importador Inteligente por URL en 2 pasos (sin copiar fotos/videos de terceros; subida manual en /uploads), CRM Kanban Multi-Tenant, Gestor Automatizado de Correos con IA, Agente JanIA Privado con RAG sobre inventario propio/colaborativo + WhatsApp Cloud API BYO-Number (Plan Élite IA), Suite Legal SaaS (Estudios de Títulos SNR/CTL, Verificación de Identidad/Antecedentes, Avalúos ACM Fitto y Corvini) y planes transparentes en COP desde $0 hasta menos de $200.000 COP/mes (Semilla $0, Agente Pro $69.900, Inmobiliaria Growth $129.900, Élite IA $189.900); (2) EN LANZAMIENTO FINAL: activación comercial definitiva de cobros en producción vía Wompi.",
+    rawText:
+      "PASO 5 v34.41: Agente JanIA Privado RAG + WhatsApp Cloud API BYO-Number + Suite Legal SaaS + estado real activo en vecygroup.com y planes < $200.000 COP/mes.",
+    createdAt: "2026-11-22T22:00:00.000Z",
+    active: true
+  },
+  {
+    id: "seed-guia-participacion-jania-emojis-match-85-v34-41",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Guía de Participación con @JanIA, Reacciones por Oferta/Demanda y Precisión Match >= 85% (v34.41)",
+    directive:
+      "Enseña siempre a los colegas cómo participar con máxima efectividad en los grupos y con JanIA: (1) En Grupo 2 (Soporte Legal, Tributario, Avalúos y Marketing) y Grupo 3 (Foro Proyecto VECY), pueden preguntar libremente citando o arrobando a @JanIA; (2) En Grupo 1 (VECY INMO OFERTAS Y DEMANDAS COLOMBIA) y en grupos aliados externos, JanIA guarda silencio en texto para no saturar, lee texto/voz/imagen/PDF/enlaces y reacciona con 👍 (u 👌/🔀) cuando ingesta una OFERTA y con 📝 (o ✏️/🔄) cuando ingesta una DEMANDA; (3) Todo inmueble o requerimiento válido queda indexado en la base central PostgreSQL, entra de inmediato a la Mesa de Coincidencias (Match >= 85%) y se visualiza en VECY TIENDA (/ofertas) y Tienda de Requerimientos (/demandas) de https://vecygroup.com; (4) Para lograr Matches de alta precisión (>= 85%), todo requerimiento debe especificar: tipo exacto de inmueble, negocio (compra/arriendo/permuta), ciudad y barrio/sector, presupuesto máximo en COP, área mínima en m², habitaciones exactas, baños, garajes y forma de pago.",
+    rawText:
+      "Guía v34.41: Participación citando/arrobando @JanIA, reacción 👍 oferta vs 📝 demanda, envío a Mesa de Coincidencias/Tiendas y redacción completa para Match >= 85%.",
+    createdAt: "2026-11-22T22:01:00.000Z",
+    active: true
+  },
+  {
+    id: "seed-rutina-diaria-comunidad-grupos-oficiales-externos-v34-41",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Rutina Diaria de Valor Inmobiliario y Complementariedad de Grupos Oficiales y Externos (v34.41)",
+    directive:
+      "Cada rutina diaria e interacción comunitaria de JanIA debe rotar temas de alto valor para agentes inmobiliarios colombianos: noticias recientes del sector, enseñanzas prácticas de corretaje y derecho notarial, avances reales de IA PropTech aplicada a finca raíz, la propuesta colaborativa VECY (40/20/40 y planes $0 a $189.900/mes) y cómo los grupos oficiales y externos se complementan (los grupos externos y Grupo 1 alimentan ofertas y demandas en silencio hacia el motor de Match >= 85% con contacto bilateral por DM, mientras Grupo 2 y Grupo 3 brindan mentoría jurídica/ACM/tributaria y debate comunitario), invitando cordialmente a los colegas a compartir sus inmuebles, requerimientos y experiencias.",
+    rawText:
+      "Rutina v34.41: Contenido diario rotativo (noticias, enseñanzas, IA, propuesta VECY y sinergia grupos oficiales vs externos).",
+    createdAt: "2026-11-22T22:02:00.000Z",
+    active: true
   }
 ];
 
