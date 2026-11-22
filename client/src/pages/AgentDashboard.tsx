@@ -63,6 +63,7 @@ export default function AgentDashboard() {
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [nit, setNit] = useState("");
+  const [showNetworkCatalog, setShowNetworkCatalog] = useState(true);
 
   // Estados de Herramientas Pro (Vecy Agenda Pro + Widget Agente IA Personalizable)
   const [agendaProEnabled, setAgendaProEnabled] = useState(true);
@@ -102,6 +103,7 @@ export default function AgentDashboard() {
       setContactPhone(th.contactPhone || myBrand.phone || "");
       setContactEmail(th.contactEmail || myBrand.email || "");
       setNit(th.nit || "");
+      setShowNetworkCatalog(th.showNetworkCatalog !== false);
 
       if (tl.agendaPro) {
         setAgendaProEnabled(tl.agendaPro.enabled ?? true);
@@ -167,6 +169,7 @@ export default function AgentDashboard() {
         contactPhone,
         contactEmail,
         nit,
+        showNetworkCatalog,
       },
       activeTools: {
         agendaPro: {
@@ -620,7 +623,7 @@ export default function AgentDashboard() {
                   </label>
                   <div className="flex items-center bg-background border border-border rounded-xl overflow-hidden">
                     <span className="px-3 text-xs text-muted-foreground font-mono bg-secondary/40 py-3 border-r border-border">
-                      vecy.co/s/
+                      https://
                     </span>
                     <input
                       type="text"
@@ -629,7 +632,15 @@ export default function AgentDashboard() {
                       onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
                       className="flex-1 bg-transparent px-3 py-3 text-sm text-foreground font-mono outline-none"
                     />
+                    <span className="px-3 text-xs text-muted-foreground font-mono bg-secondary/40 py-3 border-l border-border">
+                      .vecygroup.com
+                    </span>
                   </div>
+                  {subdomain && (
+                    <p className="text-[11px] text-primary font-mono">
+                      Disponible en https://{subdomain}.vecygroup.com y /s/{subdomain}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -737,6 +748,25 @@ export default function AgentDashboard() {
                     onChange={(e) => setSlogan(e.target.value)}
                     className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary"
                   />
+                </div>
+
+                <div className="md:col-span-2 lg:col-span-3">
+                  <label className="flex items-center gap-3 p-4 rounded-xl bg-secondary/30 border border-border cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showNetworkCatalog}
+                      onChange={(e) => setShowNetworkCatalog(e.target.checked)}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                    <div className="text-xs">
+                      <span className="font-bold text-foreground block">
+                        Incluir catálogo colaborativo de la red en mi portal marca blanca
+                      </span>
+                      <span className="text-muted-foreground">
+                        Si lo activas, tus visitantes podrán ver tus inmuebles exclusivos y también opciones aliadas 40/20/40 bajo tu marca. Si lo desactivas, se mostrará únicamente tu portafolio propio.
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
 

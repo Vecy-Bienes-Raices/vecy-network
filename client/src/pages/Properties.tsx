@@ -27,7 +27,9 @@ import {
   Home, 
   Briefcase, 
   MapPin, 
-  RefreshCw 
+  RefreshCw,
+  Link2,
+  Camera
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -39,25 +41,31 @@ type FilterType =
   | 'all' 
   | 'house' 
   | 'apartment' 
+  | 'loft'
   | 'office' 
+  | 'consultorio'
   | 'commercial' 
   | 'land' 
   | 'building' 
   | 'farm' 
   | 'warehouse' 
-  | 'hotel';
+  | 'hotel'
+  | 'cabin';
 
 const FILTER_CONFIG: { id: FilterType; label: string }[] = [
   { id: 'all', label: 'Todos' },
   { id: 'house', label: 'Casas' },
   { id: 'apartment', label: 'Apartamentos' },
+  { id: 'loft', label: 'Apartaestudios / Lofts' },
   { id: 'office', label: 'Oficinas' },
-  { id: 'commercial', label: 'Comercial' },
+  { id: 'consultorio', label: 'Consultorios' },
+  { id: 'commercial', label: 'Locales' },
   { id: 'land', label: 'Lotes / Terrenos' },
   { id: 'building', label: 'Edificios' },
   { id: 'farm', label: 'Fincas' },
   { id: 'warehouse', label: 'Bodegas' },
   { id: 'hotel', label: 'Hoteles' },
+  { id: 'cabin', label: 'Cabañas' },
 ];
 
 const SUGGESTED_NEIGHBORHOODS = [
@@ -76,13 +84,21 @@ export default function Properties() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [debouncedCity, setDebouncedCity] = useState('');
+  const [onlyWithPhotos, setOnlyWithPhotos] = useState(false);
   const [transactionFilter, setTransactionFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc' | 'area-desc'>('default');
+  const [sortBy, setSortBy] = useState<'recommended' | 'recent' | 'price_asc' | 'price_desc' | 'area_desc'>('recommended');
   const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [publishTab, setPublishTab] = useState<'oferta' | 'demanda'>('oferta');
+  const [publishAssistantTab, setPublishAssistantTab] = useState<'url' | 'text' | 'pdf'>('text');
   const { user } = useAuth();
 
-  const handleOpenPublishOffer = () => {
+  // Paginación Doctrinal y Selector de Lotes por Página (del lado del servidor)
+  const [pageSize, setPageSize] = useState<number>(9);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  const handleOpenPublishOffer = (assistantTab: 'url' | 'text' | 'pdf' = 'text') => {
     if (!user) {
       try {
         localStorage.setItem('vecy_login_return_url', '/ofertas');
@@ -92,57 +108,38 @@ export default function Properties() {
       return;
     }
     setPublishTab('oferta');
+    setPublishAssistantTab(assistantTab);
     setIsPublishOpen(true);
   };
 
-  // Debounce para búsqueda en tiempo real
+  // Debounce para búsqueda y ciudad en tiempo real
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchQuery.trim());
+      setDebouncedCity(cityFilter.trim());
     }, 280);
     return () => clearTimeout(handler);
-  }, [searchQuery]);
-
-  // Consulta al backend pasando los filtros a PostgreSQL (límite 150)
-  const { data: propertiesData, isLoading, isFetching, refetch } = trpc.properties.list.useQuery({
-    type: activeFilter === 'all' ? undefined : activeFilter,
-    transactionType: transactionFilter === 'all' ? undefined : transactionFilter,
-    search: debouncedSearch || undefined,
-    limit: 150,
-  });
-
-  // Ordenamiento en cliente del lote traído
-  const displayProperties = useMemo(() => {
-    if (!propertiesData) return [];
-    let list = [...propertiesData];
-
-    if (sortBy === 'price-asc') {
-      list.sort((a, b) => Number(a.price) - Number(b.price));
-    } else if (sortBy === 'price-desc') {
-      list.sort((a, b) => Number(b.price) - Number(a.price));
-    } else if (sortBy === 'area-desc') {
-      list.sort((a, b) => (Number(b.areaTotal) || 0) - (Number(a.areaTotal) || 0));
-    }
-
-    return list;
-  }, [propertiesData, sortBy]);
-
-  // Paginación Doctrinal y Selector de Lotes por Página
-  const [pageSize, setPageSize] = useState<number>(9);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  }, [searchQuery, cityFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeFilter, transactionFilter, debouncedSearch, sortBy, pageSize]);
+  }, [activeFilter, transactionFilter, debouncedSearch, debouncedCity, onlyWithPhotos, sortBy, pageSize]);
 
-  const totalItems = displayProperties.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  // Consulta paginada en PostgreSQL priorizando publicaciones completas con fotos propias
+  const { data: catalogData, isLoading, isFetching, refetch } = trpc.properties.listCatalog.useQuery({
+    type: activeFilter === 'all' ? undefined : activeFilter,
+    transactionType: transactionFilter === 'all' ? undefined : transactionFilter,
+    search: debouncedSearch || undefined,
+    city: debouncedCity || undefined,
+    onlyWithPhotos: onlyWithPhotos || undefined,
+    sortBy,
+    page: currentPage,
+    pageSize,
+  });
 
-  const paginatedProperties = useMemo(() => {
-    if (pageSize >= totalItems) return displayProperties;
-    const startIndex = (currentPage - 1) * pageSize;
-    return displayProperties.slice(startIndex, startIndex + pageSize);
-  }, [displayProperties, currentPage, pageSize, totalItems]);
+  const paginatedProperties = useMemo(() => catalogData?.items || [], [catalogData]);
+  const totalItems = catalogData?.total ?? paginatedProperties.length;
+  const totalPages = catalogData?.totalPages ?? 1;
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
@@ -185,17 +182,26 @@ export default function Properties() {
                   Ofertas Activas:
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-xs bg-primary/20 text-primary font-black">
-                  {propertiesData?.length || 0}
+                  {totalItems}
                 </span>
               </div>
 
               <button
-                onClick={handleOpenPublishOffer}
-                className="btn-gold px-8 py-3.5 text-xs tracking-widest uppercase font-black gap-2.5 inline-flex items-center shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:scale-105 transition-all cursor-pointer"
+                onClick={() => handleOpenPublishOffer('text')}
+                className="btn-gold px-7 py-3.5 text-xs tracking-widest uppercase font-black gap-2.5 inline-flex items-center shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:scale-105 transition-all cursor-pointer"
                 title="Publicar nuevo inmueble u oferta con asistencia instantánea de JanIA"
               >
                 <PlusCircle className="w-4 h-4 text-black" />
                 <span>+ PUBLICAR OFERTA</span>
+              </button>
+
+              <button
+                onClick={() => handleOpenPublishOffer('url')}
+                className="btn-gold-outline px-6 py-3.5 text-xs tracking-widest uppercase font-black gap-2 inline-flex items-center hover:scale-105 transition-all cursor-pointer"
+                title="Importar ficha técnica desde Wasi, Habi, Fincaraíz, Metrocuadrado, Qrador u otros portales"
+              >
+                <Link2 className="w-4 h-4 text-primary" />
+                <span>IMPORTAR POR URL</span>
               </button>
             </div>
           </ScrollReveal>
@@ -268,8 +274,30 @@ export default function Properties() {
               ))}
             </div>
 
-            {/* Controles de Transacción y Ordenamiento Ergonómicos en Celulares */}
-            <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between sm:justify-end">
+            {/* Controles de Ciudad, Fotos, Transacción y Ordenamiento Ergonómicos */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between sm:justify-end">
+              <input
+                type="text"
+                placeholder="Ciudad (ej: Medellín)"
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="w-36 sm:w-40 bg-zinc-900/90 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-primary/60"
+              />
+
+              <button
+                type="button"
+                onClick={() => setOnlyWithPhotos((v) => !v)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                  onlyWithPhotos
+                    ? 'bg-primary/20 text-primary border-primary/50'
+                    : 'bg-zinc-900/90 text-zinc-300 border-white/10 hover:text-white'
+                }`}
+                title="Mostrar únicamente inmuebles con fotografías propias cargadas"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Con fotos</span>
+              </button>
+
               {/* Filtro de Negocio */}
               <div className="flex-1 sm:flex-initial flex items-center justify-between sm:justify-start gap-2 bg-zinc-900/90 px-3 py-2 rounded-xl border border-white/10">
                 <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Negocio:</span>
@@ -282,7 +310,9 @@ export default function Properties() {
                   <option value="venta" className="bg-zinc-900 text-white">Venta</option>
                   <option value="arriendo" className="bg-zinc-900 text-white">Arriendo</option>
                   <option value="venta_o_arriendo" className="bg-zinc-900 text-white">Venta o Arriendo</option>
+                  <option value="venta_permuta" className="bg-zinc-900 text-white">Venta / Permuta</option>
                   <option value="permuta" className="bg-zinc-900 text-white">Permuta</option>
+                  <option value="arriendo_con_opcion_de_compra" className="bg-zinc-900 text-white">Opción Compra</option>
                 </select>
               </div>
 
@@ -294,10 +324,11 @@ export default function Properties() {
                   onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                   className="bg-transparent text-zinc-200 text-xs font-bold focus:outline-none cursor-pointer"
                 >
-                  <option value="default" className="bg-zinc-900 text-white">Más Recientes</option>
-                  <option value="price-asc" className="bg-zinc-900 text-white">Menor Precio</option>
-                  <option value="price-desc" className="bg-zinc-900 text-white">Mayor Precio</option>
-                  <option value="area-desc" className="bg-zinc-900 text-white">Mayor Área (m²)</option>
+                  <option value="recommended" className="bg-zinc-900 text-white">Destacados (Con Fotos)</option>
+                  <option value="recent" className="bg-zinc-900 text-white">Más Recientes</option>
+                  <option value="price_asc" className="bg-zinc-900 text-white">Menor Precio</option>
+                  <option value="price_desc" className="bg-zinc-900 text-white">Mayor Precio</option>
+                  <option value="area_desc" className="bg-zinc-900 text-white">Mayor Área (m²)</option>
                 </select>
               </div>
 
@@ -368,10 +399,12 @@ export default function Properties() {
                 </div>
               </div>
 
-              {(debouncedSearch || activeFilter !== 'all' || transactionFilter !== 'all') && (
+              {(debouncedSearch || debouncedCity || onlyWithPhotos || activeFilter !== 'all' || transactionFilter !== 'all') && (
                 <button
                   onClick={() => {
                     setSearchQuery('');
+                    setCityFilter('');
+                    setOnlyWithPhotos(false);
                     setActiveFilter('all');
                     setTransactionFilter('all');
                   }}
@@ -390,7 +423,7 @@ export default function Properties() {
                 Consultando inventario en PostgreSQL VPS...
               </p>
             </div>
-          ) : displayProperties.length === 0 ? (
+          ) : paginatedProperties.length === 0 ? (
             <div className="text-center py-28 border-2 border-dashed border-white/10 rounded-3xl bg-zinc-950/40 p-8">
               <Building2 className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-white mb-2 uppercase tracking-wide">
@@ -402,6 +435,8 @@ export default function Properties() {
               <button
                 onClick={() => {
                   setSearchQuery('');
+                  setCityFilter('');
+                  setOnlyWithPhotos(false);
                   setActiveFilter('all');
                   setTransactionFilter('all');
                 }}
@@ -526,7 +561,7 @@ export default function Properties() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <button 
-                onClick={handleOpenPublishOffer}
+                onClick={() => handleOpenPublishOffer('text')}
                 className="btn-gold px-8 py-4 text-xs font-black tracking-widest uppercase cursor-pointer"
               >
                 + SUBIR MI INMUEBLE AHORA
@@ -549,6 +584,7 @@ export default function Properties() {
         isOpen={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}
         defaultTab={publishTab}
+        initialAssistantTab={publishAssistantTab}
         onSuccess={() => refetch()}
       />
     </div>

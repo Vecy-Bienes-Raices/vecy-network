@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useLocation } from 'wouter';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import {
@@ -16,12 +17,20 @@ import {
   Briefcase,
   Maximize2,
   Car,
+  ShieldCheck,
+  Building2,
+  X,
+  Lock,
+  CheckCircle2,
+  FileSignature,
 } from 'lucide-react';
 import NetworkBackground from '@/components/NetworkBackground';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
 import { getPropertyCategoryGroup } from '../../../shared/colombiaCatalog';
+import { toast } from 'sonner';
 
 const DEMAND_TYPE_LABELS: Record<string, string> = {
   all: 'Todos',
@@ -51,12 +60,22 @@ const TX_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function RequirementsMarketplace() {
+  const [, navigate] = useLocation();
+  const { user } = useAuth();
   const [filter, setFilter] = useState('');
   const [debouncedFilter, setDebouncedFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [txFilter, setTxFilter] = useState<string>('all');
   const [cityFilter, setCityFilter] = useState<string>('');
   const [isPublishOpen, setIsPublishOpen] = useState(false);
+  const [publishDefaultTab, setPublishDefaultTab] = useState<'oferta' | 'demanda'>('demanda');
+
+  // Estado para Postulación de Inmueble con Acuerdo 40/20/40 (contacto blindado)
+  const [proposeReq, setProposeReq] = useState<any | null>(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+  const [proposalMessage, setProposalMessage] = useState('');
+  const [acceptedCollabTerms, setAcceptedCollabTerms] = useState(true);
+  const [proposalResult, setProposalResult] = useState<any | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedFilter(filter.trim()), 250);
@@ -99,13 +118,70 @@ export default function RequirementsMarketplace() {
     }).format(Number(price));
   };
 
-  const handleWhatsAppClick = (req: any) => {
-    const rawPhone = String(req.idUsuarioWhatsapp || '573166569719').replace(/[^\d]/g, '');
-    const targetPhone = rawPhone.length >= 10 ? (rawPhone.startsWith('57') ? rawPhone : `57${rawPhone}`) : '573166569719';
-    const typeLabel = DEMAND_TYPE_LABELS[req.tipoInmuebleDeseado] || req.tipoInmuebleDeseado;
-    const placeLabel = [req.addressNeighborhood || req.zonaDeseada, req.addressLocality, req.ciudadDeseada || req.addressCity].filter(Boolean).join(', ') || 'Colombia';
-    const message = `Hola, vi el requerimiento #R${req.id} en VECY para ${typeLabel} (${TX_TYPE_LABELS[req.tipoNegocioDeseado] || req.tipoNegocioDeseado}) en ${placeLabel}. Tengo el inmueble match.`;
-    window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`, '_blank');
+  const { data: myProperties, isLoading: loadingMyProps, refetch: refetchMyProps } = trpc.properties.myList.useQuery(
+    undefined,
+    { enabled: Boolean(user && proposeReq) }
+  );
+
+  const { data: myProposals, refetch: refetchMyProposals } = trpc.matching.listMyProposals.useQuery(
+    undefined,
+    { enabled: Boolean(user) }
+  );
+
+  const proposedByReqId = useMemo(() => {
+    const map = new Map<number, any>();
+    for (const row of myProposals || []) {
+      map.set(row.proposal.requirementId, row);
+    }
+    return map;
+  }, [myProposals]);
+
+  const proposeMutation = trpc.matching.proposePropertyToRequirement.useMutation({
+    onSuccess: (res) => {
+      setProposalResult(res);
+      refetchMyProposals();
+      refetch();
+      if (res.agreementRequired) {
+        toast.success(`Inmueble evaluado (${Math.round(res.matchScore)}% afinidad). Firma el acuerdo digital para liberar el contacto.`);
+      } else {
+        toast.success(`Postulación registrada con ${Math.round(res.matchScore)}% de afinidad.`);
+      }
+    },
+    onError: (err) => {
+      toast.error(err.message || 'No se pudo enviar la postulación.');
+    },
+  });
+
+  const handleOpenProposeModal = (req: any) => {
+    if (!user) {
+      try {
+        localStorage.setItem('vecy_login_return_url', '/demandas');
+      } catch (_) {}
+      toast.info('Inicia sesión como asesor para postular tu inmueble con protección antielusión 40/20/40.');
+      navigate('/login?redirect=/demandas');
+      return;
+    }
+    setProposeReq(req);
+    setSelectedPropertyId(null);
+    setProposalMessage('');
+    setAcceptedCollabTerms(true);
+    setProposalResult(null);
+  };
+
+  const handleSubmitProposal = () => {
+    if (!proposeReq || !selectedPropertyId) {
+      toast.error('Selecciona uno de tus inmuebles publicados para postular.');
+      return;
+    }
+    if (!acceptedCollabTerms) {
+      toast.error('Debes aceptar la trazabilidad y esquema colaborativo 40/20/40 para continuar.');
+      return;
+    }
+    proposeMutation.mutate({
+      requirementId: proposeReq.id,
+      propertyId: selectedPropertyId,
+      message: proposalMessage.trim() || undefined,
+    });
   };
 
   return (
@@ -151,7 +227,10 @@ export default function RequirementsMarketplace() {
               </div>
 
               <button
-                onClick={() => setIsPublishOpen(true)}
+                onClick={() => {
+                  setPublishDefaultTab('demanda');
+                  setIsPublishOpen(true);
+                }}
                 className="btn-gold px-8 py-3.5 text-xs tracking-widest uppercase font-black gap-2.5 inline-flex items-center shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:scale-105 transition-all cursor-pointer"
                 title="Publicar requerimiento o demanda de compra/arriendo con asistencia de JanIA"
               >
@@ -392,24 +471,48 @@ export default function RequirementsMarketplace() {
                         )}
                       </div>
 
-                      {/* Perfil del Asesor */}
-                      <div className="bg-white/[0.02] rounded-2xl p-4 border border-white/5 mt-auto mb-4">
-                        <div className="flex items-center gap-3.5">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 flex-shrink-0">
-                            <Users className="w-4 h-4 text-primary" />
+                      {/* Perfil del Asesor con Contacto Blindado */}
+                      <div className="bg-white/[0.02] rounded-2xl p-4 border border-white/5 mt-auto mb-4 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 flex-shrink-0">
+                              <ShieldCheck className="w-4 h-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Contacto Protegido · Antielusión</p>
+                              <p className="text-white text-xs sm:text-sm font-bold truncate">{req.nombreUsuarioWhatsapp || 'Asesor Verificado VECY'}</p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Asesor / Contacto</p>
-                            <p className="text-white text-xs sm:text-sm font-bold truncate">{req.nombreUsuarioWhatsapp || 'Agente VECY'}</p>
-                          </div>
+                          {Number(req.proposalsCount || 0) > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-primary/15 text-primary border border-primary/30 shrink-0">
+                              {req.proposalsCount} {req.proposalsCount === 1 ? 'postulación' : 'postulaciones'}
+                            </span>
+                          )}
                         </div>
+                        {proposedByReqId.get(req.id) && (
+                          <div className="text-[10px] font-bold px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center justify-between gap-2">
+                            <span>
+                              Postulado ({Math.round(Number(proposedByReqId.get(req.id).proposal.matchScore || 0))}%)
+                            </span>
+                            {proposedByReqId.get(req.id).proposal.status === 'pending_signature' && proposedByReqId.get(req.id).proposal.signatureToken ? (
+                              <a
+                                href={`/firma-match/${proposedByReqId.get(req.id).proposal.signatureToken}`}
+                                className="underline text-[#fcf6ba] font-black"
+                              >
+                                Firmar Acuerdo →
+                              </a>
+                            ) : (
+                              <span className="text-emerald-400">Acuerdo Firmado ✓</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Botón de Match Ergonómico Táctil */}
+                    {/* Botón de Postulación Segura (Sin exponer WhatsApp directo) */}
                     <div className="mt-2 pt-3 border-t border-white/5">
                       <button
-                        onClick={() => handleWhatsAppClick(req)}
+                        onClick={() => handleOpenProposeModal(req)}
                         className="btn-gold w-full min-h-[46px] py-3.5 px-4 rounded-xl text-[10px] tracking-[0.18em] font-black group-hover:glow-gold-sm active:scale-[0.98] touch-manipulation transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
                       >
                         <Zap className="w-3.5 h-3.5 inline-block shrink-0" />
@@ -500,7 +603,10 @@ export default function RequirementsMarketplace() {
               Publica tu requerimiento y deja que la red encuentre el inmueble perfecto por ti.
             </p>
             <button 
-              onClick={() => setIsPublishOpen(true)}
+              onClick={() => {
+                setPublishDefaultTab('demanda');
+                setIsPublishOpen(true);
+              }}
               className="btn-gold px-10 sm:px-14 py-4 sm:py-5 text-sm sm:text-base font-black tracking-widest uppercase hover:scale-105 transition-all shadow-[0_0_35px_rgba(191,149,63,0.35)] hover:shadow-[0_0_55px_rgba(191,149,63,0.6)] cursor-pointer rounded-2xl inline-flex items-center justify-center gap-3"
             >
               <PlusCircle className="w-5 h-5 shrink-0" />
@@ -512,12 +618,199 @@ export default function RequirementsMarketplace() {
 
       <Footer />
 
+      {/* MODAL POSTULAR INMUEBLE A REQUERIMIENTO (CONTACTO BLINDADO + FIRMA LEY 527) */}
+      {proposeReq && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="relative w-full max-w-xl rounded-3xl bg-zinc-950 border border-primary/40 shadow-2xl p-6 space-y-5 text-white max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
+              <div>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary">
+                  <Lock className="w-3.5 h-3.5" /> Postulación Segura 40/20/40
+                </span>
+                <h3 className="text-lg font-black mt-1">
+                  Postular Inmueble al Requerimiento #R{proposeReq.id}
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {proposeReq.name || `${DEMAND_TYPE_LABELS[proposeReq.tipoInmuebleDeseado] || proposeReq.tipoInmuebleDeseado} en ${proposeReq.addressNeighborhood || proposeReq.ciudadDeseada}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProposeReq(null)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {proposalResult ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Postulación Registrada
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full font-black text-[11px] ${proposalResult.qualifiesHighMatch ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                      {Math.round(proposalResult.matchScore)}% Afinidad
+                    </span>
+                  </div>
+                  <p className="text-zinc-300 leading-relaxed">
+                    {proposalResult.agreementRequired
+                      ? 'Para proteger tu comisión colaborativa 40/20/40 y liberar el contacto oficial de la punta demandante, completa la firma digital Ley 527:'
+                      : 'Tu postulación quedó registrada y vinculada al requerimiento.'}
+                  </p>
+                </div>
+
+                {proposalResult.agreementRequired && proposalResult.signatureUrl && (
+                  <a
+                    href={proposalResult.signatureUrl}
+                    className="btn-gold w-full py-3.5 px-5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2"
+                  >
+                    <FileSignature className="w-4 h-4" />
+                    <span>Firmar Acuerdo Digital y Desbloquear Contacto</span>
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setProposeReq(null)}
+                  className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-zinc-200">1. Selecciona tu inmueble propio *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProposeReq(null);
+                        setPublishDefaultTab('oferta');
+                        setIsPublishOpen(true);
+                      }}
+                      className="text-[11px] text-primary hover:underline font-bold cursor-pointer"
+                    >
+                      + Subir inmueble nuevo
+                    </button>
+                  </div>
+
+                  {loadingMyProps ? (
+                    <div className="py-8 flex items-center justify-center text-zinc-400 text-xs gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span>Cargando tus inmuebles...</span>
+                    </div>
+                  ) : !myProperties || myProperties.length === 0 ? (
+                    <div className="p-5 rounded-2xl border border-dashed border-white/15 text-center space-y-3">
+                      <Building2 className="w-8 h-8 text-zinc-500 mx-auto" />
+                      <p className="text-xs text-zinc-400">
+                        Aún no tienes inmuebles cargados en tu inventario para postular a este requerimiento.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProposeReq(null);
+                          setPublishDefaultTab('oferta');
+                          setIsPublishOpen(true);
+                        }}
+                        className="btn-gold px-5 py-2 rounded-xl text-xs font-black cursor-pointer"
+                      >
+                        Publicar / Importar Inmueble Ahora
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {myProperties.map((prop: any) => {
+                        const isSelected = selectedPropertyId === prop.id;
+                        return (
+                          <button
+                            key={prop.id}
+                            type="button"
+                            onClick={() => setSelectedPropertyId(prop.id)}
+                            className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                              isSelected
+                                ? 'bg-primary/15 border-primary text-white'
+                                : 'bg-black/50 border-white/10 text-zinc-300 hover:border-white/25'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold truncate">{prop.name}</p>
+                              <p className="text-[11px] text-zinc-400 truncate">
+                                {prop.addressNeighborhood || prop.zone}, {prop.addressCity || prop.city || 'Colombia'} · {prop.areaTotal || '-'} m²
+                              </p>
+                            </div>
+                            <span className="text-xs font-black text-primary font-mono shrink-0">
+                              {formatPrice(prop.price)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="proposal-note" className="text-xs font-bold text-zinc-200 block mb-1">
+                    2. Nota técnica para el colega (sin teléfonos ni correos)
+                  </label>
+                  <textarea
+                    id="proposal-note"
+                    rows={2}
+                    value={proposalMessage}
+                    onChange={(e) => setProposalMessage(e.target.value)}
+                    placeholder="Ej: Propiedad al día en tradición, entrega inmediata, disponibilidad para visita esta semana..."
+                    className="w-full bg-black/60 border border-white/10 focus:border-primary rounded-xl p-3 text-xs text-white outline-none"
+                  />
+                </div>
+
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/10 border border-primary/30 text-[11px] text-zinc-200 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptedCollabTerms}
+                    onChange={(e) => setAcceptedCollabTerms(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 accent-[#bf953f]"
+                  />
+                  <span>
+                    Acepto respetar la trazabilidad colaborativa <strong>40/20/40</strong> y completar la firma digital del acuerdo antes de acceder al contacto directo.
+                  </span>
+                </label>
+
+                <div className="flex justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setProposeReq(null)}
+                    className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!selectedPropertyId || proposeMutation.isPending}
+                    onClick={handleSubmitProposal}
+                    className="btn-gold px-5 py-2.5 rounded-xl text-xs font-black inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {proposeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    <span>Enviar Postulación</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* MODAL DE PUBLICACIÓN UNIFICADO */}
       <UnifiedPublishModal
         isOpen={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}
-        defaultTab="demanda"
-        onSuccess={() => refetch()}
+        defaultTab={publishDefaultTab}
+        onSuccess={() => {
+          refetch();
+          refetchMyProps();
+        }}
       />
     </div>
   );

@@ -9,7 +9,7 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import QRCode from "qrcode";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
-import { pendingSessions } from "../../drizzle/schema";
+import { pendingSessions, requirementProposals } from "../../drizzle/schema";
 
 export interface MatchSignatureItem {
   matchCode: string;
@@ -569,6 +569,25 @@ export async function completeMatchSignature(input: {
   record.signedPdfUrl = pdfResult.pdfUrl;
 
   await saveMatchSignatureRecord(record);
+
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      const db = await getDb();
+      if (db) {
+        await db
+          .update(requirementProposals)
+          .set({
+            status: "submitted",
+            agreementSignedAt: new Date(),
+            contactUnlocked: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(requirementProposals.signatureToken, record.token));
+      }
+    } catch (propErr: any) {
+      console.warn("[MatchSignature] Aviso actualizando requirement_proposals:", propErr?.message);
+    }
+  }
 
   const unlockedCodes = record.matches.map((m) => ({
     matchCode: m.matchCode,

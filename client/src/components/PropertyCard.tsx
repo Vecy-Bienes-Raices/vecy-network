@@ -107,6 +107,8 @@ const PROPERTY_TYPE_LABELS: Record<PropertyType | string, string> = {
   farm: 'Finca',
   warehouse: 'Bodega',
   office: 'Oficina',
+  consultorio: 'Consultorio',
+  cabin: 'Cabaña',
 };
 
 export default function PropertyCard({

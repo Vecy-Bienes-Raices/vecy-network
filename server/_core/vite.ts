@@ -1,10 +1,25 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request } from "express";
 import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
+import { injectOpenGraphMeta, resolveOpenGraphMeta } from "./ogMetaService";
+
+function extractRequestMetaParams(req: Request) {
+  const host =
+    (typeof req.headers["x-forwarded-host"] === "string" ? req.headers["x-forwarded-host"] : undefined) ||
+    req.headers.host ||
+    "vecygroup.com";
+  const protocol =
+    (typeof req.headers["x-forwarded-proto"] === "string" ? req.headers["x-forwarded-proto"].split(",")[0].trim() : undefined) ||
+    req.protocol ||
+    "https";
+  const rawUrl = req.originalUrl || req.url || "/";
+  const [pathname, search = ""] = rawUrl.split("?");
+  return { host, protocol, pathname, search };
+}
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -38,8 +53,10 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
+      const ogMeta = await resolveOpenGraphMeta(extractRequestMetaParams(req));
+      template = injectOpenGraphMeta(template, ogMeta);
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
@@ -55,10 +72,26 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // index: false permite que '/' pase por el handler dinámico de OpenGraph
+  app.use(express.static(distPath, { index: false }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  let cachedIndexHtml: string | null = null;
+  const indexHtmlPath = path.resolve(distPath, "index.html");
+
+  // fall through to index.html con meta tags OpenGraph dinámicos
+  app.use("*", async (req, res) => {
+    try {
+      if (!cachedIndexHtml && fs.existsSync(indexHtmlPath)) {
+        cachedIndexHtml = await fs.promises.readFile(indexHtmlPath, "utf-8");
+      }
+      if (!cachedIndexHtml) {
+        return res.status(404).send("index.html no encontrado");
+      }
+      const ogMeta = await resolveOpenGraphMeta(extractRequestMetaParams(req));
+      const rendered = injectOpenGraphMeta(cachedIndexHtml, ogMeta);
+      return res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).send(rendered);
+    } catch {
+      return res.sendFile(indexHtmlPath);
+    }
   });
 }

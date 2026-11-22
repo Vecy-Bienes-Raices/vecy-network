@@ -1,11 +1,14 @@
 import { z } from 'zod';
-import { adminProcedure, publicProcedure, router } from '../_core/trpc';
+import { adminProcedure, protectedProcedure, publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb, getRawSql } from '../db';
-import { conversations, messages, leads, propertyMatches, properties, requirements, propertyImages, propertyPublicationHistory, pendingSessions, inmobiliarioLexicon, matchFeedback } from '../../drizzle/schema';
+import { conversations, messages, leads, propertyMatches, properties, requirements, propertyImages, propertyPublicationHistory, pendingSessions, inmobiliarioLexicon, matchFeedback, requirementProposals } from '../../drizzle/schema';
 import { eq, and, desc, sql, inArray, gte } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
+import { importPropertyFromUrl, validateAndAssertSafeUrl } from '../_core/urlImportService';
+import { assertCanImportByUrl, getUserEffectiveEntitlements, incrementUsageQuota } from '../_core/planEntitlements';
+import { shieldRequirementForPublicView } from './matching';
 import {
   JANIA_PROMPT,
   processWhatsAppMessage,
@@ -222,20 +225,45 @@ export function auditMissingRequirementFields(parsed: any): string[] {
 }
 
 export const janIARouter = router({
-  // New: Extract property data from link
+  // New: Extract property data from link (SSRF-protected & zero third-party media)
   extractFromLink: publicProcedure
     .input(z.object({ url: z.string().url() }))
     .mutation(async ({ input }) => {
       try {
+        await validateAndAssertSafeUrl(input.url);
         const data = await scrapePropertyLink(input.url);
         return {
           success: true,
-          data
+          data: data ? { ...data, images: [], videoUrl: null } : data
         };
       } catch (error) {
         console.error('Error in extractFromLink:', error);
-        throw new Error('No se pudo extraer la información del link. Verifica que sea un enlace válido de un inmueble.');
+        throw new Error('No se pudo extraer la información del link. Verifica que sea un enlace público válido de un inmueble.');
       }
+    }),
+
+  // Importador Inteligente por URL (PASO 3: 9 portales + SSRF + cuotas mensuales del plan)
+  importPropertyFromUrl: protectedProcedure
+    .input(z.object({ url: z.string().min(4).max(2048) }))
+    .mutation(async ({ ctx, input }) => {
+      await assertCanImportByUrl(ctx.user.id, ctx.user.role);
+      const result = await importPropertyFromUrl(input.url);
+      if (result.status === 'ok' || result.status === 'partial') {
+        await incrementUsageQuota(ctx.user.id, 'urlImportsUsed', 1);
+      }
+      const ent = await getUserEffectiveEntitlements(ctx.user.id, ctx.user.role);
+      const limit = ent.isAdmin ? -1 : ent.plan.maxUrlImportsPerMonth;
+      return {
+        ...result,
+        quota: {
+          planCode: ent.plan.code,
+          planName: ent.plan.name,
+          periodKey: ent.periodKey,
+          used: ent.usage.urlImportsUsed,
+          limit,
+          remaining: limit < 0 ? -1 : Math.max(0, limit - ent.usage.urlImportsUsed),
+        },
+      };
     }),
 
   // Chat endpoint
@@ -2021,30 +2049,57 @@ export const janIARouter = router({
           userId: requirements.userId,
           idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
           nombreUsuarioWhatsapp: requirements.nombreUsuarioWhatsapp,
+          publishToReqStore: requirements.publishToReqStore,
+          anonymizedPublicSummary: requirements.anonymizedPublicSummary,
         })
         .from(requirements)
         .where(eq(requirements.status, 'active'))
         .orderBy(desc(requirements.id))
         .limit(input?.limit || 150);
 
+      let proposalCountsMap = new Map<number, number>();
+      try {
+        const reqIds = rows.map((r) => r.id);
+        if (reqIds.length > 0) {
+          const counts = await db
+            .select({
+              requirementId: requirementProposals.requirementId,
+              count: sql<number>`count(*)::int`,
+            })
+            .from(requirementProposals)
+            .where(inArray(requirementProposals.requirementId, reqIds))
+            .groupBy(requirementProposals.requirementId);
+          proposalCountsMap = new Map(counts.map((c) => [c.requirementId, c.count]));
+        }
+      } catch {
+        // Ignorar si la tabla aún no fue migrada en entornos legacy
+      }
+
       const searchNorm = (input?.search || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
       const cityFilterNorm = (input?.city || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
       return rows
+        .filter((r: any) => {
+          if (r.publishToReqStore === false) return false;
+          if (r.calificacion === 'incompleto' && !r.presupuestoMax && !r.areaMin && !r.zonaDeseada && !r.addressNeighborhood) {
+            return false;
+          }
+          return true;
+        })
         .map((r: any) => {
           let phone = r.idUsuarioWhatsapp;
           let advisorName = r.nombreUsuarioWhatsapp;
           if (!phone || isLidIdentifier(phone) || !normalizeAdvisorPhone(phone)) {
             const known = lookupAdvisorSync(phone, advisorName);
-            if (known?.phone) {
-              phone = known.phone;
-              if (known.name && (!advisorName || isGenericName(advisorName))) advisorName = known.name;
-            }
+            if (known?.name && (!advisorName || isGenericName(advisorName))) advisorName = known.name;
           }
-          return {
+          const shielded = shieldRequirementForPublicView({
             ...r,
-            idUsuarioWhatsapp: phone,
             nombreUsuarioWhatsapp: advisorName,
+          });
+          return {
+            ...shielded,
+            proposalsCount: proposalCountsMap.get(r.id) ?? 0,
           };
         })
         .filter((r: any) => {

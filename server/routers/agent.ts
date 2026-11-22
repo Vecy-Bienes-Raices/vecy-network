@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { eq, and, desc, isNull, or, sql } from "drizzle-orm";
+import { eq, and, desc, isNull, ne, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
-import { properties, referralLinks, users } from "../../drizzle/schema";
+import { agencies, properties, referralLinks, users } from "../../drizzle/schema";
+import { extractTenantSlugFromHost, isCustomWhiteLabelHost, normalizeHostname } from "../../shared/whitelabel";
 import { TRPCError } from "@trpc/server";
 import { invokeLLM } from "../_core/llm";
 import crypto from "crypto";
@@ -157,15 +158,36 @@ export const agentRouter = router({
       return agent[0];
     }),
 
-  // Public: Get complete Agent Microsite data (profile + own properties + network collaborative properties)
+  // Public: Get complete Agent Microsite data (profile + own properties + optional network collaborative properties)
   getStoreBySubdomain: publicProcedure
-    .input(z.object({ slug: z.string().min(1) }))
-    .query(async ({ input }) => {
+    .input(z.object({
+      slug: z.string().optional(),
+      host: z.string().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const cleanSlug = input.slug.toLowerCase().trim();
-      const numericId = !isNaN(Number(cleanSlug)) ? Number(cleanSlug) : null;
+      const requestHost = normalizeHostname(input.host || (ctx.req?.headers?.["x-forwarded-host"] as string) || (ctx.req?.headers?.host as string));
+      const hostSlug = extractTenantSlugFromHost(requestHost);
+      const customHost = isCustomWhiteLabelHost(requestHost) ? requestHost : null;
+      const cleanSlug = (input.slug || hostSlug || "").toLowerCase().trim();
+
+      if (!cleanSlug && !customHost) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "slug or custom host required" });
+      }
+
+      const numericId = cleanSlug && !isNaN(Number(cleanSlug)) ? Number(cleanSlug) : null;
+
+      let agencyRow: typeof agencies.$inferSelect | undefined;
+      if (customHost) {
+        const rows = await db.select().from(agencies).where(eq(agencies.customDomain, customHost)).limit(1);
+        agencyRow = rows[0];
+      }
+      if (!agencyRow && cleanSlug) {
+        const rows = await db.select().from(agencies).where(eq(agencies.slug, cleanSlug)).limit(1);
+        agencyRow = rows[0];
+      }
 
       const agentRows = await db.select({
         id: users.id,
@@ -180,9 +202,11 @@ export const agentRouter = router({
       })
       .from(users)
       .where(
-        numericId
-          ? or(eq(users.subdomain, cleanSlug), eq(users.id, numericId))
-          : eq(users.subdomain, cleanSlug)
+        agencyRow
+          ? eq(users.id, agencyRow.ownerUserId)
+          : numericId
+            ? or(eq(users.subdomain, cleanSlug), eq(users.id, numericId))
+            : eq(users.subdomain, cleanSlug)
       )
       .limit(1);
 
@@ -190,31 +214,75 @@ export const agentRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Sitio de agente no encontrado" });
       }
 
-      const agent = agentRows[0];
+      const baseAgent = agentRows[0];
+      const baseTheme = (baseAgent.themeConfig as Record<string, any>) || {};
+      const agencyTheme = (agencyRow?.themeConfig as Record<string, any>) || {};
+      const mergedTheme: Record<string, any> = {
+        ...agencyTheme,
+        ...baseTheme,
+        agencyName: baseTheme.agencyName || agencyRow?.brandName || baseAgent.name || "Inmobiliaria Asociada",
+        slogan: baseTheme.slogan || agencyRow?.tagline || "Portafolio Inmobiliario Certificado • Red Colaborativa",
+        primaryColor: baseTheme.primaryColor || agencyRow?.primaryColor || "#0f4c81",
+        secondaryColor: baseTheme.secondaryColor || agencyRow?.secondaryColor || "#0f172a",
+        contactPhone: baseTheme.contactPhone || agencyRow?.whatsappBusinessPhone || baseAgent.phone || "",
+        contactEmail: baseTheme.contactEmail || agencyRow?.contactEmail || baseAgent.email || "",
+      };
 
-      // Inmuebles propios del agente + inmuebles colaborativos de la red Vecy que aceptan tercería
+      const agent = {
+        ...baseAgent,
+        subdomain: baseAgent.subdomain || agencyRow?.slug || cleanSlug,
+        customLogoUrl: baseAgent.customLogoUrl || agencyRow?.logoUrl || null,
+        themeConfig: mergedTheme,
+      };
+
+      const showNetworkCatalog = mergedTheme.showNetworkCatalog !== false;
+
+      // Inmuebles propios del agente (excluye privados)
       const ownProperties = await db.select()
         .from(properties)
-        .where(and(eq(properties.agentId, agent.id), eq(properties.available, true)))
-        .orderBy(desc(properties.createdAt))
-        .limit(50);
-
-      const networkProperties = await db.select()
-        .from(properties)
-        .where(and(eq(properties.available, true), eq(properties.aceptaTerceria, true)))
+        .where(
+          and(
+            eq(properties.agentId, agent.id),
+            eq(properties.available, true),
+            or(ne(properties.visibilityScope, "private"), isNull(properties.visibilityScope))
+          )
+        )
         .orderBy(desc(properties.featured), desc(properties.createdAt))
-        .limit(40);
+        .limit(80);
 
-      // Unificar sin duplicados poniendo primero los del propio agente
+      // Inmuebles de la red colaborativa (solo si showNetworkCatalog está activo)
+      const networkProperties = showNetworkCatalog
+        ? await db.select()
+            .from(properties)
+            .where(
+              and(
+                eq(properties.available, true),
+                eq(properties.aceptaTerceria, true),
+                or(eq(properties.republishToVecyStore, true), isNull(properties.republishToVecyStore)),
+                or(
+                  and(ne(properties.visibilityScope, "agent_only"), ne(properties.visibilityScope, "private")),
+                  isNull(properties.visibilityScope)
+                )
+              )
+            )
+            .orderBy(desc(properties.featured), desc(properties.createdAt))
+            .limit(40)
+        : [];
+
       const seenIds = new Set(ownProperties.map(p => p.id));
       const combinedProperties = [
-        ...ownProperties,
-        ...networkProperties.filter(p => !seenIds.has(p.id)),
+        ...ownProperties.map(p => ({ ...p, isOwnProperty: true })),
+        ...networkProperties
+          .filter(p => !seenIds.has(p.id))
+          .map(p => ({ ...p, isOwnProperty: false })),
       ];
 
       return {
         agent,
+        agency: agencyRow || null,
         ownCount: ownProperties.length,
+        networkCount: combinedProperties.length - ownProperties.length,
+        showNetworkCatalog,
         properties: combinedProperties,
       };
     }),

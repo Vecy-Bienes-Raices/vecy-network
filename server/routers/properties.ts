@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { eq, ne, desc, ilike, or, isNull, and, lte, sql } from "drizzle-orm";
-import { assertCanCreateProperty } from "../_core/planEntitlements";
+import { eq, ne, desc, asc, ilike, or, isNull, and, gte, lte, sql } from "drizzle-orm";
+import {
+  assertCanCreateProperty,
+  assertCanImportByUrl,
+  getUserEffectiveEntitlements,
+  incrementUsageQuota,
+} from "../_core/planEntitlements";
 
 import { getDb } from "../db";
 import { properties, propertyImages } from "../../drizzle/schema";
@@ -9,7 +14,7 @@ import { TRPCError } from "@trpc/server";
 import { getPropertyRefCityPrefix, findDepartmentForCity, BOGOTA_LOCALITIES } from "../../shared/colombiaCatalog";
 import { parseArea } from "../../shared/colombianRealEstateParser";
 import { buscarLugarColombia } from "../_core/colombia-geography";
-import { extractFallbackDataFromText } from "../_core/jania/parsers";
+import { extractFallbackDataFromText } from "../_core/janIA";
 
 const propertyInputSchema = z.object({
   name: z.string().min(2),
@@ -23,6 +28,7 @@ const propertyInputSchema = z.object({
     "arriendo_con_opcion_de_compra", "permuta", "venta_permuta", "aporte"
   ]).default("venta"),
   price: z.string().min(1),
+  rentPrice: z.string().optional().nullable(),
   currency: z.enum(["COP", "USD"]).default("COP"),
   city: z.string().default("Bogotá"),
   location: z.string().optional().nullable(),
@@ -57,6 +63,9 @@ const propertyInputSchema = z.object({
   republishToVecyStore: z.boolean().optional(),
   visibilityScope: z.enum(["public_and_agent", "agent_only", "private"]).optional(),
   agencyId: z.number().optional().nullable(),
+  sourcePortal: z.string().max(80).optional().nullable(),
+  sourceUrl: z.string().max(2048).optional().nullable(),
+  rawImportPayload: z.any().optional().nullable(),
 });
 
 type AdminPropertyListItem = {
@@ -64,8 +73,11 @@ type AdminPropertyListItem = {
   name: string;
   price: string;
   rentPrice: string | null;
+  city: string | null;
   location: string | null;
   zone: string;
+  addressCity: string | null;
+  addressLocality: string | null;
   addressNeighborhood: string | null;
   propertyType: typeof properties.$inferSelect.propertyType;
   transactionType: typeof properties.$inferSelect.transactionType;
@@ -84,7 +96,14 @@ type AdminPropertyListItem = {
   standByDirectoVecy: boolean | null;
   aceptaTerceria: boolean | null;
   estadoComercial: string | null;
+  amenities: unknown;
   images: unknown;
+  videoUrl: string | null;
+  republishToVecyStore: boolean | null;
+  visibilityScope: string | null;
+  sourcePortal: string | null;
+  agentId: number | null;
+  agencyId: number | null;
   createdAt: Date;
 };
 
@@ -118,8 +137,45 @@ const propertyFields = {
   estadoComercial: properties.estadoComercial,
   amenities: properties.amenities,
   images: properties.images,
+  videoUrl: properties.videoUrl,
+  republishToVecyStore: properties.republishToVecyStore,
+  visibilityScope: properties.visibilityScope,
+  sourcePortal: properties.sourcePortal,
+  agentId: properties.agentId,
+  agencyId: properties.agencyId,
   createdAt: properties.createdAt,
 };
+
+/**
+ * Puntaje determinista de completitud y calidad visual para priorizar en VECY TIENDA
+ * las publicaciones completas con fotos propias de agentes.
+ */
+export function computeListingCompletenessRank(prop: {
+  images?: unknown;
+  videoUrl?: string | null;
+  price?: string | number | null;
+  areaTotal?: string | number | null;
+  description?: string | null;
+  addressNeighborhood?: string | null;
+  addressCity?: string | null;
+  city?: string | null;
+  agentId?: number | null;
+  featured?: boolean | null;
+}): number {
+  let score = 0;
+  const imgs = Array.isArray(prop.images) ? prop.images.filter((u) => typeof u === "string" && u.trim().length > 0) : [];
+  if (imgs.length > 0) {
+    score += 500 + Math.min(imgs.length, 10) * 10;
+  }
+  if (prop.videoUrl && prop.videoUrl.trim().length > 4) score += 40;
+  if (Number(prop.price || 0) > 0) score += 40;
+  if (Number(prop.areaTotal || 0) > 0) score += 30;
+  if ((prop.description || "").trim().length >= 30) score += 25;
+  if (prop.addressNeighborhood && (prop.addressCity || prop.city)) score += 20;
+  if (prop.agentId) score += 25;
+  if (prop.featured) score += 35;
+  return score;
+}
 
 let cachedAdminMyList: AdminPropertyListItem[] | null = null;
 let cachedAdminMyListTime = 0;
@@ -482,72 +538,193 @@ export function parsePropertyDeterministically(text: string) {
   };
 }
 
+const storeListInputSchema = z.object({
+  search: z.string().optional(),
+  zone: z.string().optional(),
+  city: z.string().optional(),
+  type: z.string().optional(),
+  transactionType: z.string().optional(),
+  minPrice: z.number().optional(),
+  maxPrice: z.number().optional(),
+  minBedrooms: z.number().optional(),
+  onlyWithPhotos: z.boolean().optional(),
+  sortBy: z.enum(["recommended", "recent", "price_asc", "price_desc", "area_desc"]).optional().default("recommended"),
+  limit: z.number().min(1).max(200).default(100),
+  offset: z.number().min(0).default(0),
+});
+
+function buildStoreWhereConditions(input?: z.infer<typeof storeListInputSchema>) {
+  const whereConditions = [];
+
+  if (input?.search) {
+    whereConditions.push(
+      or(
+        ilike(properties.name, `%${input.search}%`),
+        ilike(properties.description, `%${input.search}%`),
+        ilike(properties.zone, `%${input.search}%`),
+        ilike(properties.addressNeighborhood, `%${input.search}%`),
+        ilike(properties.addressLocality, `%${input.search}%`),
+        ilike(properties.city, `%${input.search}%`),
+        ilike(properties.addressCity, `%${input.search}%`),
+        ilike(properties.externalListingId, `%${input.search}%`)
+      )
+    );
+  }
+
+  if (input?.zone) {
+    whereConditions.push(
+      or(
+        ilike(properties.zone, `%${input.zone}%`),
+        ilike(properties.addressNeighborhood, `%${input.zone}%`),
+        ilike(properties.addressLocality, `%${input.zone}%`)
+      )
+    );
+  }
+
+  if (input?.city) {
+    whereConditions.push(
+      or(
+        ilike(properties.city, `%${input.city}%`),
+        ilike(properties.addressCity, `%${input.city}%`)
+      )
+    );
+  }
+
+  if (input?.type) {
+    whereConditions.push(eq(properties.propertyType, input.type as any));
+  }
+
+  if (input?.transactionType) {
+    whereConditions.push(eq(properties.transactionType, input.transactionType as any));
+  }
+
+  if (input?.minPrice && input.minPrice > 0) {
+    whereConditions.push(sql`CAST(${properties.price} AS NUMERIC) >= ${input.minPrice}`);
+  }
+
+  if (input?.maxPrice && input.maxPrice > 0) {
+    whereConditions.push(sql`CAST(${properties.price} AS NUMERIC) <= ${input.maxPrice}`);
+  }
+
+  if (input?.minBedrooms !== undefined && input.minBedrooms >= 0) {
+    whereConditions.push(gte(properties.bedrooms, input.minBedrooms));
+  }
+
+  if (input?.onlyWithPhotos) {
+    whereConditions.push(
+      sql`jsonb_typeof(${properties.images}) = 'array' AND jsonb_array_length(${properties.images}) > 0`
+    );
+  }
+
+  // Por defecto mostrar inmuebles disponibles y elegibles para VECY TIENDA
+  whereConditions.push(eq(properties.available, true));
+  whereConditions.push(
+    or(eq(properties.republishToVecyStore, true), isNull(properties.republishToVecyStore))
+  );
+  whereConditions.push(
+    or(
+      and(ne(properties.visibilityScope, "agent_only"), ne(properties.visibilityScope, "private")),
+      isNull(properties.visibilityScope)
+    )
+  );
+
+  return whereConditions;
+}
+
+function getStoreOrderBy(sortBy: string | undefined) {
+  const hasPhotosExpr = sql`CASE WHEN jsonb_typeof(${properties.images}) = 'array' AND jsonb_array_length(${properties.images}) > 0 THEN 1 ELSE 0 END DESC`;
+  const completenessExpr = sql`(
+    (CASE WHEN jsonb_typeof(${properties.images}) = 'array' AND jsonb_array_length(${properties.images}) > 0 THEN 4 ELSE 0 END) +
+    (CASE WHEN ${properties.agentId} IS NOT NULL THEN 2 ELSE 0 END) +
+    (CASE WHEN ${properties.areaTotal} IS NOT NULL AND CAST(${properties.areaTotal} AS NUMERIC) > 0 THEN 1 ELSE 0 END) +
+    (CASE WHEN length(COALESCE(${properties.description}, '')) >= 30 THEN 1 ELSE 0 END)
+  ) DESC`;
+
+  switch (sortBy) {
+    case "price_asc":
+      return [asc(sql`CAST(${properties.price} AS NUMERIC)`), desc(properties.id)];
+    case "price_desc":
+      return [desc(sql`CAST(${properties.price} AS NUMERIC)`), desc(properties.id)];
+    case "area_desc":
+      return [desc(sql`COALESCE(CAST(${properties.areaTotal} AS NUMERIC), 0)`), desc(properties.id)];
+    case "recent":
+      return [desc(properties.id)];
+    case "recommended":
+    default:
+      return [hasPhotosExpr, completenessExpr, desc(properties.featured), desc(properties.id)];
+  }
+}
+
 export const propertiesRouter = router({
   // --- PUBLIC ---
   list: publicProcedure
-    .input(z.object({
-      search: z.string().optional(),
-      zone: z.string().optional(),
-      type: z.string().optional(),
-      transactionType: z.string().optional(),
-      limit: z.number().min(1).max(200).default(100),
-      offset: z.number().default(0),
-    }).optional())
+    .input(storeListInputSchema.optional())
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
-      const whereConditions = [];
+      const whereConditions = buildStoreWhereConditions(input);
+      const orderClauses = getStoreOrderBy(input?.sortBy || "recommended");
 
-      if (input?.search) {
-        whereConditions.push(
-          or(
-            ilike(properties.name, `%${input.search}%`),
-            ilike(properties.description, `%${input.search}%`),
-            ilike(properties.zone, `%${input.search}%`),
-            ilike(properties.addressNeighborhood, `%${input.search}%`),
-            ilike(properties.city, `%${input.search}%`)
-          )
-        );
-      }
-
-      if (input?.zone) {
-        whereConditions.push(
-          or(
-            ilike(properties.zone, `%${input.zone}%`),
-            ilike(properties.addressNeighborhood, `%${input.zone}%`),
-            ilike(properties.addressLocality, `%${input.zone}%`)
-          )
-        );
-      }
-
-      if (input?.type) {
-        whereConditions.push(eq(properties.propertyType, input.type as any));
-      }
-
-      if (input?.transactionType) {
-        whereConditions.push(eq(properties.transactionType, input.transactionType as any));
-      }
-
-      // Por defecto mostrar inmuebles disponibles y elegibles para VECY TIENDA
-      whereConditions.push(eq(properties.available, true));
-      whereConditions.push(
-        or(eq(properties.republishToVecyStore, true), isNull(properties.republishToVecyStore))
-      );
-      whereConditions.push(
-        or(ne(properties.visibilityScope, "agent_only"), isNull(properties.visibilityScope))
-      );
-
-      const query = db
+      const items = await db
         .select(propertyFields)
         .from(properties)
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-        .orderBy(desc(properties.id))
+        .orderBy(...orderClauses)
         .limit(input?.limit || 100)
         .offset(input?.offset || 0);
 
-      const items = await query;
       return items;
+    }),
+
+  listCatalog: publicProcedure
+    .input(
+      storeListInputSchema
+        .omit({ limit: true, offset: true })
+        .extend({
+          page: z.number().min(1).default(1),
+          pageSize: z.number().min(1).max(150).default(12),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 12;
+      const offset = (page - 1) * pageSize;
+
+      const whereConditions = buildStoreWhereConditions(
+        input ? { ...input, limit: pageSize, offset } : undefined
+      );
+      const whereExpr = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+      const orderClauses = getStoreOrderBy(input?.sortBy || "recommended");
+
+      const [[countRow], items] = await Promise.all([
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(properties)
+          .where(whereExpr),
+        db
+          .select(propertyFields)
+          .from(properties)
+          .where(whereExpr)
+          .orderBy(...orderClauses)
+          .limit(pageSize)
+          .offset(offset),
+      ]);
+
+      const total = countRow?.count ?? items.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+      return {
+        items,
+        total,
+        page,
+        pageSize,
+        totalPages,
+      };
     }),
   getById: publicProcedure
     .input(z.object({ id: z.number() }))
@@ -579,6 +756,47 @@ export const propertiesRouter = router({
       return result;
     }),
 
+  // --- IMPORTADOR INTELIGENTE POR URL (2 PASOS — SIN COPIA DE MEDIOS EXTERNOS) ---
+  getUrlImportQuota: protectedProcedure.query(async ({ ctx }) => {
+    const ent = await getUserEffectiveEntitlements(ctx.user.id, ctx.user.role);
+    const limit = ent.isAdmin ? -1 : ent.plan.maxUrlImportsPerMonth;
+    const used = ent.usage.urlImportsUsed;
+    return {
+      planCode: ent.plan.code,
+      planName: ent.plan.name,
+      periodKey: ent.periodKey,
+      used,
+      limit,
+      remaining: limit < 0 ? -1 : Math.max(0, limit - used),
+    };
+  }),
+
+  importFromUrl: protectedProcedure
+    .input(z.object({ url: z.string().min(4).max(2048) }))
+    .mutation(async ({ ctx, input }) => {
+      await assertCanImportByUrl(ctx.user.id, ctx.user.role);
+      const { importPropertyFromUrl } = await import("../_core/urlImportService");
+      const result = await importPropertyFromUrl(input.url);
+
+      if (result.status === "ok" || result.status === "partial") {
+        await incrementUsageQuota(ctx.user.id, "urlImportsUsed", 1);
+      }
+
+      const ent = await getUserEffectiveEntitlements(ctx.user.id, ctx.user.role);
+      const limit = ent.isAdmin ? -1 : ent.plan.maxUrlImportsPerMonth;
+      return {
+        ...result,
+        quota: {
+          planCode: ent.plan.code,
+          planName: ent.plan.name,
+          periodKey: ent.periodKey,
+          used: ent.usage.urlImportsUsed,
+          limit,
+          remaining: limit < 0 ? -1 : Math.max(0, limit - ent.usage.urlImportsUsed),
+        },
+      };
+    }),
+
   // --- MUTATIONS (CREAR / EDITAR — RBAC PROTEGIDO) ---
   create: protectedProcedure
     .input(propertyInputSchema)
@@ -598,15 +816,39 @@ export const propertiesRouter = router({
         .toUpperCase()
         .substring(0, 3) || cityPrefix;
 
+      const providedRawText = String(input.rawText || "").trim();
+      const effectiveRawText =
+        providedRawText.length >= 25
+          ? providedRawText
+          : [
+              input.name,
+              input.propertyType ? `tipo ${input.propertyType}` : "",
+              input.transactionType ? `en ${input.transactionType}` : "",
+              input.addressNeighborhood || input.zone ? `sector ${input.addressNeighborhood || input.zone}` : "",
+              input.city || input.addressCity ? `ciudad ${input.city || input.addressCity}` : "",
+              input.price || input.rentPrice ? `valor $${input.price || input.rentPrice}` : "",
+              input.areaTotal ? `área ${input.areaTotal} m2` : "",
+              input.bedrooms ? `${input.bedrooms} habitaciones` : "",
+              input.bathrooms ? `${input.bathrooms} baños` : "",
+              input.garages ? `${input.garages} parqueaderos` : "",
+              input.description || "",
+            ]
+              .filter(Boolean)
+              .join(", ") || providedRawText || null;
+
       const newProperty = await db.insert(properties).values({
         ...input,
+        rawText: effectiveRawText,
         addressCity: input.addressCity || input.city || null,
-        origenTipo: "web_admin_unified",
-        origenNombre: "Centro de Publicación Vecy",
+        origenTipo: input.sourceUrl ? "web_url_import" : "web_admin_unified",
+        origenNombre: input.sourcePortal ? `Importado ${input.sourcePortal} (Medios Propios)` : "Centro de Publicación Vecy",
         agentId: ctx.user.id,
         agencyId: input.agencyId ?? entitlements.defaultAgencyId ?? null,
         republishToVecyStore: input.republishToVecyStore ?? entitlements.plan.autoRepublishStore ?? true,
         visibilityScope: input.visibilityScope ?? "public_and_agent",
+        sourcePortal: input.sourcePortal ?? null,
+        sourceUrl: input.sourceUrl ?? null,
+        rawImportPayload: input.rawImportPayload ?? null,
       }).returning();
       invalidatePropertiesListCache();
 
@@ -619,6 +861,22 @@ export const propertiesRouter = router({
         }).where(eq(properties.id, created.id));
         created.externalListingId = autoRefCode;
         created.canonicalExternalId = `VECY:${autoRefCode}`;
+
+        if (Array.isArray(input.images) && input.images.length > 0) {
+          try {
+            await db.insert(propertyImages).values(
+              input.images.slice(0, 30).map((url, idx) => ({
+                propertyId: created.id,
+                imageUrl: url,
+                displayOrder: idx,
+                isMainImage: idx === 0,
+                uploadedBy: String(ctx.user.id),
+              }))
+            );
+          } catch (imgErr: any) {
+            console.warn("[properties.create] Aviso sincronizando propertyImages:", imgErr?.message);
+          }
+        }
 
         import("../_core/matching")
           .then(({ findMatchesForProperty }) =>
@@ -778,6 +1036,18 @@ Texto del inmueble:\n${input.text || "Ver documento PDF adjunto"}`;
 
       cachedAdminMyList = null;
       invalidatePropertiesListCache();
+      invalidatePropertyGetByIdCache(input.id);
+
+      if (updated[0]?.id && updated[0].available !== false) {
+        import("../_core/matching")
+          .then(({ findMatchesForProperty }) =>
+            findMatchesForProperty(updated[0].id).catch((err) =>
+              console.warn("[properties.update] Error calculando matches en background:", err?.message || err)
+            )
+          )
+          .catch(() => {});
+      }
+
       return updated[0];
     }),
 

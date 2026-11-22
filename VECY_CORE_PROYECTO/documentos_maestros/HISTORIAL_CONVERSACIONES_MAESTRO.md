@@ -7,6 +7,21 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-22] — JanIA v34.37: PASO 3 — Importador Inteligente por URL (2 Pasos + SSRF + 0 Medios Copiados), VECY TIENDA, Tienda de Requerimientos Blindada y Portal Marca Blanca (Doctrina Eduardo A. Rivera — v34.37 - 34.37.0)
+
+#### 1. Solicitud de Eduardo A. Rivera
+- Implementar el **PASO 3** del plan maestro SaaS de forma 100% aditiva sin alterar los flujos estabilizados de WhatsApp/JanIA ni los 781 tests vigentes:
+  1. Importador inteligente por URL en 2 pasos con defensa SSRF, soporte para 9 portales colombianos/PropTech, cero copia de fotos/videos externos, limpieza de PII/competidores, control de cuota `maxUrlImportsMonth` y fallback asistido ante WAF/SPA.
+  2. Mejoras en VECY TIENDA (`/ofertas`), blindaje `contactShielded` + postulaciones `requirement_proposals` con firma previa en `/demandas` y aplicación real de Marca Blanca + OpenGraph dinámico para `/s/:slug` y `*.vecygroup.com`.
+
+#### 2. Acciones Ejecutadas en `v34.37`
+1. **Migración `0015_requirement_proposals_and_whitelabel.sql` + `drizzle/schema.ts`:** tabla `requirement_proposals` con índices y llave única `(requirement_id, property_id, proposing_user_id)` para postulaciones seguras en `/demandas`.
+2. **Importador URL SSRF-Safe (`server/_core/urlImportService.ts`, `properties.ts`, `janIA.ts`):** defensa SSRF integral (rangos privados/metadatos IPv4/IPv6, DNS lookup, redirects por salto), extracción previa a limpieza de `<script>` (`__NEXT_DATA__`, JSON-LD, OpenGraph, selectores DOM) para **Wasi, Qrador, NexoApp, Vitrina Raíz, KiteProp, Habi, Fincaraíz, Ciencuadras y Metrocuadrado**, normalización doctrinal (19 tipos, 8 modalidades, precios y geografía DIVIPOLA/veredas), `images: []` / `videoUrl: null` y cuotas mensuales del plan.
+3. **Flujo 2 Pasos UI (`client/src/components/publish/UrlImportStep.tsx` + `UnifiedPublishModal.tsx`):** Paso 1 (URL / Texto / PDF + campos editables) -> Paso 2 (subida guiada/obligatoria de fotos y video propios en `/uploads` + `republishToVecyStore: true` por defecto).
+4. **VECY TIENDA & Tienda de Demandas (`Properties.tsx`, `properties.ts`, `images.ts`, `RequirementsMarketplace.tsx`, `matching.ts`, `matchSignatureService.ts`):** `properties.list` / `listCatalog` priorizan publicaciones con fotos propias y disparan matching `>= 85%`; `listActiveRequirements` y `shieldRequirementForPublicView` protegen el contacto directo (`contactShielded: true`) y `proposePropertyToRequirement` vincula firma digital Ley 527.
+5. **Portal Marca Blanca & OpenGraph Dinámico (`shared/whitelabel.ts`, `AgentMicrosite.tsx`, `AgentDashboard.tsx`, `App.tsx`, `agent.ts`, `ogMetaService.ts`, `vite.ts`, `index.ts`):** aplicación real de logo, colores, plantilla (`wasi-classic`, `luxury-editorial`, `modern-minimal`) y catálogo propio vs. red en `/s/:slug` y subdominios `*.vecygroup.com`, más inyección dinámica de meta tags OpenGraph para WhatsApp/redes.
+6. **Pruebas y Gobernanza:** nueva suite `server/__tests__/paso3UrlImportAndMarketplace.test.ts` (fixtures offline `$0 COP`), semilla `seed-paso3-url-import-tiendas-marca-blanca-v34-37`, **Suite 223** en `regression.test.ts`, bump `v34.37` (`34.37.0`).
+
 ### 📅 [2026-11-22] — JanIA v34.36: Estabilización Baileys (Receipt/Notification ACK + Cache LRU), Cloudflare Full (Strict) en `vecygroup.com` y PASO 2 SaaS COP `$0`–`<= $200.000` (Doctrina Eduardo A. Rivera — v34.36 - 34.36.0)
 
 #### 1. Solicitud de Eduardo A. Rivera y Diagnóstico Técnico

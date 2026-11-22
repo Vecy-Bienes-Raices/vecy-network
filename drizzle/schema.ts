@@ -790,3 +790,32 @@ export const usageQuotas = pgTable("usage_quotas", {
 
 export type UsageQuota = typeof usageQuotas.$inferSelect;
 export type InsertUsageQuota = typeof usageQuotas.$inferInsert;
+
+/**
+ * Postulaciones de inmuebles a requerimientos (Tienda de Demandas con acuerdo 40/20/40)
+ */
+export const requirementProposals = pgTable("requirement_proposals", {
+  id: serial("id").primaryKey(),
+  requirementId: integer("requirement_id").notNull().references(() => requirements.id, { onDelete: "cascade" }),
+  propertyId: integer("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  proposingUserId: integer("proposing_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  matchScore: decimal("match_score", { precision: 5, scale: 2 }),
+  message: text("message"),
+  status: varchar("status", { length: 30 }).default("pending_signature").notNull(),
+  agreementRequired: boolean("agreement_required").default(true).notNull(),
+  signatureToken: varchar("signature_token", { length: 120 }),
+  agreementSignedAt: timestamp("agreement_signed_at"),
+  contactUnlocked: boolean("contact_unlocked").default(false).notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_req_proposals_req_id").on(table.requirementId),
+  index("idx_req_proposals_prop_id").on(table.propertyId),
+  index("idx_req_proposals_user_id").on(table.proposingUserId),
+  index("idx_req_proposals_sig_token").on(table.signatureToken),
+  uniqueIndex("uq_req_proposals_req_prop_user").on(table.requirementId, table.propertyId, table.proposingUserId),
+]);
+
+export type RequirementProposal = typeof requirementProposals.$inferSelect;
+export type InsertRequirementProposal = typeof requirementProposals.$inferInsert;

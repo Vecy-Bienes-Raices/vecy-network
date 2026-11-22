@@ -9,6 +9,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingScrollToTop from "./components/FloatingScrollToTop";
 import JanIAFloatingButton from "./components/JanIAFloatingButton";
+import { extractTenantSlugFromHost, isCustomWhiteLabelHost } from "../../shared/whitelabel";
 
 // Rutas críticas cargadas de forma prioritaria
 import Home from "./pages/Home";
@@ -47,10 +48,16 @@ function PageLoadingFallback() {
 }
 
 function Router() {
+  const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
+  const whiteLabelSlug = extractTenantSlugFromHost(currentHost);
+  const isCustomHost = isCustomWhiteLabelHost(currentHost);
+
   return (
     <Suspense fallback={<PageLoadingFallback />}>
       <Switch>
-        <Route path={"/"} component={Home} />
+        <Route path={"/"}>
+          {whiteLabelSlug || isCustomHost ? <AgentMicrosite hostSlug={whiteLabelSlug || undefined} /> : <Home />}
+        </Route>
         <Route path={"/ofertas"} component={Properties} />
         <Route path={"/properties"} component={Properties} />
         <Route path={"/demandas"} component={RequirementsMarketplace} />

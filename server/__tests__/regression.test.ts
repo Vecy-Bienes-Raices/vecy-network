@@ -16148,9 +16148,51 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-baileys-receipt-ack-ssl-strict-paso2-saas-v34-36"
       );
       expect(seed36?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.36");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[6-9]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.36.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[6-9]|[4-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 223: PASO 3 — Importador URL (2 Pasos), VECY TIENDA, Demandas Blindadas & Marca Blanca (v34.37)
+  // =========================================================================
+  describe("Suite 223: PASO 3 — Importador URL (2 Pasos + SSRF), Tiendas y Portal Marca Blanca (v34.37)", () => {
+    it("1. Verifica módulos PASO 3 (urlImportService, ogMetaService, shared/whitelabel, UrlImportStep) y gobernanza v34.37 (34.37.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      expect(fs.existsSync("server/_core/urlImportService.ts")).toBe(true);
+      expect(fs.existsSync("server/_core/ogMetaService.ts")).toBe(true);
+      expect(fs.existsSync("shared/whitelabel.ts")).toBe(true);
+      expect(fs.existsSync("client/src/components/publish/UrlImportStep.tsx")).toBe(true);
+      expect(fs.existsSync("drizzle/0015_requirement_proposals_and_whitelabel.sql")).toBe(true);
+
+      const propsSrc = fs.readFileSync("server/routers/properties.ts", "utf-8");
+      expect(propsSrc).toContain("importFromUrl: protectedProcedure");
+      expect(propsSrc).toContain("listCatalog: publicProcedure");
+      expect(propsSrc).toContain("computeListingCompletenessRank");
+
+      const matchingSrc = fs.readFileSync("server/routers/matching.ts", "utf-8");
+      expect(matchingSrc).toContain("proposePropertyToRequirement: protectedProcedure");
+      expect(matchingSrc).toContain("shieldRequirementForPublicView");
+      expect(matchingSrc).not.toContain("score >= 70");
+
+      const reqMarketSrc = fs.readFileSync("client/src/pages/RequirementsMarketplace.tsx", "utf-8");
+      expect(reqMarketSrc).not.toContain("wa.me/${targetPhone}");
+
+      const viteSrc = fs.readFileSync("server/_core/vite.ts", "utf-8");
+      expect(viteSrc).toContain("index: false");
+      expect(viteSrc).toContain("injectOpenGraphMeta");
+
+      const seed37 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-paso3-url-import-tiendas-marca-blanca-v34-37"
+      );
+      expect(seed37?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.37");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.37.0");
     });
   });
 });

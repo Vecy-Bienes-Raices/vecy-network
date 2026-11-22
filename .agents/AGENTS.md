@@ -184,7 +184,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.36 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.37 — Noviembre 2026
+
+### Novedades v34.37 (PASO 3 — Importador Inteligente por URL en 2 Pasos, VECY TIENDA, Tienda de Requerimientos Blindada y Portal Marca Blanca — Doctrina Eduardo A. Rivera):
+- **Importador Inteligente por URL (2 Pasos + Cero Medios Copiados):**
+  1. `server/_core/urlImportService.ts`, `server/routers/properties.ts` (`getUrlImportQuota`, `importFromUrl`), `server/routers/janIA.ts` (`importPropertyFromUrl`, `extractFromLink` blindado): validación SSRF integral (protocolo, credenciales, puertos, IPs privadas/reservadas/metadatos IPv4/IPv6, DNS lookup y validación por salto de redirecciones), extracción estructurada ANTES de limpiar `<script>` (`__NEXT_DATA__`, JSON-LD, OpenGraph, selectores DOM) para **Wasi, Qrador, NexoApp, Vitrina Raíz, KiteProp, Habi, Fincaraíz, Ciencuadras y Metrocuadrado**, normalización a los 19 tipos exactos/8 modalidades/DIVIPOLA/veredas, scrubbing de competidores y PII, `images: []` / `videoUrl: null`, fallback asistido WAF/SPA vacía y control de cuota `maxUrlImportsPerMonth`.
+  2. `client/src/components/publish/UrlImportStep.tsx` + `UnifiedPublishModal.tsx`: Paso 1 (URL/texto/PDF + campos editables) -> Paso 2 (subida obligatoria/guiada de fotos y video propios en `/uploads` + opción `republishToVecyStore: true` por defecto).
+- **VECY TIENDA (`/ofertas`), Tienda de Requerimientos (`/demandas`) y Portal Marca Blanca (`*.vecygroup.com`):**
+  1. `client/src/pages/Properties.tsx`, `server/routers/properties.ts`, `server/routers/images.ts`: paginación y filtros del servidor (`listCatalog`), ranking `computeListingCompletenessRank` priorizando publicaciones completas con fotos propias, respeto a `republishToVecyStore`/`visibilityScope` y disparo de matching `>= 85%` en `create` y `update`.
+  2. `drizzle/0015_requirement_proposals_and_whitelabel.sql`, `server/routers/matching.ts`, `server/_core/matchSignatureService.ts`, `client/src/pages/RequirementsMarketplace.tsx`: contacto blindado (`contactShielded: true`, `idUsuarioWhatsapp: null`) y postulaciones `requirement_proposals` con firma previa Ley 527.
+  3. `shared/whitelabel.ts`, `server/routers/agent.ts`, `client/src/pages/AgentMicrosite.tsx`, `AgentDashboard.tsx`, `App.tsx`, `server/_core/ogMetaService.ts`, `server/_core/vite.ts`, `server/_core/index.ts`: aplicación real de logo, colores, 3 plantillas y catálogo propio vs. red en `/s/:slug` y `*.vecygroup.com` + inyección dinámica de OpenGraph para WhatsApp/redes.
+- **Gobernanza y Validación:** `server/__tests__/paso3UrlImportAndMarketplace.test.ts`, semilla `seed-paso3-url-import-tiendas-marca-blanca-v34-37`, **Suite 223**, bump `v34.37` (`34.37.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.36 — Noviembre 2026
 
 ### Novedades v34.36 (Estabilización Baileys + Cloudflare Origin CA Full Strict `vecygroup.com` + PASO 2 SaaS COP `$0`–`$189.900` — Doctrina Eduardo A. Rivera):
 - **Prioridad 1 — Resiliencia Baileys (`server/_core/whatsapp-match.ts`):** failsafe ACK para `CB:receipt` (`7s`) y `CB:notification` (`8s`), supresión de `reactionMessage` en store y `getMessage`, `maxMsgRetryCount: 2`, caché LRU en RAM (`15.000` entradas) para claves Signal de `.baileys_auth`, backoff exponencial (`5s..90s`) con estabilidad `60s`, watchdog cada `30s` y métricas `receiptFailsafeAckCount`/`notificationFailsafeAckCount`/`totalDisconnects` en `/api/health`.

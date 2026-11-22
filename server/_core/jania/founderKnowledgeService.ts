@@ -1046,6 +1046,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.36: Baileys receipt/notification ACK + Nginx 443 Full Strict + Migración 0014 SaaS COP + Wompi + RBAC properties + Matching >= 85%.",
     createdAt: "2026-11-22T04:10:00.000Z",
     active: true
+  },
+  {
+    id: "seed-paso3-url-import-tiendas-marca-blanca-v34-37",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "PASO 3 — Importador Inteligente por URL (2 Pasos, SSRF-safe, 0 Medios Externos), VECY TIENDA, Tienda de Requerimientos Blindada y Portal Marca Blanca (v34.37)",
+    directive:
+      "1) Importador URL (urlImportService.ts): valida URL contra SSRF (rangos privados, metadatos, IPv4-mapped IPv6, DNS y redirects), extrae antes de limpiar <script> (__NEXT_DATA__, JSON-LD, OpenGraph, DOM) para Wasi, Qrador, NexoApp, Vitrina Raíz, KiteProp, Habi, Fincaraíz, Ciencuadras y Metrocuadrado, normaliza a 19 tipos/8 modalidades/DIVIPOLA, limpia teléfonos/correos/competidores, JAMÁS copia imágenes/videos externos (Paso 2 exige subida propia) y respeta cuotas maxUrlImportsPerMonth. 2) VECY TIENDA (/ofertas) respeta republishToVecyStore y prioriza publicaciones completas con fotos propias. 3) Tienda de Requerimientos (/demandas) blinda el contacto directo (contactShielded) y habilita postulaciones con firma Ley 527 (requirement_proposals). 4) Portal Marca Blanca aplica plantillas, colores, logo, catálogo propio vs red en *.vecygroup.com y sirve meta tags OpenGraph dinámicos.",
+    rawText:
+      "Blindaje v34.37: Importador URL SSRF-safe en 2 pasos + VECY TIENDA + Tienda de Demandas contactShielded + Portal Marca Blanca *.vecygroup.com + OG dinámico.",
+    createdAt: "2026-11-22T05:00:00.000Z",
+    active: true
   }
 ];
 

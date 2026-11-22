@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import AgentProToolsWidget from '@/components/AgentProToolsWidget';
@@ -6,24 +6,72 @@ import AgentProptechSuite from '@/components/AgentProptechSuite';
 import {
   Building2, MapPin, Bed, Bath, Car, Ruler, Phone, Mail,
   CalendarCheck, Download, EyeOff, Palette, Search, Sparkles,
-  ShieldCheck, ExternalLink, Loader2, Share2
+  ShieldCheck, ExternalLink, Loader2, Share2, Globe
 } from 'lucide-react';
 import ShareModal from '@/components/ShareModal';
+import { extractTenantSlugFromHost } from '../../../shared/whitelabel';
 
-export default function AgentMicrosite() {
+interface AgentMicrositeProps {
+  hostSlug?: string;
+}
+
+export default function AgentMicrosite({ hostSlug }: AgentMicrositeProps = {}) {
   const [, paramsS] = useRoute('/s/:slug');
   const [, paramsAgencia] = useRoute('/agencia/:slug');
-  const slug = paramsS?.slug || paramsAgencia?.slug || '';
+  const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+  const detectedHostSlug = extractTenantSlugFromHost(currentHost);
+  const slug = hostSlug || paramsS?.slug || paramsAgencia?.slug || detectedHostSlug || '';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [txFilter, setTxFilter] = useState<string>('all');
+  const [catalogScope, setCatalogScope] = useState<'all' | 'own' | 'network'>('all');
   const [shareOpen, setShareOpen] = useState(false);
   const [shareConfig, setShareConfig] = useState({ url: '', text: '', title: '' });
 
   const { data, isLoading, error } = trpc.agent.getStoreBySubdomain.useQuery(
-    { slug },
-    { enabled: !!slug }
+    { slug: slug || undefined, host: currentHost || undefined },
+    { enabled: Boolean(slug || currentHost) }
   );
+
+  const agent = data?.agent;
+  const properties = data?.properties || [];
+  const showNetworkCatalog = data?.showNetworkCatalog ?? true;
+  const ownCount = data?.ownCount ?? 0;
+
+  const theme = (agent?.themeConfig as any) || {};
+  const tools = (agent?.activeTools as any) || {};
+  const templateStyle = (theme.templateStyle as 'wasi-classic' | 'luxury-editorial' | 'modern-minimal') || 'wasi-classic';
+  const primaryColor = theme.primaryColor || '#0f4c81';
+  const secondaryColor = theme.secondaryColor || '#0f172a';
+  const accentColor = theme.accentColor || primaryColor;
+  const agencyName = theme.agencyName || agent?.name || 'Inmobiliaria Asociada';
+  const slogan = theme.slogan || 'Portafolio Inmobiliario Certificado • Red Colaborativa Vecy';
+  const contactPhone = theme.contactPhone || agent?.phone || '+57 316 6569719';
+  const contactEmail = theme.contactEmail || agent?.email || '';
+  const isMinimalLight = templateStyle === 'modern-minimal';
+  const isEditorial = templateStyle === 'luxury-editorial';
+
+  useEffect(() => {
+    if (agent && agencyName) {
+      document.title = `${agencyName} | Portafolio Inmobiliario`;
+    }
+  }, [agent, agencyName]);
+
+  const filteredProperties = useMemo(() => {
+    return (properties || []).filter((p: any) => {
+      if (catalogScope === 'own' && !p.isOwnProperty) return false;
+      if (catalogScope === 'network' && p.isOwnProperty) return false;
+      const matchesTx = txFilter === 'all' || (p.transactionType || '').toLowerCase().includes(txFilter);
+      const q = searchTerm.toLowerCase().trim();
+      const matchesQuery =
+        !q ||
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.zone || '').toLowerCase().includes(q) ||
+        (p.addressNeighborhood || '').toLowerCase().includes(q) ||
+        (p.city || '').toLowerCase().includes(q);
+      return matchesTx && matchesQuery;
+    });
+  }, [properties, txFilter, searchTerm, catalogScope]);
 
   if (isLoading) {
     return (
@@ -34,7 +82,7 @@ export default function AgentMicrosite() {
     );
   }
 
-  if (error || !data?.agent) {
+  if (error || !agent) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-white p-6 text-center">
         <Building2 className="w-16 h-16 text-zinc-700 mb-4" />
@@ -51,32 +99,19 @@ export default function AgentMicrosite() {
     );
   }
 
-  const { agent, properties } = data;
-  const theme = (agent.themeConfig as any) || {};
-  const tools = (agent.activeTools as any) || {};
-  const primaryColor = theme.primaryColor || '#0f4c81';
-  const secondaryColor = theme.secondaryColor || '#0f172a';
-  const agencyName = theme.agencyName || agent.name || 'Inmobiliaria Asociada';
-  const slogan = theme.slogan || 'Portafolio Inmobiliario Certificado • Red Colaborativa Vecy';
-  const contactPhone = theme.contactPhone || agent.phone || '+57 316 6569719';
-  const contactEmail = theme.contactEmail || agent.email || '';
-
-  const filteredProperties = useMemo(() => {
-    return (properties || []).filter((p: any) => {
-      const matchesTx = txFilter === 'all' || (p.transactionType || '').toLowerCase().includes(txFilter);
-      const q = searchTerm.toLowerCase().trim();
-      const matchesQuery =
-        !q ||
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.zone || '').toLowerCase().includes(q) ||
-        (p.addressNeighborhood || '').toLowerCase().includes(q) ||
-        (p.city || '').toLowerCase().includes(q);
-      return matchesTx && matchesQuery;
-    });
-  }, [properties, txFilter, searchTerm]);
+  const canonicalSiteUrl = agent.subdomain
+    ? `https://${agent.subdomain}.vecygroup.com/`
+    : (typeof window !== 'undefined' ? window.location.href : 'https://vecygroup.com/');
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-['Outfit',sans-serif]">
+    <div
+      className={`min-h-screen ${isMinimalLight ? 'bg-zinc-50 text-zinc-900' : 'bg-zinc-950 text-white'} ${isEditorial ? "font-['Plus_Jakarta_Sans',serif]" : "font-['Outfit',sans-serif]"}`}
+      style={{
+        ['--brand-primary' as any]: primaryColor,
+        ['--brand-secondary' as any]: secondaryColor,
+        ['--brand-accent' as any]: accentColor,
+      }}
+    >
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* CABECERA PERSONALIZADA DEL SUSCRIPTOR                              */}
       {/* ══════════════════════════════════════════════════════════════════ */}
@@ -109,6 +144,23 @@ export default function AgentMicrosite() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setShareConfig({
+                  title: `Compartir Portal de ${agencyName}`,
+                  url: canonicalSiteUrl,
+                  text: `Explora nuestro portafolio inmobiliario en ${agencyName}`,
+                });
+                setShareOpen(true);
+              }}
+              className="px-3.5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 cursor-pointer"
+              title="Compartir enlace marca blanca"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Compartir</span>
+            </button>
+
             <a
               href={`/agenda?agentId=${agent.id}`}
               className="px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider text-white shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
@@ -196,23 +248,51 @@ export default function AgentMicrosite() {
           activeTools={tools}
         />
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
             <h3 className="text-xl font-black uppercase tracking-wider">
               Catálogo Disponible ({filteredProperties.length})
             </h3>
-            <p className="text-xs text-zinc-400">
+            <p className={`text-xs ${isMinimalLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
               Cada ficha cuenta con descarga en PDF con marca de {agencyName} o en Marca Blanca Neutra para aliados.
             </p>
           </div>
+
+          {showNetworkCatalog && (
+            <div className={`inline-flex p-1 rounded-xl border ${isMinimalLight ? 'bg-zinc-200/80 border-zinc-300' : 'bg-zinc-900 border-white/10'}`}>
+              {[
+                { id: 'all', label: `Todo (${(properties || []).length})` },
+                { id: 'own', label: `Portafolio Propio (${ownCount})` },
+                { id: 'network', label: 'Red Colaborativa' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setCatalogScope(tab.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    catalogScope === tab.id
+                      ? 'text-white shadow'
+                      : isMinimalLight
+                        ? 'text-zinc-700 hover:text-zinc-950'
+                        : 'text-zinc-400 hover:text-white'
+                  }`}
+                  style={catalogScope === tab.id ? { backgroundColor: primaryColor } : undefined}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {filteredProperties.length === 0 ? (
-          <div className="text-center py-16 bg-zinc-900/50 rounded-3xl border border-white/10">
-            <p className="text-zinc-400 text-sm">No se encontraron inmuebles con ese filtro.</p>
+          <div className={`text-center py-16 rounded-3xl border ${isMinimalLight ? 'bg-white border-zinc-200' : 'bg-zinc-900/50 border-white/10'}`}>
+            <p className={isMinimalLight ? 'text-zinc-600 text-sm' : 'text-zinc-400 text-sm'}>
+              No se encontraron inmuebles con ese filtro.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+          <div className={`grid gap-7 ${isEditorial ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {filteredProperties.map((prop: any) => {
               const imgs = Array.isArray(prop.images) && prop.images.length > 0
                 ? prop.images
@@ -225,10 +305,14 @@ export default function AgentMicrosite() {
               return (
                 <div
                   key={prop.id}
-                  className="bg-zinc-900/90 rounded-3xl overflow-hidden border border-white/10 hover:border-white/25 transition-all flex flex-col justify-between shadow-xl group"
+                  className={`rounded-3xl overflow-hidden border transition-all flex flex-col justify-between shadow-xl group ${
+                    isMinimalLight
+                      ? 'bg-white border-zinc-200 hover:border-zinc-400 text-zinc-900'
+                      : 'bg-zinc-900/90 border-white/10 hover:border-white/25 text-white'
+                  }`}
                 >
                   <div>
-                    <div className="relative h-56 overflow-hidden">
+                    <div className={`relative overflow-hidden ${isEditorial ? 'h-72' : 'h-56'}`}>
                       <img
                         src={imgs[0]}
                         alt={prop.name}
@@ -239,6 +323,9 @@ export default function AgentMicrosite() {
                         style={{ backgroundColor: primaryColor }}
                       >
                         {(prop.transactionType || 'venta').replace(/_/g, ' ')}
+                      </div>
+                      <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-black/75 text-white border border-white/15">
+                        {prop.isOwnProperty ? 'Propio' : 'Red Aliada'}
                       </div>
                       <div className="absolute bottom-3 right-3 px-3.5 py-1.5 rounded-xl bg-black/85 backdrop-blur-md text-white font-black text-base border border-white/15">
                         ${Number(prop.price || 0).toLocaleString('es-CO')} COP
@@ -251,26 +338,26 @@ export default function AgentMicrosite() {
                         <span>{prop.addressNeighborhood || prop.zone}, {prop.city || 'Bogotá'}</span>
                       </div>
 
-                      <h4 className="text-base font-extrabold text-white line-clamp-2 leading-snug">
+                      <h4 className={`text-base font-extrabold line-clamp-2 leading-snug ${isMinimalLight ? 'text-zinc-900' : 'text-white'}`}>
                         {prop.name}
                       </h4>
 
-                      <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center text-xs">
+                      <div className={`grid grid-cols-4 gap-2 pt-2 border-t text-center text-xs ${isMinimalLight ? 'border-zinc-200' : 'border-white/10'}`}>
                         <div>
                           <span className="text-[10px] text-zinc-500 block">Área</span>
-                          <strong className="text-white">{prop.areaTotal || '-'} m²</strong>
+                          <strong className={isMinimalLight ? 'text-zinc-900' : 'text-white'}>{prop.areaTotal || '-'} m²</strong>
                         </div>
                         <div>
                           <span className="text-[10px] text-zinc-500 block">Hab</span>
-                          <strong className="text-white">{prop.bedrooms ?? '-'}</strong>
+                          <strong className={isMinimalLight ? 'text-zinc-900' : 'text-white'}>{prop.bedrooms ?? '-'}</strong>
                         </div>
                         <div>
                           <span className="text-[10px] text-zinc-500 block">Baños</span>
-                          <strong className="text-white">{prop.bathrooms ?? '-'}</strong>
+                          <strong className={isMinimalLight ? 'text-zinc-900' : 'text-white'}>{prop.bathrooms ?? '-'}</strong>
                         </div>
                         <div>
                           <span className="text-[10px] text-zinc-500 block">Garaje</span>
-                          <strong className="text-white">{prop.garages ?? '0'}</strong>
+                          <strong className={isMinimalLight ? 'text-zinc-900' : 'text-white'}>{prop.garages ?? '0'}</strong>
                         </div>
                       </div>
                     </div>
@@ -329,15 +416,35 @@ export default function AgentMicrosite() {
       </main>
 
       {/* Footer del Micro-Sitio del Suscriptor */}
-      <footer className="border-t border-white/10 py-10 px-4 text-center text-xs text-zinc-400" style={{ backgroundColor: secondaryColor }}>
+      <footer className="border-t border-white/10 py-10 px-4 text-center text-xs text-zinc-300" style={{ backgroundColor: secondaryColor }}>
         <div className="max-w-5xl mx-auto space-y-2">
           <p className="font-black text-white text-sm uppercase tracking-wider">{agencyName}</p>
-          <p>
-            {contactPhone && <span className="mr-4">WhatsApp: {contactPhone}</span>}
+          <p className="flex flex-wrap items-center justify-center gap-4">
+            {contactPhone && <span>WhatsApp: {contactPhone}</span>}
             {contactEmail && <span>Correo: {contactEmail}</span>}
+            {theme.nit && <span>NIT: {theme.nit}</span>}
+            {theme.address && <span>{theme.address}</span>}
           </p>
-          <p className="text-[11px] text-zinc-500 pt-2">
-            Impulsado por la Red Colaborativa Inmobiliaria <strong>VECY BIENES RAÍCES</strong> • Publicación Ilimitada con IA
+          {(theme.websiteUrl || theme.instagramUrl || theme.facebookUrl || theme.linkedinUrl) && (
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+              {theme.websiteUrl && (
+                <a href={theme.websiteUrl} target="_blank" rel="noreferrer" className="underline hover:text-white inline-flex items-center gap-1">
+                  <Globe className="w-3 h-3" /> Web Oficial
+                </a>
+              )}
+              {theme.instagramUrl && (
+                <a href={theme.instagramUrl} target="_blank" rel="noreferrer" className="underline hover:text-white">Instagram</a>
+              )}
+              {theme.facebookUrl && (
+                <a href={theme.facebookUrl} target="_blank" rel="noreferrer" className="underline hover:text-white">Facebook</a>
+              )}
+              {theme.linkedinUrl && (
+                <a href={theme.linkedinUrl} target="_blank" rel="noreferrer" className="underline hover:text-white">LinkedIn</a>
+              )}
+            </div>
+          )}
+          <p className="text-[11px] text-zinc-400 pt-2">
+            Portal Inmobiliario Certificado • <strong>{agencyName}</strong>
           </p>
         </div>
       </footer>

@@ -330,6 +330,14 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.37 — Noviembre 2026
+- **PASO 3 — Importador Inteligente por URL (2 Pasos), VECY TIENDA, Tienda de Requerimientos y Portal Marca Blanca:**
+  - `drizzle/0015_requirement_proposals_and_whitelabel.sql` + `drizzle/schema.ts`: nueva tabla `requirement_proposals` con flujo de firma previa Ley 527 e índices de trazabilidad.
+  - `server/_core/urlImportService.ts`, `server/routers/properties.ts`, `server/routers/janIA.ts`, `UrlImportStep.tsx`, `UnifiedPublishModal.tsx`: importador SSRF-safe en 2 pasos (sin copiar fotos/videos de terceros), soporte de extracción previa a limpieza `<script>` (`__NEXT_DATA__`, JSON-LD, OpenGraph, selectores DOM) para Wasi, Qrador, NexoApp, Vitrina Raíz, KiteProp, Habi, Fincaraíz, Ciencuadras y Metrocuadrado, normalización completa, scrubbing de competidores/PII, fallback asistido WAF/SPA vacía y cuotas `maxUrlImportsPerMonth`.
+  - `client/src/pages/Properties.tsx`, `server/routers/images.ts`, `server/routers/matching.ts`, `client/src/pages/RequirementsMarketplace.tsx`, `server/_core/matchSignatureService.ts`: ranking por completitud/fotos propias en VECY TIENDA, matching `>= 85%` en `create`/`update`, contacto blindado (`contactShielded: true`) y postulación `requirement_proposals` en `/demandas`.
+  - `shared/whitelabel.ts`, `server/routers/agent.ts`, `client/src/pages/AgentMicrosite.tsx`, `client/src/pages/AgentDashboard.tsx`, `client/src/App.tsx`, `server/_core/ogMetaService.ts`, `server/_core/vite.ts`, `server/_core/index.ts`: resolución multi-tenant por `/s/:slug`, `*.vecygroup.com` y dominio propio con aplicación real de plantillas/logo/colores/catálogo e inyección dinámica de OpenGraph para WhatsApp/redes.
+  - Gobernanza y Pruebas: `server/__tests__/paso3UrlImportAndMarketplace.test.ts`, semilla `seed-paso3-url-import-tiendas-marca-blanca-v34-37`, **Suite 223** en `regression.test.ts`, bump `v34.37` (`34.37.0`).
+
 ### 🔖 v34.36 — Noviembre 2026
 - **Estabilización Baileys, Cloudflare SSL Full (Strict) en `vecygroup.com` y PASO 2 SaaS COP (`$0` a `<= $200.000/mes`):**
   - `server/_core/whatsapp-match.ts`: añadido failsafe ACK en `CB:receipt` (`7s`) y `CB:notification` (`8s`), supresión de reintentos y almacenamiento de `reactionMessage`, `maxMsgRetryCount: 2`, caché LRU acotada (`15.000` entradas) para claves Signal de `.baileys_auth`, backoff exponencial (`5s..90s`), temporizador de estabilidad (`60s`) y watchdog liveness (`30s`) con telemetría ampliada en `/api/health`.

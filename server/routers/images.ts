@@ -7,8 +7,9 @@ import { publicProcedure } from '../_core/trpc';
 import { storagePut } from '../storage';
 import { addPropertyImage, getPropertyImages, deletePropertyImage } from '../db';
 import { getDb } from '../db';
-import { propertyImages } from '../../drizzle/schema';
+import { propertyImages, properties } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { invalidatePropertiesListCache, invalidatePropertyGetByIdCache } from './properties';
 
 export const imagesRouter = {
   /**
@@ -63,6 +64,32 @@ export const imagesRouter = {
           mimeType: input.mimeType,
           fileSize: buffer.length,
         });
+
+        // Sincronizar también el JSONB properties.images (best-effort)
+        try {
+          const db = await getDb();
+          if (db) {
+            const [prop] = await db
+              .select({ images: properties.images })
+              .from(properties)
+              .where(eq(properties.id, input.propertyId))
+              .limit(1);
+            if (prop) {
+              const currentImgs = Array.isArray(prop.images) ? [...(prop.images as string[])] : [];
+              if (!currentImgs.includes(url)) {
+                const updatedImgs = input.isMainImage ? [url, ...currentImgs] : [...currentImgs, url];
+                await db
+                  .update(properties)
+                  .set({ images: updatedImgs.slice(0, 30), updatedAt: new Date() })
+                  .where(eq(properties.id, input.propertyId));
+                invalidatePropertiesListCache();
+                invalidatePropertyGetByIdCache(input.propertyId);
+              }
+            }
+          }
+        } catch (syncErr) {
+          console.warn('[images.uploadPropertyImage] No se pudo sincronizar properties.images:', syncErr);
+        }
 
         return {
           success: true,

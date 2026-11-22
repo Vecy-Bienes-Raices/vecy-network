@@ -8,9 +8,10 @@ import {
   ChevronDown, ChevronUp, Sliders, Compass, Shield, Flame, Wine, Tv,
   BookOpen, Coffee, Sun, Trees, CheckSquare, Square, Edit2, PlusCircle,
   ChevronLeft, ChevronRight, GripVertical, Clipboard, ClipboardCheck,
-  FileDown, Paperclip
+  FileDown, Paperclip, Link2, Camera, Store, ArrowRight, ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
+import UrlImportStep from './UrlImportStep';
 import {
   COLOMBIA_DEPARTMENTS,
   getSuggestedLocalitiesForCity,
@@ -22,6 +23,7 @@ interface UnifiedPublishModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultTab?: 'oferta' | 'demanda';
+  initialAssistantTab?: 'url' | 'text' | 'pdf';
   onSuccess?: () => void;
   editProperty?: any;
 }
@@ -348,14 +350,23 @@ export default function UnifiedPublishModal({
   isOpen,
   onClose,
   defaultTab = 'oferta',
+  initialAssistantTab = 'text',
   onSuccess,
   editProperty,
 }: UnifiedPublishModalProps) {
   const [activeTab, setActiveTab] = useState<'oferta' | 'demanda'>(defaultTab);
+  const [propWizardStep, setPropWizardStep] = useState<1 | 2>(1);
 
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab]);
+
+  useEffect(() => {
+    if (isOpen && !editProperty) {
+      setJaniaAssistantTab(initialAssistantTab);
+      setPropWizardStep(1);
+    }
+  }, [isOpen, initialAssistantTab, editProperty]);
 
   // Cerrar con Escape y bloquear scroll
   useEffect(() => {
@@ -388,6 +399,7 @@ export default function UnifiedPublishModal({
   const [propSubtype, setPropSubtype] = useState<string>('');
   const [propName, setPropName] = useState('');
   const [propPrice, setPropPrice] = useState('');
+  const [propRentPrice, setPropRentPrice] = useState('');
   const [propAdminFee, setPropAdminFee] = useState('');
   const [propAreaConstruida, setPropAreaConstruida] = useState('');
   const [propAreaPrivada, setPropAreaPrivada] = useState('');
@@ -396,8 +408,16 @@ export default function UnifiedPublishModal({
   const [propBathrooms, setPropBathrooms] = useState<number | ''>('');
   const [propCocina, setPropCocina] = useState<string>('Integral');
 
-  // ASISTENTE JANIA WORKSPACE: TEXTO & FICHA TÉCNICA PDF (v31.56)
-  const [janiaAssistantTab, setJaniaAssistantTab] = useState<'text' | 'pdf'>('text');
+  // ASISTENTE JANIA WORKSPACE: URL, TEXTO & FICHA TÉCNICA PDF
+  const [janiaAssistantTab, setJaniaAssistantTab] = useState<'url' | 'text' | 'pdf'>(initialAssistantTab);
+  const [propRepublishToVecyStore, setPropRepublishToVecyStore] = useState<boolean>(true);
+  const [propVisibilityScope, setPropVisibilityScope] = useState<'public_and_agent' | 'agent_only'>('public_and_agent');
+  const [propSourcePortal, setPropSourcePortal] = useState<string | null>(null);
+  const [propSourceUrl, setPropSourceUrl] = useState<string | null>(null);
+  const [propRawImportPayload, setPropRawImportPayload] = useState<any>(null);
+  const step1HeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const step2HeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const propRawTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [propPdfFile, setPropPdfFile] = useState<File | null>(null);
   const [propPdfFileName, setPropPdfFileName] = useState<string>('');
   const [propPdfBase64, setPropPdfBase64] = useState<string>('');
@@ -625,8 +645,17 @@ export default function UnifiedPublishModal({
     if (data.pdfUrl) setPropPdfUrl(data.pdfUrl);
     if (data.isSubtipoComercial !== undefined) setPropIsSubtipoComercial(Boolean(data.isSubtipoComercial));
     if (data.transactionType) setPropTxType(data.transactionType);
-    if (data.price) setPropPrice(formatCOP(data.price));
+    if (data.price && String(data.price) !== '0') setPropPrice(formatCOP(data.price));
+    if (data.rentPrice && String(data.rentPrice) !== '0') setPropRentPrice(formatCOP(data.rentPrice));
     if (data.adminFee) setPropAdminFee(formatCOP(data.adminFee));
+    if (data.sourcePortal) setPropSourcePortal(data.sourcePortal);
+    if (data.sourceUrl) setPropSourceUrl(data.sourceUrl);
+    if (data.rawImportPayload) setPropRawImportPayload(data.rawImportPayload);
+    if (data.republishToVecyStore !== undefined) setPropRepublishToVecyStore(Boolean(data.republishToVecyStore));
+    if (data.thirdPartyMediaStripped) {
+      setPropImages([]);
+      setPropVideoUrl('');
+    }
     if (data.city) {
       setPropCity(data.city);
       const dep = data.department || findDepartmentForCity(data.city);
@@ -1032,9 +1061,16 @@ export default function UnifiedPublishModal({
   useEffect(() => {
     if (editProperty && isOpen) {
       setActiveTab('oferta');
+      setPropWizardStep(1);
       setPropName(editProperty.name || '');
       setPropPrice(editProperty.price ? formatCOP(String(editProperty.price)) : '');
+      setPropRentPrice(editProperty.rentPrice ? formatCOP(String(editProperty.rentPrice)) : '');
       setPropAdminFee(editProperty.adminFee ? formatCOP(String(editProperty.adminFee)) : '');
+      setPropRepublishToVecyStore(editProperty.republishToVecyStore !== false);
+      setPropVisibilityScope(editProperty.visibilityScope === 'agent_only' ? 'agent_only' : 'public_and_agent');
+      setPropSourcePortal(editProperty.sourcePortal || null);
+      setPropSourceUrl(editProperty.sourceUrl || null);
+      setPropRawImportPayload(editProperty.rawImportPayload || null);
       setPropAreaConstruida(editProperty.areaTotal ? String(editProperty.areaTotal) : '');
       setPropAreaPrivada(editProperty.areaPrivate ? String(editProperty.areaPrivate) : '');
       setPropYearBuilt(editProperty.yearBuilt || '');
@@ -1132,10 +1168,17 @@ export default function UnifiedPublishModal({
   }, [editProperty, isOpen]);
 
   const resetPropForm = () => {
+    setPropWizardStep(1);
     setPropRawText('');
     setPropName('');
     setPropPrice('');
+    setPropRentPrice('');
     setPropAdminFee('');
+    setPropRepublishToVecyStore(true);
+    setPropVisibilityScope('public_and_agent');
+    setPropSourcePortal(null);
+    setPropSourceUrl(null);
+    setPropRawImportPayload(null);
     setPropAreaConstruida('');
     setPropAreaPrivada('');
     setPropYearBuilt('');
@@ -1420,15 +1463,32 @@ export default function UnifiedPublishModal({
     }
   };
 
+  const goToWizardStep = (step: 1 | 2) => {
+    setPropWizardStep(step);
+    requestAnimationFrame(() => {
+      if (step === 1) step1HeadingRef.current?.focus();
+      else step2HeadingRef.current?.focus();
+    });
+  };
+
   // Guardar Inmueble (Oferta)
   const handleSaveProperty = () => {
     if (!propName.trim()) {
       toast.error('Por favor escribe un título o nombre para el inmueble');
+      goToWizardStep(1);
       return;
     }
     const cleanPrice = cleanCOP(propPrice);
-    if (!cleanPrice || cleanPrice === '0') {
+    const cleanRentPrice = cleanCOP(propRentPrice);
+    const effectivePrice = cleanPrice && cleanPrice !== '0' ? cleanPrice : cleanRentPrice;
+    if (!effectivePrice || effectivePrice === '0') {
       toast.error('Por favor indica un precio válido para el inmueble');
+      goToWizardStep(1);
+      return;
+    }
+    if (propSourceUrl && propImages.length === 0) {
+      toast.error('Para publicaciones importadas por URL debes subir al menos 1 foto propia en el Paso 2.');
+      goToWizardStep(2);
       return;
     }
 
@@ -1443,7 +1503,13 @@ export default function UnifiedPublishModal({
       description: (propDescription || propRawText || '').trim().slice(0, 500),
       propertyType: dbPropertyType as any,
       transactionType: (propTxType === 'permuta' ? 'venta_permuta' : propTxType) as any,
-      price: cleanPrice,
+      price: effectivePrice,
+      rentPrice: cleanRentPrice && cleanRentPrice !== '0' ? cleanRentPrice : null,
+      republishToVecyStore: propRepublishToVecyStore,
+      visibilityScope: propVisibilityScope,
+      sourcePortal: propSourcePortal,
+      sourceUrl: propSourceUrl,
+      rawImportPayload: propRawImportPayload,
       city: finalCity,
       addressCity: finalCity,
       addressLocality: finalLocality,
@@ -1868,8 +1934,50 @@ export default function UnifiedPublishModal({
           {/* ══════════════════════════════════════════════════════════════ */}
           {activeTab === 'oferta' && (
             <div className="space-y-6 animate-fade-in">
-              
-              {/* ASISTENTE JANIA WORKSPACE: DUAL TAB TEXTO & FICHA TÉCNICA PDF (v31.56) */}
+
+              {/* NAVEGADOR DE 2 PASOS (PASO 1: DATOS / URL -> PASO 2: FOTOS Y VIDEO PROPIOS + VECY TIENDA) */}
+              <nav aria-label="Pasos de publicación del inmueble" className="grid grid-cols-2 gap-2.5 p-2 rounded-2xl bg-black/60 border border-white/10">
+                <button
+                  type="button"
+                  aria-current={propWizardStep === 1 ? 'step' : undefined}
+                  onClick={() => goToWizardStep(1)}
+                  className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                    propWizardStep === 1
+                      ? 'bg-gradient-to-r from-[#bf953f]/25 to-[#aa771c]/15 border border-[#bf953f]/60 text-white shadow'
+                      : 'bg-white/[0.02] hover:bg-white/[0.05] border border-transparent text-zinc-400'
+                  }`}
+                >
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${propWizardStep === 1 ? 'bg-[#bf953f] text-black' : 'bg-white/10 text-zinc-300'}`}>1</span>
+                  <div className="min-w-0">
+                    <span className="text-xs font-black block truncate">Paso 1 · Datos e Importación URL</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Enlace externo, texto o ficha editable</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  aria-current={propWizardStep === 2 ? 'step' : undefined}
+                  onClick={() => goToWizardStep(2)}
+                  className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                    propWizardStep === 2
+                      ? 'bg-gradient-to-r from-[#bf953f]/25 to-[#aa771c]/15 border border-[#bf953f]/60 text-white shadow'
+                      : 'bg-white/[0.02] hover:bg-white/[0.05] border border-transparent text-zinc-400'
+                  }`}
+                >
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${propWizardStep === 2 ? 'bg-[#bf953f] text-black' : 'bg-white/10 text-zinc-300'}`}>2</span>
+                  <div className="min-w-0">
+                    <span className="text-xs font-black block truncate">Paso 2 · Fotos/Video Propios ({propImages.length})</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Medios propios + VECY TIENDA</span>
+                  </div>
+                </button>
+              </nav>
+
+              <div className={propWizardStep === 1 ? 'space-y-6' : 'hidden'} hidden={propWizardStep !== 1}>
+                <h3 ref={step1HeadingRef} tabIndex={-1} className="sr-only">
+                  Paso 1: Datos del inmueble e importación por URL
+                </h3>
+
+              {/* ASISTENTE JANIA WORKSPACE: URL, TEXTO & FICHA TÉCNICA PDF */}
               <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-black/60 to-amber-500/5 border border-[#bf953f]/40 space-y-4 shadow-[0_4px_25px_rgba(191,149,63,0.15)]">
                 {/* Header con pestañas y status */}
                 <div className="flex items-center justify-between flex-wrap gap-2.5 border-b border-white/10 pb-3">
@@ -1879,16 +1987,28 @@ export default function UnifiedPublishModal({
                     </div>
                     <div>
                       <span className="text-xs font-black uppercase tracking-wider text-[#fcf6ba] block">
-                        Asistente JanIA: Estructuración Inteligente con IA
+                        Asistente JanIA: Importación por URL & Estructuración IA
                       </span>
                       <span className="text-[10px] text-zinc-400">
-                        Pega la descripción completa o adjunta la Ficha Técnica en PDF
+                        Importa desde un enlace (9 portales), pega descripción o adjunta Ficha Técnica PDF
                       </span>
                     </div>
                   </div>
 
-                  {/* Switcher de Pestaña: Texto vs PDF */}
-                  <div className="flex items-center p-1 bg-black/80 rounded-xl border border-white/10">
+                  {/* Switcher de Pestaña: URL vs Texto vs PDF */}
+                  <div className="flex flex-wrap items-center p-1 bg-black/80 rounded-xl border border-white/10 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setJaniaAssistantTab('url')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        janiaAssistantTab === 'url'
+                          ? 'bg-[#bf953f] text-black shadow font-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      <span>Importar por URL</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setJaniaAssistantTab('text')}
@@ -1918,6 +2038,22 @@ export default function UnifiedPublishModal({
                     </button>
                   </div>
                 </div>
+
+                {/* CONTENIDO TAB 0: IMPORTAR POR URL */}
+                {janiaAssistantTab === 'url' && (
+                  <UrlImportStep
+                    onImportSuccess={(res) => {
+                      if (res?.data) {
+                        applyPropData(res.data);
+                      }
+                    }}
+                    onFallbackToText={() => {
+                      setJaniaAssistantTab('text');
+                      requestAnimationFrame(() => propRawTextareaRef.current?.focus());
+                    }}
+                    onAdvanceToMediaStep={() => goToWizardStep(2)}
+                  />
+                )}
 
                 {/* CONTENIDO TAB 1: TEXTO LIBRE */}
                 {janiaAssistantTab === 'text' && (
@@ -1953,6 +2089,7 @@ export default function UnifiedPublishModal({
 
                     {/* Textarea amplio y expansible */}
                     <textarea
+                      ref={propRawTextareaRef}
                       rows={6}
                       value={propRawText}
                       onChange={(e) => setPropRawText(e.target.value)}
@@ -2068,7 +2205,8 @@ export default function UnifiedPublishModal({
                   </div>
                 )}
 
-                {/* Footer de acción de estructurar */}
+                {/* Footer de acción de estructurar (solo para Texto y PDF) */}
+                {janiaAssistantTab !== 'url' && (
                 <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-white/5">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-amber-300/80 font-semibold flex items-center gap-1">
@@ -2096,6 +2234,7 @@ export default function UnifiedPublishModal({
                     )}
                   </button>
                 </div>
+                )}
               </div>
 
               {/* ──────────────────────────────────────────────────────────── */}
@@ -2241,15 +2380,31 @@ export default function UnifiedPublishModal({
 
                   {/* Precio (tipo moneda COP) */}
                   <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Precio (COP) *</label>
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
+                      {propTxType === 'arriendo' ? 'Canon Mensual (COP) *' : 'Precio Venta / Principal (COP) *'}
+                    </label>
                     <input
                       type="text"
                       value={propPrice}
                       onChange={(e) => setPropPrice(formatCOP(e.target.value))}
-                      placeholder="$ 1.500.000.000"
+                      placeholder={propTxType === 'arriendo' ? '$ 4.500.000' : '$ 1.500.000.000'}
                       className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-mono font-bold outline-none"
                     />
                   </div>
+
+                  {/* Canon de Arriendo opcional para Venta o Arriendo */}
+                  {propTxType === 'venta_o_arriendo' && (
+                    <div>
+                      <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Canon de Arriendo (COP)</label>
+                      <input
+                        type="text"
+                        value={propRentPrice}
+                        onChange={(e) => setPropRentPrice(formatCOP(e.target.value))}
+                        placeholder="$ 6.500.000"
+                        className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white font-mono font-bold outline-none"
+                      />
+                    </div>
+                  )}
 
                   {/* Precio Administración */}
                   <div>
@@ -2768,6 +2923,48 @@ export default function UnifiedPublishModal({
                 </div>
               </div>
 
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-[11px] text-zinc-400">
+                    {propSourcePortal ? `Datos prellenados desde ${propSourcePortal}. Verifica y continúa al Paso 2.` : 'Siguiente: sube las fotos y el video propio del inmueble.'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => goToWizardStep(2)}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#bf953f] via-[#d4af37] to-[#aa771c] hover:brightness-110 text-black font-black text-xs inline-flex items-center gap-2 shadow-lg shadow-[#bf953f]/30 cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Continuar al Paso 2: Subir Fotos y Video Propios</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* ──────────────────────────────────────────────────────────── */}
+              {/* PASO 2: MEDIOS PROPIOS (FOTOS Y VIDEO) + VECY TIENDA         */}
+              {/* ──────────────────────────────────────────────────────────── */}
+              <div className={propWizardStep === 2 ? 'space-y-6' : 'hidden'} hidden={propWizardStep !== 2}>
+                <h3 ref={step2HeadingRef} tabIndex={-1} className="sr-only">
+                  Paso 2: Carga de fotos y video propios y republicación en VECY TIENDA
+                </h3>
+
+                <div className={`p-4 rounded-2xl border flex items-start gap-3 text-xs ${
+                  propSourceUrl && propImages.length === 0
+                    ? 'bg-amber-950/35 border-amber-500/50 text-amber-200'
+                    : 'bg-emerald-950/25 border-emerald-500/35 text-emerald-200'
+                }`}>
+                  <Camera className="w-5 h-5 shrink-0 mt-0.5 text-[#bf953f]" />
+                  <div className="space-y-1">
+                    <p className="font-black uppercase tracking-wider text-white">
+                      Paso 2 · Sube tus fotos y video propios
+                    </p>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">
+                      {propSourceUrl
+                        ? `Importaste datos desde ${propSourcePortal || 'un enlace externo'}. Para proteger los derechos de autor, no copiamos fotografías ni videos externos: sube al menos 1 foto propia para publicar.`
+                        : 'Las publicaciones con fotos propias reales y video reciben prioridad máxima en VECY TIENDA y aumentan los cierres en tu portal marca blanca.'}
+                    </p>
+                  </div>
+                </div>
+
               {/* ──────────────────────────────────────────────────────────── */}
               {/* D) SECCIÓN 4: GALERÍA (30 FOTOS), VIDEO & CHECKLISTS         */}
               {/* ──────────────────────────────────────────────────────────── */}
@@ -3212,28 +3409,69 @@ export default function UnifiedPublishModal({
                 </div>
               </div>
 
+              {/* OPCIÓN DE REPUBLICACIÓN EN VECY TIENDA + ALCANCE */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-[#bf953f]/30 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#fcf6ba]">
+                  <Store className="w-4 h-4 text-[#bf953f]" />
+                  <span>Visibilidad y Republicación en VECY TIENDA</span>
+                </div>
+
+                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl bg-black/50 border border-white/10 hover:border-[#bf953f]/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={propRepublishToVecyStore}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setPropRepublishToVecyStore(checked);
+                      setPropVisibilityScope(checked ? 'public_and_agent' : 'agent_only');
+                    }}
+                    className="w-4 h-4 mt-0.5 accent-[#bf953f]"
+                  />
+                  <div className="text-xs">
+                    <span className="font-bold text-white block">
+                      Republicar automáticamente en VECY TIENDA (/ofertas) y Mesa de Matches &gt;= 85%
+                    </span>
+                    <span className="text-[11px] text-zinc-400">
+                      Recomendado: tu inmueble aparece en tu portal marca blanca y también en la vitrina colaborativa 40/20/40 de VECY TIENDA. Si lo desmarcas, solo será visible en tu sitio personal.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
               {/* BOTÓN FINAL PUBLICAR INMUEBLE */}
-              <div className="pt-2 flex justify-end gap-3">
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
+                  onClick={() => goToWizardStep(1)}
+                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  Cancelar
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Volver al Paso 1 (Datos)</span>
                 </button>
-                <button
-                  type="button"
-                  disabled={createPropMutation.isPending || updatePropMutation.isPending}
-                  onClick={handleSaveProperty}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#aa771c] hover:brightness-110 text-black font-black text-xs inline-flex items-center gap-2 shadow-lg shadow-[#bf953f]/30 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {(createPropMutation.isPending || updatePropMutation.isPending) ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="w-4 h-4" />
-                  )}
-                  <span>{editProperty ? 'Guardar Cambios del Inmueble' : 'Publicar Inmueble (Oferta) en la Red'}</span>
-                </button>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={createPropMutation.isPending || updatePropMutation.isPending}
+                    onClick={handleSaveProperty}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#aa771c] hover:brightness-110 text-black font-black text-xs inline-flex items-center gap-2 shadow-lg shadow-[#bf953f]/30 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {(createPropMutation.isPending || updatePropMutation.isPending) ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                    <span>{editProperty ? 'Guardar Cambios del Inmueble' : 'Publicar Inmueble (Oferta) en la Red'}</span>
+                  </button>
+                </div>
+              </div>
               </div>
             </div>
           )}

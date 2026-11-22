@@ -1451,6 +1451,23 @@ Dirección obligatoria:
     }
   });
 
+  // Previsualización OpenGraph para portales marca blanca y fichas dinámicas
+  app.get('/api/whitelabel/og-preview', async (req, res) => {
+    try {
+      const { resolveOpenGraphMeta } = await import('./ogMetaService');
+      const host =
+        (typeof req.query.host === 'string' && req.query.host) ||
+        (typeof req.headers['x-forwarded-host'] === 'string' ? req.headers['x-forwarded-host'] : undefined) ||
+        req.headers.host ||
+        'vecygroup.com';
+      const pathname = typeof req.query.path === 'string' && req.query.path ? req.query.path : '/';
+      const meta = await resolveOpenGraphMeta({ host, pathname, protocol: 'https' });
+      return res.status(200).json({ ok: true, meta });
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'Error resolviendo OpenGraph' });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);
