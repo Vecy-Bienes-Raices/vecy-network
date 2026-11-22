@@ -85,6 +85,13 @@
       "when": 1784420084593,
       "tag": "0011_fluffy_jack_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795320000000,
+      "tag": "0014_saas_plans_rbac_multitenant",
+      "breakpoints": true
     }
   ]
 }

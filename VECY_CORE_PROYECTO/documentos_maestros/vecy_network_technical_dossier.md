@@ -330,6 +330,13 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.36 — Noviembre 2026
+- **Estabilización Baileys, Cloudflare SSL Full (Strict) en `vecygroup.com` y PASO 2 SaaS COP (`$0` a `<= $200.000/mes`):**
+  - `server/_core/whatsapp-match.ts`: añadido failsafe ACK en `CB:receipt` (`7s`) y `CB:notification` (`8s`), supresión de reintentos y almacenamiento de `reactionMessage`, `maxMsgRetryCount: 2`, caché LRU acotada (`15.000` entradas) para claves Signal de `.baileys_auth`, backoff exponencial (`5s..90s`), temporizador de estabilidad (`60s`) y watchdog liveness (`30s`) con telemetría ampliada en `/api/health`.
+  - Infraestructura Cloudflare + Nginx VPS: certificado Origin CA a 15 años en `/etc/ssl/cloudflare/`, registro DNS `A * -> 13.140.149.144` (proxied), Nginx dual en puertos `80` (proxy HTTP para `vercel.json`) y `443 ssl http2`, SSL `strict`, verificado `HTTP 200` en `vecygroup.com`, `www.vecygroup.com`, `demo.vecygroup.com`, `/api/health` y `vecy-bienes-raices.vercel.app/api/health`.
+  - PASO 2 SaaS Multi-Tenant (`drizzle/0014_saas_plans_rbac_multitenant.sql`, `drizzle/schema.ts`, `planEntitlements.ts`, `wompiBillingService.ts`, `billing.ts`, `properties.ts`, `matching.ts`, `shared/authRouting.ts`, `Planes.tsx`): 6 nuevas tablas SaaS/Wompi/Multi-tenant, 4 planes (`$0` a `$189.900 COP/mes`), webhook Wompi SHA-256 (`/api/webhooks/wompi`), página `/planes`, RBAC estricto (`protectedProcedure`) en `properties.ts`, `VECY_MIN_MATCH_SCORE = 85` en `matching.ts` y redirección `agent -> /agent-dashboard`.
+  - Gobernanza y Pruebas: semilla `seed-baileys-receipt-ack-ssl-strict-paso2-saas-v34-36`, **Suite 222 (4/4)** en `regression.test.ts` (`npm run check`: 0 errores; `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 781/781 tests en verde**; `npm run build` limpio; versión `v34.36` / `34.36.0`).
+
 ### 🔖 v34.35 — Noviembre 2026
 - **Blindaje Determinista de Saludo Horario Oficial de Colombia (`Buenos días` / `Buenas tardes` / `Buenas noches`):**
   - `server/_core/jania/parsers.ts`, `server/_core/whatsapp-utils.ts` & `server/_core/jania/handlers/dmHandler.ts`: unificación horaria `America/Bogota` mediante `Intl.DateTimeFormat` (`05:00–11:59` `Buenos días`, `12:00–18:59` `Buenas tardes`, `19:00–04:59` `Buenas noches`) e implementación de `enforceColombiaTimeGreeting()` dentro de `sanitizeResponseMarkdown()`, `sanitizeDmOrthographyAndGreeting()` y `dmHandler.ts` para corregir deterministamente cualquier alucinación horaria del LLM (caso Eduardo `10:37 a.m.`).

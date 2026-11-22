@@ -9086,7 +9086,10 @@ Ana Morales Castillo
 
       expect(loginTsx).toContain("resolveDestination");
       expect(loginTsx).toContain("vecy_login_return_url");
-      expect(loginTsx).toContain("return isAdmin ? '/admin' : '/jania'");
+      expect(loginTsx).toContain("resolvePostLoginDestination");
+      const authRoutingTs = fs.readFileSync("shared/authRouting.ts", "utf-8");
+      expect(authRoutingTs).toContain('return "/admin"');
+      expect(authRoutingTs).toContain('return "/jania"');
 
       expect(adminTsx).toContain("Ir al Chat de JanIA Web");
     });
@@ -15986,9 +15989,168 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-saludo-horario-colombia-determinista-v34-35"
       );
       expect(seed35?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.35");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[5-9]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.35.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[5-9]|[4-9]\d)\.0$/);
+    });
+  });
+
+  describe("222. Doctrina v34.36: Estabilización Baileys (Receipt/Notification ACK + Cache LRU), SSL Full Strict & PASO 2 SaaS COP", () => {
+    it("1. Baileys: scheduleStanzaAckFailsafe/markStanzaAcked previenen Stream Errored (ack) en receipt/notification y getHealthSnapshot expone nuevas métricas", async () => {
+      const fs = await import("fs");
+      const { JaniaMatchBot } = await import("../_core/whatsapp-match");
+      const bot: any = new JaniaMatchBot({ isWorkerOnly: true });
+
+      const sentNodes: any[] = [];
+      bot.sock = {
+        sendNode: async (node: any) => {
+          sentNodes.push(node);
+        },
+      };
+
+      const ackOk = await bot.ackTopLevelStanza(
+        { tag: "receipt", attrs: { id: "REC-TEST-222", from: "573001112233@s.whatsapp.net", type: "delivery" } },
+        "receipt-failsafe"
+      );
+      expect(ackOk).toBe(true);
+      expect(sentNodes.length).toBeGreaterThan(0);
+      expect(sentNodes[0]?.attrs?.class).toBe("receipt");
+
+      const snap = bot.getHealthSnapshot();
+      expect(snap.receiptFailsafeAckCount).toBeGreaterThan(0);
+      expect(typeof snap.notificationFailsafeAckCount).toBe("number");
+      expect(typeof snap.totalDisconnects).toBe("number");
+
+      bot.sock = null;
+      const src = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(src).toContain("maxMsgRetryCount: 2");
+      expect(src).toContain("BACKOFF_SCHEDULE_MS");
+      expect(src).toContain("authKeyMemoryCache");
+      expect(src).toContain("reactionMessage");
+    });
+
+    it("2. Planes SaaS COP ($0 a <= $200.000/mes) y migración 0014 contienen tope de precio e idempotencia completa", async () => {
+      const fs = await import("fs");
+      const { DEFAULT_PLAN_CATALOG, MAX_MONTHLY_PLAN_PRICE_COP } = await import("../_core/planEntitlements");
+
+      expect(MAX_MONTHLY_PLAN_PRICE_COP).toBe(200_000);
+      expect(DEFAULT_PLAN_CATALOG.length).toBeGreaterThanOrEqual(4);
+      expect(DEFAULT_PLAN_CATALOG.some((p) => p.code === "free" && p.monthlyPriceCop === 0)).toBe(true);
+      for (const plan of DEFAULT_PLAN_CATALOG) {
+        expect(plan.monthlyPriceCop).toBeGreaterThanOrEqual(0);
+        expect(plan.monthlyPriceCop).toBeLessThanOrEqual(200_000);
+      }
+
+      const sql = fs.readFileSync("drizzle/0014_saas_plans_rbac_multitenant.sql", "utf-8");
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS "subscription_plans"');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS "agencies"');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS "agency_members"');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS "user_subscriptions"');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS "payment_transactions"');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS "usage_quotas"');
+      expect(sql).toContain("republish_to_vecy_store");
+    });
+
+    it("3. Wompi Crypto SHA-256: computeWompiIntegritySignature y verifyWompiWebhookSignature validan firmas auténticas y rechazan alteraciones", async () => {
+      const crypto = await import("crypto");
+      const { computeWompiIntegritySignature, verifyWompiWebhookSignature } = await import(
+        "../_core/wompiBillingService"
+      );
+
+      const sig = computeWompiIntegritySignature({
+        reference: "VECY-1-AGENTE_PRO-M-123",
+        amountInCents: 6990000,
+        currency: "COP",
+        integritySecret: "test_integrity_secret",
+      });
+      const expectedDirect = crypto
+        .createHash("sha256")
+        .update("VECY-1-AGENTE_PRO-M-1236990000COPtest_integrity_secret", "utf8")
+        .digest("hex");
+      expect(sig).toBe(expectedDirect);
+
+      const eventsSecret = "test_events_secret_xyz";
+      const timestamp = 1795320000;
+      const payload = {
+        event: "transaction.updated",
+        timestamp,
+        data: {
+          transaction: {
+            id: "12345-wompi",
+            status: "APPROVED",
+            amount_in_cents: 6990000,
+            reference: "VECY-1-AGENTE_PRO-M-123",
+          },
+        },
+        signature: {
+          properties: ["transaction.id", "transaction.status", "transaction.amount_in_cents"],
+          checksum: crypto
+            .createHash("sha256")
+            .update(`12345-wompiAPPROVED6990000${timestamp}${eventsSecret}`, "utf8")
+            .digest("hex"),
+        },
+      };
+
+      expect(verifyWompiWebhookSignature({ payload, eventsSecret }).valid).toBe(true);
+      expect(
+        verifyWompiWebhookSignature({
+          payload: {
+            ...payload,
+            data: { transaction: { ...payload.data.transaction, amount_in_cents: 100 } },
+          },
+          eventsSecret,
+        }).valid
+      ).toBe(false);
+      expect(verifyWompiWebhookSignature({ payload, eventsSecret: "" }).valid).toBe(false);
+    });
+
+    it("4. RBAC properties, Matching >= 85%, Redirect agente -> /agent-dashboard y gobernanza v34.36 (34.36.0)", async () => {
+      const fs = await import("fs");
+      const { VECY_MIN_MATCH_SCORE } = await import("../routers/matching");
+      const { resolvePostLoginDestination } = await import("../../shared/authRouting");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      const loginSrc = fs.readFileSync("client/src/pages/Login.tsx", "utf-8");
+      expect(loginSrc).toContain("resolvePostLoginDestination");
+
+      expect(VECY_MIN_MATCH_SCORE).toBe(85);
+      const matchingSrc = fs.readFileSync("server/routers/matching.ts", "utf-8");
+      expect(matchingSrc).not.toContain("score >= 70");
+      expect(matchingSrc).toContain('"cabin"');
+
+      const propsSrc = fs.readFileSync("server/routers/properties.ts", "utf-8");
+      expect(propsSrc).toContain("create: protectedProcedure");
+      expect(propsSrc).toContain("update: protectedProcedure");
+      expect(propsSrc).toContain("delete: protectedProcedure");
+      expect(propsSrc).toContain("myList: protectedProcedure");
+      expect(propsSrc).toContain("assertCanCreateProperty");
+      expect(propsSrc).toContain("republishToVecyStore");
+
+      expect(
+        resolvePostLoginDestination({ userEmail: "agente.demo@inmobiliaria.co", userRole: "agent" })
+      ).toBe("/agent-dashboard");
+      expect(
+        resolvePostLoginDestination({ userEmail: "otro@vecy.co", userRole: "admin" })
+      ).toBe("/admin");
+      expect(
+        resolvePostLoginDestination({ userEmail: "cliente@correo.co", userRole: "user" })
+      ).toBe("/jania");
+      expect(
+        resolvePostLoginDestination({
+          userEmail: "agente.demo@inmobiliaria.co",
+          userRole: "agent",
+          redirectQuery: "/planes",
+        })
+      ).toBe("/planes");
+
+      const seed36 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-baileys-receipt-ack-ssl-strict-paso2-saas-v34-36"
+      );
+      expect(seed36?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.36");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.36.0");
     });
   });
 });

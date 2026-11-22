@@ -5,6 +5,8 @@ import { properties, requirements, propertyMatches } from "../../drizzle/schema"
 import { eq, and } from "drizzle-orm";
 import { evaluarMatch, calcularScoreMatch } from "../_core/matching";
 
+export const VECY_MIN_MATCH_SCORE = 85;
+
 export const matchingRouter = router({
   /**
    * Buscar matches para un inmueble específico (Oferta -> Demanda)
@@ -28,7 +30,7 @@ export const matchingRouter = router({
           requirementId: r.id,
           score: calcularScoreMatch(r, p)
         }))
-        .filter(m => m.score >= 70);
+        .filter(m => m.score >= VECY_MIN_MATCH_SCORE);
 
       return matches.slice(0, 10);
     }),
@@ -40,7 +42,7 @@ export const matchingRouter = router({
     .input(z.object({
       tipoInmuebleDeseado: z.enum([
         "apartment", "house", "building", "warehouse", "farm", "hotel", 
-        "office", "land", "commercial", "loft", "consultorio"
+        "office", "land", "commercial", "loft", "consultorio", "cabin"
       ]),
       tipoNegocioDeseado: z.enum([
         "venta", "arriendo", "venta_o_arriendo", "arriendo_temporal",
@@ -90,7 +92,7 @@ export const matchingRouter = router({
           propertyId: p.id,
           score: calcularScoreMatch(req, p)
         }))
-        .filter(m => m.score >= 70);
+        .filter(m => m.score >= VECY_MIN_MATCH_SCORE);
 
       // Guardar matches encontrados
       for (const m of matches) {

@@ -7,4 +7,11 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  wompiPublicKey: process.env.WOMPI_PUBLIC_KEY ?? "",
+  wompiPrivateKey: process.env.WOMPI_PRIVATE_KEY ?? "",
+  wompiEventsSecret: process.env.WOMPI_EVENTS_SECRET ?? "",
+  wompiIntegritySecret: process.env.WOMPI_INTEGRITY_SECRET ?? "",
+  wompiSandbox: (process.env.WOMPI_SANDBOX ?? "true") !== "false",
+  publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "https://vecygroup.com",
+  rootDomain: process.env.VECY_ROOT_DOMAIN ?? "vecygroup.com",
 };

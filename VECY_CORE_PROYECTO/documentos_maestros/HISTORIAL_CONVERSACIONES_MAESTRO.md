@@ -7,6 +7,21 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-22] — JanIA v34.36: Estabilización Baileys (Receipt/Notification ACK + Cache LRU), Cloudflare Full (Strict) en `vecygroup.com` y PASO 2 SaaS COP `$0`–`<= $200.000` (Doctrina Eduardo A. Rivera — v34.36 - 34.36.0)
+
+#### 1. Solicitud de Eduardo A. Rivera y Diagnóstico Técnico
+- Eduardo solicitó en secuencia estricta: (1) diagnosticar y estabilizar desconexiones continuas de Baileys/WhatsApp en VPS, (2) habilitar HTTPS (`Full strict`) para `vecygroup.com` y `*.vecygroup.com` tras configurar el DNS en Cloudflare, y (3) ejecutar el PASO 2 completo del Plano Maestro SaaS.
+- **Diagnóstico Baileys VPS:** los logs PM2 y `messages-recv.js` confirmaron desconexiones `500 Stream Errored (ack)`, `428` y `rate-overlimit` disparados por reintentos `sendMessagesAgain()` sobre reacciones antes de acusar `receipt`, sumado a `26.261` archivos en `.baileys_auth` sin caché RAM y reseteo prematuro de reintentos.
+
+#### 2. Acciones Ejecutadas en `v34.36`
+1. **Prioridad 1 — Estabilidad Baileys (`server/_core/whatsapp-match.ts`):** failsafe ACK para `CB:receipt` (`7s`) y `CB:notification` (`8s`), supresión de `reactionMessage` en store y reintentos (`maxMsgRetryCount: 2`), caché LRU en RAM (`15.000` entradas) sobre `.baileys_auth`, backoff exponencial (`5s..90s`) con estabilidad `60s`, watchdog de `30s` y nuevas métricas en `/api/health`.
+2. **Prioridad 2 — Cloudflare Origin CA + Nginx `:443` `Full (strict)`:** certificado Origin CA a 15 años instalado en `/etc/ssl/cloudflare/` (`vecygroup.com`, `*.vecygroup.com`), registro wildcard `A * -> 13.140.149.144` proxied, Nginx escuchando en puertos `80` (manteniendo `vercel.json` IP proxy) y `443 ssl http2`, modo SSL Cloudflare en `strict`, verificado `HTTP 200` en `vecygroup.com`, `www.vecygroup.com`, `demo.vecygroup.com`, `/api/health` y `vecy-bienes-raices.vercel.app/api/health`.
+3. **Prioridad 3 — PASO 2 SaaS Multi-Tenant (`0014_saas_plans_rbac_multitenant.sql`, `drizzle/schema.ts`, `planEntitlements.ts`, `wompiBillingService.ts`, `billing.ts`, `properties.ts`, `matching.ts`, `shared/authRouting.ts`, `Planes.tsx`):**
+   - Creadas 6 tablas (`subscription_plans`, `agencies`, `agency_members`, `user_subscriptions`, `payment_transactions`, `usage_quotas`) y 4 planes COP entre `$0` y `$189.900/mes` (`<= $200.000 COP/mes`).
+   - Pasarela Wompi COP + verificación criptográfica SHA-256 en `POST /api/webhooks/wompi` + vista `/planes` y `/pricing`.
+   - RBAC estricto (`protectedProcedure` + validación de cuota y dueño/admin) en `properties.ts`, umbral unificado `VECY_MIN_MATCH_SCORE = 85` en `matching.ts`, redirección `agent -> /agent-dashboard` en `shared/authRouting.ts`/`Login.tsx` y gate de login al publicar en `Properties.tsx`.
+4. **Gobernanza y Validación Local:** bump `v34.36` (`34.36.0`), semilla `seed-baileys-receipt-ack-ssl-strict-paso2-saas-v34-36`, **Suite 222 (4/4)**, `npm run check` (**0 errores**), `NODE_ENV=test npx vitest run --testTimeout=35000` (**6/6 archivos, 781/781 tests en verde** | `$0 COP`) y `npm run build` limpio.
+
 ### 📅 [2026-11-20] — JanIA v34.35: Blindaje Determinista de Saludo Horario Oficial de Colombia (`Buenos días` / `Buenas tardes` / `Buenas noches`) (Doctrina Eduardo A. Rivera — v34.35 - 34.35.0)
 
 #### 1. Reporte Directo de Eduardo A. Rivera (Captura 10:37 a.m. COL)

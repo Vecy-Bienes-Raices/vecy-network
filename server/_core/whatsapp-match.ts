@@ -243,7 +243,17 @@ export class JaniaMatchBot {
   private lastDisconnectReason: string | null = null;
   private lastAvailableBroadcastAt: number = 0;
   private pendingMessageAckTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private pendingStanzaAckTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private unknownStanzaTagsLogged: Set<string> = new Set();
+  private receiptFailsafeAckCount: number = 0;
+  private notificationFailsafeAckCount: number = 0;
+  private totalDisconnects: number = 0;
+  private stableConnectedSince: number | null = null;
+  private stableConnectionTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectionLivenessTimer: ReturnType<typeof setInterval> | null = null;
+  private isLoggedOut: boolean = false;
+  private authKeyMemoryCache: Map<string, any> = new Map();
+  private msgRetryCounterMap: Map<string, { val: unknown; exp: number }> = new Map();
 
   public getHealthSnapshot() {
     const isEventBufferStuck = Boolean(this.sock?.ev?.isBuffering?.());
@@ -257,6 +267,10 @@ export class JaniaMatchBot {
       wsMessagesReceivedCount: this.wsMessagesReceivedCount,
       statusAckCount: this.statusAckCount,
       failsafeAckCount: this.failsafeAckCount,
+      receiptFailsafeAckCount: this.receiptFailsafeAckCount,
+      notificationFailsafeAckCount: this.notificationFailsafeAckCount,
+      totalDisconnects: this.totalDisconnects,
+      stableConnectedSince: this.stableConnectedSince,
       offlinePreviewCount: this.offlinePreviewCount,
       offlineCompletedCount: this.offlineCompletedCount,
       offlineDrainActive: this.offlineDrainActive,
@@ -268,6 +282,45 @@ export class JaniaMatchBot {
       lastDisconnectCode: this.lastDisconnectCode,
       lastDisconnectReason: this.lastDisconnectReason,
     };
+  }
+
+  private getMsgRetryCounterCache() {
+    const map = this.msgRetryCounterMap;
+    const TTL_MS = 10 * 60 * 1000;
+    const MAX_ENTRIES = 5000;
+    return {
+      get<T>(key: string): T | undefined {
+        const entry = map.get(key);
+        if (!entry) return undefined;
+        if (Date.now() > entry.exp) {
+          map.delete(key);
+          return undefined;
+        }
+        return entry.val as T;
+      },
+      set<T>(key: string, value: T): void {
+        if (map.size >= MAX_ENTRIES) {
+          const firstKey = map.keys().next().value;
+          if (firstKey !== undefined) map.delete(firstKey);
+        }
+        map.set(key, { val: value, exp: Date.now() + TTL_MS });
+      },
+      del(key: string): void {
+        map.delete(key);
+      },
+      flushAll(): void {
+        map.clear();
+      },
+    };
+  }
+
+  private isBotRuntimeEnabled(): boolean {
+    if (this.isWorkerOnly) return false;
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') return false;
+    const isDev = process.env.NODE_ENV === 'development';
+    return isDev
+      ? (process.env.ENABLE_LOCAL_WHATSAPP === 'true' || process.env.ENABLE_WHATSAPP_BOT === 'true')
+      : (process.env.ENABLE_WHATSAPP_BOT !== 'false' || process.env.ENABLE_JANIA_MATCH_BOT === 'true');
   }
 
   /**
@@ -368,7 +421,10 @@ export class JaniaMatchBot {
     return { tag: 'ack', attrs: ackAttrs };
   }
 
-  public async ackTopLevelStanza(node: any, sourceLabel: 'status' | 'message-failsafe' = 'status'): Promise<boolean> {
+  public async ackTopLevelStanza(
+    node: any,
+    sourceLabel: 'status' | 'message-failsafe' | 'receipt-failsafe' | 'notification-failsafe' = 'status'
+  ): Promise<boolean> {
     if (!this.sock || !node) return false;
     const ackStanza = this.buildAckStanzaForNode(node);
     if (!ackStanza) return false;
@@ -384,6 +440,16 @@ export class JaniaMatchBot {
         this.statusAckCount++;
         if (this.statusAckCount <= 10 || this.statusAckCount % 25 === 0) {
           console.log(`[${this.botName}-STATUS-ACK] ✅ ACK #${this.statusAckCount} enviado para <${node.tag}> id=${ackStanza.attrs.id} to=${ackStanza.attrs.to} type=${ackStanza.attrs.type || 'n/a'}`);
+        }
+      } else if (sourceLabel === 'receipt-failsafe') {
+        this.receiptFailsafeAckCount++;
+        if (this.receiptFailsafeAckCount <= 10 || this.receiptFailsafeAckCount % 25 === 0) {
+          console.warn(`[${this.botName}-RECEIPT-ACK-FAILSAFE] 🛡️ ACK de rescate #${this.receiptFailsafeAckCount} enviado para <receipt> id=${ackStanza.attrs.id} to=${ackStanza.attrs.to} type=${ackStanza.attrs.type || 'n/a'}`);
+        }
+      } else if (sourceLabel === 'notification-failsafe') {
+        this.notificationFailsafeAckCount++;
+        if (this.notificationFailsafeAckCount <= 10 || this.notificationFailsafeAckCount % 25 === 0) {
+          console.warn(`[${this.botName}-NOTIF-ACK-FAILSAFE] 🛡️ ACK de rescate #${this.notificationFailsafeAckCount} enviado para <notification> id=${ackStanza.attrs.id} to=${ackStanza.attrs.to} type=${ackStanza.attrs.type || 'n/a'}`);
         }
       } else {
         this.failsafeAckCount++;
@@ -401,6 +467,44 @@ export class JaniaMatchBot {
       clearTimeout(timer);
     }
     this.pendingMessageAckTimers.clear();
+    for (const timer of this.pendingStanzaAckTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.pendingStanzaAckTimers.clear();
+  }
+
+  public markStanzaAcked(stanzaClass?: string | null, stanzaId?: string | null) {
+    if (!stanzaId) return;
+    if (stanzaClass) {
+      const key = `${stanzaClass}:${stanzaId}`;
+      const timer = this.pendingStanzaAckTimers.get(key);
+      if (timer) {
+        clearTimeout(timer);
+        this.pendingStanzaAckTimers.delete(key);
+      }
+    }
+    if (!stanzaClass || stanzaClass === 'message') {
+      this.markMessageUpserted(stanzaId);
+    }
+  }
+
+  private scheduleStanzaAckFailsafe(
+    node: any,
+    tag: 'receipt' | 'notification',
+    timeoutMs: number
+  ) {
+    const id = node?.attrs?.id ? String(node.attrs.id) : '';
+    if (!id) return;
+    const key = `${tag}:${id}`;
+    if (this.pendingStanzaAckTimers.has(key)) return;
+    const sourceLabel = tag === 'receipt' ? 'receipt-failsafe' : 'notification-failsafe';
+    const timer = setTimeout(() => {
+      this.pendingStanzaAckTimers.delete(key);
+      if (this.isReady && this.sock) {
+        this.ackTopLevelStanza(node, sourceLabel).catch(() => {});
+      }
+    }, timeoutMs);
+    this.pendingStanzaAckTimers.set(key, timer);
   }
 
   public markMessageUpserted(msgId?: string | null) {
@@ -829,6 +933,11 @@ export class JaniaMatchBot {
     const unwrapped = (message as any)?.deviceSentMessage?.message
       || (message as any)?.ephemeralMessage?.message
       || message;
+    // 🛡️ Evitar almacenar reacciones o mensajes puramente de protocolo: si alguien en grupos grandes
+    // solicita retry sobre una reacción (👍/👌/📝), Baileys dispara tormentas rate-overlimit y bloquea ACKs.
+    if ((unwrapped as any)?.reactionMessage || ((unwrapped as any)?.protocolMessage && !(unwrapped as any)?.protocolMessage?.editedMessage)) {
+      return;
+    }
     this.messageStore.set(id, unwrapped);
     if (this.messageStore.size > 2000) {
       const firstKey = this.messageStore.keys().next().value;
@@ -1028,6 +1137,23 @@ export class JaniaMatchBot {
     this.loadCooldowns();
     this.setupGracefulShutdown();
     this.startDbHeartbeat();
+    this.startConnectionLivenessWatchdog();
+  }
+
+  private startConnectionLivenessWatchdog() {
+    if (!this.isBotRuntimeEnabled()) return;
+    if (this.connectionLivenessTimer) {
+      clearInterval(this.connectionLivenessTimer);
+    }
+    this.connectionLivenessTimer = setInterval(() => {
+      if (this.isLoggedOut) return;
+      if (!this.isReady && !this.isInitializing && !this.reconnectTimer) {
+        console.warn(`[${this.botName}-LIVENESS] ⚠️ Socket sin conexión activa ni reconexión programada. Lanzando initialize() de recuperación...`);
+        this.initialize().catch((err) => {
+          console.error(`[${this.botName}-LIVENESS] Error en recuperación:`, err?.message || err);
+        });
+      }
+    }, 30000);
   }
 
   private startDbHeartbeat() {
@@ -1123,19 +1249,54 @@ export class JaniaMatchBot {
       }
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
-      // 🛡️ DOCTRINA v32.51 / v33.95: Blindaje contra error "No open session" y purga de pendingPreKey zombies en Baileys
-      // 1. Si un archivo de sesión en disco solo contiene sesiones cerradas (closed !== -1), o
-      // 2. Si una sesión abierta (closed === -1) lleva más de 10 minutos estancada en estado pendingPreKey sin recibir respuesta
-      //    que confirme el handshake (causa raíz del aviso "🕒 Esperando el mensaje. Esto puede demorar un poco"),
-      //    la purgamos y retornamos null para que assertSessions negocie un PreKeyBundle 100% fresco con WhatsApp antes de cifrar.
-      const originalKeysGet = state.keys.get;
+      // 🛡️ DOCTRINA v32.51 / v33.95 / v34.36: Caché LRU en RAM sobre .baileys_auth (26k+ archivos) +
+      // blindaje contra error "No open session" y purga de pendingPreKey zombies en Baileys.
+      const MAX_AUTH_CACHE_ENTRIES = 15000;
+      const setAuthCache = (cacheKey: string, val: any) => {
+        if (this.authKeyMemoryCache.has(cacheKey)) {
+          this.authKeyMemoryCache.delete(cacheKey);
+        } else if (this.authKeyMemoryCache.size >= MAX_AUTH_CACHE_ENTRIES) {
+          const oldest = this.authKeyMemoryCache.keys().next().value;
+          if (oldest !== undefined) this.authKeyMemoryCache.delete(oldest);
+        }
+        this.authKeyMemoryCache.set(cacheKey, val);
+      };
+
+      const originalKeysGet = state.keys.get.bind(state.keys);
+      const originalKeysSet = state.keys.set.bind(state.keys);
+
       state.keys.get = (async (type: any, ids: string[]) => {
-        const data = await originalKeysGet(type, ids);
+        const data: Record<string, any> = {};
+        const missingIds: string[] = [];
+
+        for (const id of ids) {
+          const cacheKey = `${type}:${id}`;
+          if (this.authKeyMemoryCache.has(cacheKey)) {
+            const cachedVal = this.authKeyMemoryCache.get(cacheKey);
+            this.authKeyMemoryCache.delete(cacheKey);
+            this.authKeyMemoryCache.set(cacheKey, cachedVal);
+            data[id] = cachedVal;
+          } else {
+            missingIds.push(id);
+          }
+        }
+
+        if (missingIds.length > 0) {
+          const fetched = await originalKeysGet(type, missingIds);
+          for (const id of missingIds) {
+            const val = (fetched as any)[id] ?? null;
+            data[id] = val;
+            if (val !== null && val !== undefined) {
+              setAuthCache(`${type}:${id}`, val);
+            }
+          }
+        }
+
         if (type === 'session') {
           const now = Date.now();
           const STALE_PENDING_PREKEY_MS = 10 * 60 * 1000; // 10 minutos
           for (const id of ids) {
-            const sessRecord: any = (data as any)[id];
+            const sessRecord: any = data[id];
             if (sessRecord && sessRecord._sessions) {
               const sessionKeys = Object.keys(sessRecord._sessions);
               if (sessionKeys.length > 0) {
@@ -1153,13 +1314,33 @@ export class JaniaMatchBot {
                 if (!hasOpen) {
                   // Toda sesión en este archivo está cerrada o tenía un pendingPreKey obsoleto:
                   // forzar re-negociación Signal limpia a Baileys
-                  (data as any)[id] = null;
+                  data[id] = null;
+                  this.authKeyMemoryCache.delete(`${type}:${id}`);
                 }
               }
             }
           }
         }
         return data;
+      }) as any;
+
+      state.keys.set = (async (data: any) => {
+        if (data && typeof data === 'object') {
+          for (const category of Object.keys(data)) {
+            const catMap = data[category];
+            if (!catMap || typeof catMap !== 'object') continue;
+            for (const id of Object.keys(catMap)) {
+              const val = catMap[id];
+              const cacheKey = `${category}:${id}`;
+              if (val) {
+                setAuthCache(cacheKey, val);
+              } else {
+                this.authKeyMemoryCache.delete(cacheKey);
+              }
+            }
+          }
+        }
+        return originalKeysSet(data);
       }) as any;
 
       // Guardar las credenciales iniciales de inmediato en disco para evitar que se pierdan
@@ -1232,19 +1413,41 @@ export class JaniaMatchBot {
         connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
         defaultQueryTimeoutMs: 90000,
         keepAliveIntervalMs: 20000, // Ping Keep-Alive de WebSocket cada 20 segundos
+        maxMsgRetryCount: 2, // 🛡️ Acota reintentos Signal para erradicar tormentas rate-overlimit en grupos
+        retryRequestDelayMs: 500,
+        msgRetryCounterCache: this.getMsgRetryCounterCache() as any,
+        cachedGroupMetadata: async (jid: string) => this.getCachedGroupMetadata(jid),
         emitOwnEvents: true,
         getMessage: async (key: proto.IMessageKey) => {
           if (key?.id && this.messageStore.has(key.id)) {
-            return this.messageStore.get(key.id);
+            const stored = this.messageStore.get(key.id);
+            if (key?.remoteJid?.endsWith('@g.us') && (stored as any)?.reactionMessage) {
+              return undefined;
+            }
+            return stored;
           }
           return undefined;
         },
       });
 
-      // 📡 Escudo Anti-Stream-Errored(ack) (Doctrina v34.33 — Baileys Issue #2858):
+      // Interceptar sendNode saliente para cancelar failsafes cuando Baileys ya envió el <ack> nativo
+      if (this.sock && typeof this.sock.sendNode === 'function') {
+        const originalSendNode = this.sock.sendNode.bind(this.sock);
+        this.sock.sendNode = async (node: any) => {
+          try {
+            if (node?.tag === 'ack' && node?.attrs?.id) {
+              this.markStanzaAcked(node.attrs.class, node.attrs.id);
+            }
+          } catch (_) { }
+          return originalSendNode(node);
+        };
+      }
+
+      // 📡 Escudo Anti-Stream-Errored(ack) (Doctrina v34.33 / v34.36 — Baileys Issue #2858):
       // 1) WhatsApp entrega historias como stanza <status> de nivel superior que Baileys 6.7.19 no maneja ni acusa (ACK),
       //    congelando toda la cola entrante y provocando cortes "Stream Errored (ack)" cada ~50 minutos en bucle infinito.
-      // 2) Además resguarda <message> atascados con un ACK de rescate a los 12s si no dispararon messages.upsert.
+      // 2) Resguarda <message>, <receipt> y <notification> atascados por tormentas rate-overlimit/retry con ACK de rescate
+      //    (cancelado de inmediato si Baileys emite su <ack> nativo antes del vencimiento).
       if (this.sock?.ws && typeof this.sock.ws.on === 'function') {
         const KNOWN_WA_STANZA_TAGS = new Set([
           'message', 'call', 'receipt', 'notification', 'presence', 'chatstate',
@@ -1253,6 +1456,14 @@ export class JaniaMatchBot {
 
         this.sock.ws.on('CB:status', (node: any) => {
           this.ackTopLevelStanza(node, 'status').catch(() => {});
+        });
+
+        this.sock.ws.on('CB:receipt', (node: any) => {
+          this.scheduleStanzaAckFailsafe(node, 'receipt', 7000);
+        });
+
+        this.sock.ws.on('CB:notification', (node: any) => {
+          this.scheduleStanzaAckFailsafe(node, 'notification', 8000);
         });
 
         this.sock.ws.on('CB:message', (node: any) => {
@@ -1438,6 +1649,12 @@ export class JaniaMatchBot {
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 403;
 
         this.isReady = false;
+        this.totalDisconnects++;
+        this.stableConnectedSince = null;
+        if (this.stableConnectionTimer) {
+          clearTimeout(this.stableConnectionTimer);
+          this.stableConnectionTimer = null;
+        }
         this.stopEventBufferWatchdog();
         this.stopOfflineBatchPump();
         this.clearAllPendingMessageAckTimers();
@@ -1445,7 +1662,8 @@ export class JaniaMatchBot {
         this.lastDisconnectReason = String(disconnectReason).slice(0, 200);
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
 
-        if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
+        if (!shouldReconnect) {
+          this.isLoggedOut = true;
           console.error(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Sesión cerrada o desvinculada por WhatsApp (error ${statusCode}: ${this.lastDisconnectReason}). Deteniendo reconexión automática por seguridad.`);
           return;
         }
@@ -1456,42 +1674,39 @@ export class JaniaMatchBot {
         }
 
         this.reconnectAttempts++;
-        if (this.reconnectAttempts > 3) {
-          console.warn(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados (${statusCode}: ${this.lastDisconnectReason}). Pausando reconexión por 45 segundos para proteger el número +573192919978...`);
-          this.reconnectTimer = setTimeout(() => {
-            this.reconnectTimer = null;
-            this.reconnectAttempts = 0;
-            this.initialize();
-          }, 45000);
-          return;
-        }
-
-        const isRestart = statusCode === DisconnectReason.restartRequired;
-        const isConnectionLost = statusCode === DisconnectReason.connectionLost;
+        const BACKOFF_SCHEDULE_MS = [5000, 12000, 25000, 45000, 90000];
+        const baseBackoff = BACKOFF_SCHEDULE_MS[Math.min(Math.max(0, this.reconnectAttempts - 1), BACKOFF_SCHEDULE_MS.length - 1)];
         const isConflict = statusCode === 440;
-
-        // Si hay conflicto (código 440), esperar 20 segundos para dar tiempo a que se libere la otra conexión sin hacer ping-pong
         const jitter = Math.floor(Math.random() * 3000);
-        const delayMs = isConflict ? (20000 + jitter) : ((this.reconnectAttempts * 4000) + jitter);
+        const delayMs = (isConflict ? Math.max(25000, baseBackoff) : baseBackoff) + jitter;
 
-        console.warn(`[${this.botName}] 🛡️ [ANTI-BAN] Conexión Baileys pausada (código: ${statusCode}, motivo: ${this.lastDisconnectReason}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs / 1000)}s...`);
+        console.warn(`[${this.botName}] 🛡️ [ANTI-BAN] Conexión Baileys pausada (código: ${statusCode}, motivo: ${this.lastDisconnectReason}, cortes=${this.totalDisconnects}) [Intento #${this.reconnectAttempts}]. Reconectando de forma segura en ${Math.round(delayMs / 1000)}s...`);
 
-        if (shouldReconnect) {
-          this.reconnectTimer = setTimeout(() => {
-            this.reconnectTimer = null;
-            this.initialize();
-          }, delayMs);
-        }
+        this.reconnectTimer = setTimeout(() => {
+          this.reconnectTimer = null;
+          this.initialize();
+        }, delayMs);
       } else if (connection === 'open') {
         console.log(`\n🚀 ${this.botName} 🔌💘 — BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
         this.isReady = true;
-        this.reconnectAttempts = 0; // Resetear intentos al conectar exitosamente
+        this.isLoggedOut = false;
+        this.stableConnectedSince = Date.now();
         this.lastDisconnectCode = null;
         this.lastDisconnectReason = null;
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
         }
+        if (this.stableConnectionTimer) {
+          clearTimeout(this.stableConnectionTimer);
+        }
+        // Resetear backoff únicamente tras 60 segundos de conexión estable real
+        this.stableConnectionTimer = setTimeout(() => {
+          this.stableConnectionTimer = null;
+          if (this.isReady) {
+            this.reconnectAttempts = 0;
+          }
+        }, 60000);
         // 🛡️ Doctrina v34.32: Anunciar presencia 'available' y activar Watchdog anti-bloqueo del event buffer de Baileys
         this.ensureOnlinePresence(true).catch(() => {});
         this.startEventBufferWatchdog();
@@ -5765,6 +5980,21 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     const shutdown = async () => {
       console.log('\n🛑 Cerrando JanIA Match Bot (Baileys)...');
       try {
+        this.stopEventBufferWatchdog();
+        this.stopOfflineBatchPump();
+        this.clearAllPendingMessageAckTimers();
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
+        if (this.stableConnectionTimer) {
+          clearTimeout(this.stableConnectionTimer);
+          this.stableConnectionTimer = null;
+        }
+        if (this.connectionLivenessTimer) {
+          clearInterval(this.connectionLivenessTimer);
+          this.connectionLivenessTimer = null;
+        }
         if (this.sock) {
           await this.sock.end();
         }

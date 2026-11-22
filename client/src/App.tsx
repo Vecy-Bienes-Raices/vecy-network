@@ -34,6 +34,7 @@ const JanIAConsole = lazy(() => import("./pages/JanIAConsole"));
 const TerminosCondiciones = lazy(() => import("./pages/TerminosCondiciones"));
 const PoliticaPrivacidad = lazy(() => import("./pages/PoliticaPrivacidad"));
 const FirmaMatch = lazy(() => import("./pages/FirmaMatch"));
+const Planes = lazy(() => import("./pages/Planes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoadingFallback() {
@@ -79,6 +80,8 @@ function Router() {
         <Route path={"/politica"} component={PoliticaPrivacidad} />
         <Route path={"/privacidad"} component={PoliticaPrivacidad} />
         <Route path={"/firma-match/:token"} component={FirmaMatch} />
+        <Route path={"/planes"} component={Planes} />
+        <Route path={"/pricing"} component={Planes} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
         <Route component={NotFound} />

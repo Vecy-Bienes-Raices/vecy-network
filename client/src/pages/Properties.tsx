@@ -32,6 +32,7 @@ import {
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { useAuth } from '@/_core/hooks/useAuth';
 import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
+import { toast } from 'sonner';
 
 // ─── Tipos y Filtros Doctrinales ──────────────────────────────────────────────
 type FilterType = 
@@ -80,6 +81,19 @@ export default function Properties() {
   const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [publishTab, setPublishTab] = useState<'oferta' | 'demanda'>('oferta');
   const { user } = useAuth();
+
+  const handleOpenPublishOffer = () => {
+    if (!user) {
+      try {
+        localStorage.setItem('vecy_login_return_url', '/ofertas');
+      } catch (_) {}
+      toast.info('Inicia sesión o regístrate gratis para publicar un inmueble en VECY TIENDA.');
+      navigate('/login?redirect=/ofertas');
+      return;
+    }
+    setPublishTab('oferta');
+    setIsPublishOpen(true);
+  };
 
   // Debounce para búsqueda en tiempo real
   useEffect(() => {
@@ -176,10 +190,7 @@ export default function Properties() {
               </div>
 
               <button
-                onClick={() => {
-                  setPublishTab('oferta');
-                  setIsPublishOpen(true);
-                }}
+                onClick={handleOpenPublishOffer}
                 className="btn-gold px-8 py-3.5 text-xs tracking-widest uppercase font-black gap-2.5 inline-flex items-center shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:scale-105 transition-all cursor-pointer"
                 title="Publicar nuevo inmueble u oferta con asistencia instantánea de JanIA"
               >
@@ -515,10 +526,7 @@ export default function Properties() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <button 
-                onClick={() => {
-                  setPublishTab('oferta');
-                  setIsPublishOpen(true);
-                }}
+                onClick={handleOpenPublishOffer}
                 className="btn-gold px-8 py-4 text-xs font-black tracking-widest uppercase cursor-pointer"
               >
                 + SUBIR MI INMUEBLE AHORA

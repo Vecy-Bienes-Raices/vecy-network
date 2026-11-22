@@ -6,6 +6,9 @@ import { trpc } from '@/lib/trpc';
 import { getLoginUrl } from '@/const';
 import { Shield, Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { ADMIN_EMAILS_LIST, resolvePostLoginDestination } from '../../../shared/authRouting';
+
+export { ADMIN_EMAILS_LIST, resolvePostLoginDestination };
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -25,30 +28,26 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const isExchangingRef = React.useRef(false);
 
-  const ADMIN_EMAILS = [
-    'vecybienesraices@gmail.com',
-    'edduinnova@gmail.com',
-    'edduainnova@gmail.com',
-    'jani79alves@gmail.com',
-    'eduardoariveram@gmail.com',
-    'eddu.mendoza@gmail.com',
-    'mejorpontealdia@gmail.com'
-  ];
+  const ADMIN_EMAILS = ADMIN_EMAILS_LIST;
 
   const resolveDestination = (userEmail: string, userRole?: string): string => {
     let savedReturn = '';
     try {
       savedReturn = localStorage.getItem('vecy_login_return_url') || '';
     } catch (_) {}
+    const dest = resolvePostLoginDestination({
+      userEmail,
+      userRole,
+      redirectQuery,
+      savedReturn,
+    });
     const targetRedirect = redirectQuery || savedReturn;
     if (targetRedirect && targetRedirect.startsWith('/') && !targetRedirect.startsWith('/login')) {
       try {
         localStorage.removeItem('vecy_login_return_url');
       } catch (_) {}
-      return targetRedirect;
     }
-    const isAdmin = ADMIN_EMAILS.includes((userEmail || '').toLowerCase()) || userRole === 'admin' || userRole === 'agent';
-    return isAdmin ? '/admin' : '/jania';
+    return dest;
   };
 
   // Exchange Supabase token with backend session

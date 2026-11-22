@@ -1432,6 +1432,25 @@ Dirección obligatoria:
     }
   });
 
+  // Webhook Wompi para suscripciones y pagos COP (con verificación SHA-256)
+  app.post('/api/webhooks/wompi', async (req, res) => {
+    try {
+      const { processWompiWebhookEvent } = await import('./wompiBillingService');
+      const headerChecksum =
+        typeof req.headers['x-event-checksum'] === 'string'
+          ? req.headers['x-event-checksum']
+          : undefined;
+      const result = await processWompiWebhookEvent({
+        payload: req.body || {},
+        headerChecksum,
+      });
+      return res.status(result.statusCode).json(result);
+    } catch (err: any) {
+      console.error('[WOMPI-WEBHOOK-ERROR]', err?.message || err);
+      return res.status(500).json({ ok: false, message: 'Error procesando webhook Wompi' });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);

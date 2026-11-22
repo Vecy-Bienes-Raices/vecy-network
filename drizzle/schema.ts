@@ -1,4 +1,4 @@
-import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid, index } from "drizzle-orm/pg-core";
+import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 // Enums expanded based on VECY CORE Blueprint
 export const roleEnum = pgEnum("role", ["user", "janIA", "system", "admin", "agent"]);
@@ -47,6 +47,9 @@ export const users = pgTable("users", {
   themeConfig: jsonb("themeConfig"),
   customLogoUrl: text("customLogoUrl"),
   activeTools: jsonb("activeTools"),
+  planCode: varchar("plan_code", { length: 50 }).default("free").notNull(),
+  subscriptionStatus: varchar("subscription_status", { length: 30 }).default("active").notNull(),
+  defaultAgencyId: integer("default_agency_id"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -126,9 +129,17 @@ export const properties = pgTable("properties", {
   vigenciaIa: varchar("vigencia_ia", { length: 50 }).default("VIGENTE").notNull(),
   aceptaTerceria: boolean("acepta_terceria").default(true),
   standByDirectoVecy: boolean("stand_by_directo_vecy").default(false),
+  agencyId: integer("agency_id"),
+  republishToVecyStore: boolean("republish_to_vecy_store").default(true).notNull(),
+  visibilityScope: varchar("visibility_scope", { length: 30 }).default("public_and_agent").notNull(),
+  sourcePortal: varchar("source_portal", { length: 80 }),
+  sourceUrl: text("source_url"),
+  rawImportPayload: jsonb("raw_import_payload"),
 }, (table) => [
   index("idx_properties_available").on(table.available),
   index("idx_properties_tx_type").on(table.transactionType),
+  index("idx_properties_agency_id").on(table.agencyId),
+  index("idx_properties_visibility_scope").on(table.visibilityScope),
 ]);
 
 export type Property = typeof properties.$inferSelect;
@@ -178,8 +189,12 @@ export const requirements = pgTable("requirements", {
   origenNombre: varchar("origen_nombre", { length: 255 }),
   aceptaTerceria: boolean("acepta_terceria").default(true),
   standByDirectoVecy: boolean("stand_by_directo_vecy").default(false),
+  agencyId: integer("agency_id"),
+  publishToReqStore: boolean("publish_to_req_store").default(true).notNull(),
+  anonymizedPublicSummary: text("anonymized_public_summary"),
 }, (table) => [
   index("idx_requirements_status").on(table.status),
+  index("idx_requirements_agency_id").on(table.agencyId),
 ]);
 
 export type Requirement = typeof requirements.$inferSelect;
@@ -199,6 +214,9 @@ export const leads = pgTable("leads", {
   status: leadStatusEnum("status").default("new").notNull(),
   source: varchar("source", { length: 100 }), // janIA, website, whatsapp
   propertyId: integer("propertyId").references(() => properties.id),
+  agencyId: integer("agency_id"),
+  assignedAgentId: integer("assigned_agent_id").references(() => users.id),
+  requirementId: integer("requirement_id").references(() => requirements.id),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -624,3 +642,151 @@ export const predialConsultations = pgTable("predial_consultations", {
 
 export type PredialConsultation = typeof predialConsultations.$inferSelect;
 export type InsertPredialConsultation = typeof predialConsultations.$inferInsert;
+
+/**
+ * Planes SaaS VECY Network (Free $0 hasta <= $200.000 COP/mes)
+ */
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 120 }).notNull(),
+  description: text("description"),
+  monthlyPriceCop: integer("monthly_price_cop").notNull().default(0),
+  annualPriceCop: integer("annual_price_cop").notNull().default(0),
+  maxActiveProperties: integer("max_active_properties").notNull().default(5),
+  maxActiveRequirements: integer("max_active_requirements").notNull().default(10),
+  maxUrlImportsPerMonth: integer("max_url_imports_per_month").notNull().default(3),
+  maxTeamSeats: integer("max_team_seats").notNull().default(1),
+  customDomainEnabled: boolean("custom_domain_enabled").notNull().default(false),
+  privateJaniaEnabled: boolean("private_jania_enabled").notNull().default(false),
+  emailCampaignsMonthlyQuota: integer("email_campaigns_monthly_quota").notNull().default(0),
+  autoRepublishStore: boolean("auto_republish_store").notNull().default(true),
+  featuresJson: jsonb("features_json"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+
+/**
+ * Inmobiliarias / Agencias Marca Blanca (<slug>.vecygroup.com o dominio propio)
+ */
+export const agencies = pgTable("agencies", {
+  id: serial("id").primaryKey(),
+  ownerUserId: integer("owner_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  brandName: varchar("brand_name", { length: 200 }).notNull(),
+  tagline: text("tagline"),
+  logoUrl: text("logo_url"),
+  primaryColor: varchar("primary_color", { length: 20 }).default("#D4AF37").notNull(),
+  secondaryColor: varchar("secondary_color", { length: 20 }).default("#0A0A0A").notNull(),
+  customDomain: varchar("custom_domain", { length: 255 }).unique(),
+  whatsappBusinessPhone: varchar("whatsapp_business_phone", { length: 30 }),
+  contactEmail: varchar("contact_email", { length: 320 }),
+  city: varchar("city", { length: 100 }).default("Bogotá, D.C."),
+  planCode: varchar("plan_code", { length: 50 }).default("free").notNull(),
+  republishByDefault: boolean("republish_by_default").default(true).notNull(),
+  themeConfig: jsonb("theme_config"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_agencies_owner").on(table.ownerUserId),
+]);
+
+export type Agency = typeof agencies.$inferSelect;
+export type InsertAgency = typeof agencies.$inferInsert;
+
+/**
+ * Miembros y roles dentro de una agencia marca blanca
+ */
+export const agencyMembers = pgTable("agency_members", {
+  id: serial("id").primaryKey(),
+  agencyId: integer("agency_id").notNull().references(() => agencies.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  memberRole: varchar("member_role", { length: 40 }).default("agent").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  invitedAt: timestamp("invited_at").defaultNow().notNull(),
+  joinedAt: timestamp("joined_at"),
+}, (table) => [
+  uniqueIndex("uq_agency_members_agency_user").on(table.agencyId, table.userId),
+]);
+
+export type AgencyMember = typeof agencyMembers.$inferSelect;
+export type InsertAgencyMember = typeof agencyMembers.$inferInsert;
+
+/**
+ * Suscripciones activas/históricas por usuario
+ */
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  planCode: varchar("plan_code", { length: 50 }).notNull(),
+  status: varchar("status", { length: 30 }).default("active").notNull(),
+  billingCycle: varchar("billing_cycle", { length: 20 }).default("monthly").notNull(),
+  priceCop: integer("price_cop").notNull().default(0),
+  provider: varchar("provider", { length: 40 }).default("wompi").notNull(),
+  providerSubscriptionId: varchar("provider_subscription_id", { length: 160 }),
+  currentPeriodStart: timestamp("current_period_start").defaultNow().notNull(),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_user_subscriptions_user_id").on(table.userId),
+  index("idx_user_subscriptions_status").on(table.status),
+]);
+
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
+
+/**
+ * Transacciones de pago Wompi (COP en centavos) con firma de integridad y trazabilidad de webhook
+ */
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscriptionId: integer("subscription_id").references(() => userSubscriptions.id, { onDelete: "set null" }),
+  planCode: varchar("plan_code", { length: 50 }).notNull(),
+  provider: varchar("provider", { length: 40 }).default("wompi").notNull(),
+  reference: varchar("reference", { length: 120 }).notNull().unique(),
+  providerTransactionId: varchar("provider_transaction_id", { length: 160 }),
+  amountInCents: bigint("amount_in_cents", { mode: "number" }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("COP").notNull(),
+  status: varchar("status", { length: 30 }).default("PENDING").notNull(),
+  paymentMethodType: varchar("payment_method_type", { length: 60 }),
+  integritySignature: varchar("integrity_signature", { length: 128 }),
+  rawWebhookPayload: jsonb("raw_webhook_payload"),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_payment_transactions_user_id").on(table.userId),
+  index("idx_payment_transactions_status").on(table.status),
+]);
+
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type InsertPaymentTransaction = typeof paymentTransactions.$inferInsert;
+
+/**
+ * Consumo mensual por usuario (importaciones URL, campañas email CRM, JanIA privada)
+ */
+export const usageQuotas = pgTable("usage_quotas", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  periodKey: varchar("period_key", { length: 20 }).notNull(),
+  urlImportsUsed: integer("url_imports_used").default(0).notNull(),
+  emailCampaignsUsed: integer("email_campaigns_used").default(0).notNull(),
+  privateJaniaMessagesUsed: integer("private_jania_messages_used").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_usage_quotas_user_period").on(table.userId, table.periodKey),
+]);
+
+export type UsageQuota = typeof usageQuotas.$inferSelect;
+export type InsertUsageQuota = typeof usageQuotas.$inferInsert;

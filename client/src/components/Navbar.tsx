@@ -39,10 +39,11 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
     { label: 'DEMANDAS', href: '/demandas' },
     { label: 'BOLSA', href: '/red-colaboracion' },
     { label: 'SERVICIOS', href: '/services' },
+    { label: 'PLANES', href: '/planes' },
     { label: 'AGENTES', href: '/agent-dashboard' },
   ];
 
-  if (user && ['admin', 'agent'].includes(user.role as string)) {
+  if (user && user.role === 'admin') {
     navItems.push({ label: 'ADMINISTRACIÓN', href: '/admin' });
   }
 

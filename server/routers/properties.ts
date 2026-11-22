@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-import { eq, desc, ilike, or, isNull, and, lte, sql } from "drizzle-orm";
+import { eq, ne, desc, ilike, or, isNull, and, lte, sql } from "drizzle-orm";
+import { assertCanCreateProperty } from "../_core/planEntitlements";
 
 import { getDb } from "../db";
 import { properties, propertyImages } from "../../drizzle/schema";
@@ -53,6 +54,9 @@ const propertyInputSchema = z.object({
   latitude: z.string().optional().nullable(),
   longitude: z.string().optional().nullable(),
   images: z.array(z.string()).optional().nullable(),
+  republishToVecyStore: z.boolean().optional(),
+  visibilityScope: z.enum(["public_and_agent", "agent_only", "private"]).optional(),
+  agencyId: z.number().optional().nullable(),
 });
 
 type AdminPropertyListItem = {
@@ -525,8 +529,14 @@ export const propertiesRouter = router({
         whereConditions.push(eq(properties.transactionType, input.transactionType as any));
       }
 
-      // Por defecto mostrar inmuebles disponibles
+      // Por defecto mostrar inmuebles disponibles y elegibles para VECY TIENDA
       whereConditions.push(eq(properties.available, true));
+      whereConditions.push(
+        or(eq(properties.republishToVecyStore, true), isNull(properties.republishToVecyStore))
+      );
+      whereConditions.push(
+        or(ne(properties.visibilityScope, "agent_only"), isNull(properties.visibilityScope))
+      );
 
       const query = db
         .select(propertyFields)
@@ -569,12 +579,14 @@ export const propertiesRouter = router({
       return result;
     }),
 
-  // --- MUTATIONS (CREAR / EDITAR) ---
-  create: publicProcedure
+  // --- MUTATIONS (CREAR / EDITAR — RBAC PROTEGIDO) ---
+  create: protectedProcedure
     .input(propertyInputSchema)
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+
+      const entitlements = await assertCanCreateProperty(ctx.user.id, ctx.user.role);
 
       // Generación automática del código oficial único nacional del inmueble (Doctrina v34.25)
       // Formato: ID-[CIUDAD3]-[ZONA3][CONSECUTIVO] (ej: ID-BOG-KEN01, ID-MED-POB05, ID-CAL-PAN12)
@@ -591,8 +603,12 @@ export const propertiesRouter = router({
         addressCity: input.addressCity || input.city || null,
         origenTipo: "web_admin_unified",
         origenNombre: "Centro de Publicación Vecy",
-        agentId: ctx?.user?.id ?? 1,
+        agentId: ctx.user.id,
+        agencyId: input.agencyId ?? entitlements.defaultAgencyId ?? null,
+        republishToVecyStore: input.republishToVecyStore ?? entitlements.plan.autoRepublishStore ?? true,
+        visibilityScope: input.visibilityScope ?? "public_and_agent",
       }).returning();
+      invalidatePropertiesListCache();
 
       const created = newProperty[0];
       if (created?.id) {
@@ -738,7 +754,7 @@ Texto del inmueble:\n${input.text || "Ver documento PDF adjunto"}`;
       }
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(z.object({
       id: z.number(),
       data: propertyInputSchema.partial(),
@@ -750,9 +766,9 @@ Texto del inmueble:\n${input.text || "Ver documento PDF adjunto"}`;
       const existing = await db.select().from(properties).where(eq(properties.id, input.id)).limit(1);
       if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // Si hay usuario y no es admin ni dueño, bloquear
-      if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      // RBAC estricto: solo admin o propietario asignado
+      if (ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permisos para editar este inmueble" });
       }
 
       const updated = await db.update(properties)
@@ -760,11 +776,12 @@ Texto del inmueble:\n${input.text || "Ver documento PDF adjunto"}`;
         .where(eq(properties.id, input.id))
         .returning();
 
+      cachedAdminMyList = null;
       invalidatePropertiesListCache();
       return updated[0];
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -773,22 +790,23 @@ Texto del inmueble:\n${input.text || "Ver documento PDF adjunto"}`;
       const existing = await db.select().from(properties).where(eq(properties.id, input.id)).limit(1);
       if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // Si hay usuario y no es admin ni dueño, bloquear
-      if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      // RBAC estricto: solo admin o propietario asignado
+      if (ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permisos para eliminar este inmueble" });
       }
 
       await db.delete(properties).where(eq(properties.id, input.id));
+      cachedAdminMyList = null;
       invalidatePropertiesListCache();
       return { success: true };
     }),
 
-  // List my own properties (agent view) or all properties (admin view) - Protegido con micro-caché para Supabase Egress
-  myList: publicProcedure.query(async ({ ctx }) => {
+  // List my own properties (agent view) or all properties (admin view) - Protegido con RBAC y micro-caché
+  myList: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const user = ctx?.user;
-    if (!user || (user.role as string) === "admin") {
+    const user = ctx.user;
+    if ((user.role as string) === "admin") {
       const now = Date.now();
       if (cachedAdminMyList && (now - cachedAdminMyListTime) < 180000) {
         return cachedAdminMyList;

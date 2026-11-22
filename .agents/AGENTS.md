@@ -184,7 +184,18 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.35 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.36 — Noviembre 2026
+
+### Novedades v34.36 (Estabilización Baileys + Cloudflare Origin CA Full Strict `vecygroup.com` + PASO 2 SaaS COP `$0`–`$189.900` — Doctrina Eduardo A. Rivera):
+- **Prioridad 1 — Resiliencia Baileys (`server/_core/whatsapp-match.ts`):** failsafe ACK para `CB:receipt` (`7s`) y `CB:notification` (`8s`), supresión de `reactionMessage` en store y `getMessage`, `maxMsgRetryCount: 2`, caché LRU en RAM (`15.000` entradas) para claves Signal de `.baileys_auth`, backoff exponencial (`5s..90s`) con estabilidad `60s`, watchdog cada `30s` y métricas `receiptFailsafeAckCount`/`notificationFailsafeAckCount`/`totalDisconnects` en `/api/health`.
+- **Prioridad 2 — HTTPS Full (Strict) en `vecygroup.com` y `*.vecygroup.com`:** certificado Cloudflare Origin CA 15 años en `/etc/ssl/cloudflare/`, registro DNS `A * -> 13.140.149.144` proxied, Nginx en puertos `:80` (compatible `vercel.json`) y `:443 ssl http2`, SSL `strict`, verificado `HTTP 200` en `vecygroup.com`, `www.vecygroup.com`, `demo.vecygroup.com`, `/api/health` y `vecy-bienes-raices.vercel.app/api/health`.
+- **Prioridad 3 — PASO 2 SaaS Multi-Tenant (`drizzle/0014_saas_plans_rbac_multitenant.sql`, `planEntitlements.ts`, `wompiBillingService.ts`, `billing.ts`, `properties.ts`, `matching.ts`, `shared/authRouting.ts`, `Planes.tsx`):**
+  1. 6 tablas nuevas (`subscription_plans`, `agencies`, `agency_members`, `user_subscriptions`, `payment_transactions`, `usage_quotas`) y 4 planes COP (`free $0`, `agente_pro $69.900`, `inmobiliaria_growth $129.900`, `elite_ia $189.900`, tope `<= $200.000 COP/mes`).
+  2. Checkout + verificación criptográfica SHA-256 de webhooks Wompi (`POST /api/webhooks/wompi`) y vista `/planes` + `/pricing`.
+  3. RBAC estricto (`protectedProcedure` + cuota por plan) en `properties.ts`, umbral unificado `VECY_MIN_MATCH_SCORE = 85` (`matching.ts`), redirección `agent -> /agent-dashboard` (`shared/authRouting.ts` / `Login.tsx`) y guard de autenticación al publicar en `Properties.tsx`.
+- **Gobernanza y Validación (`founderKnowledgeService.ts`, `regression.test.ts`):** Semilla `seed-baileys-receipt-ack-ssl-strict-paso2-saas-v34-36`, **Suite 222 (4/4)**, `npm run check` (0 errores), `npm run build` limpio, `NODE_ENV=test npx vitest run --testTimeout=35000`: **6/6 archivos, 781/781 tests en verde** (`$0 COP`), versión `v34.36` (`34.36.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.35 — Noviembre 2026
 
 ### Novedades v34.35 (Blindaje Determinista de Saludo Horario Oficial de Colombia — `Buenos días` / `Buenas tardes` / `Buenas noches` — Doctrina Eduardo A. Rivera):
 - **Corrección Total de Saludo Horario (`server/_core/jania/parsers.ts`, `server/_core/whatsapp-utils.ts`, `server/_core/jania/handlers/dmHandler.ts`):**

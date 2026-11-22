@@ -1034,6 +1034,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.35: Unificación horaria America/Bogota con Intl.DateTimeFormat y corrección determinista enforceColombiaTimeGreeting en todas las respuestas salientes.",
     createdAt: "2026-11-20T16:15:00.000Z",
     active: true
+  },
+  {
+    id: "seed-baileys-receipt-ack-ssl-strict-paso2-saas-v34-36",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Estabilización Baileys (Receipt/Notification Failsafe + Auth LRU), Cloudflare Full (Strict) en vecygroup.com y PASO 2 SaaS COP (v34.36)",
+    directive:
+      "1) Baileys 6.7.19 no debe ejecutar sendMessagesAgain en reacciones ni dejar stanzas receipt/notification sin ACK: whatsapp-match.ts incluye failsafe ACK (7s receipt / 8s notification), límite de reintentos maxMsgRetryCount=2, caché LRU RAM para Signal keys (.baileys_auth), backoff exponencial y watchdog Liveness. 2) vecygroup.com y *.vecygroup.com operan con Cloudflare Origin CA (443 Full strict) sin romper puerto 80 HTTP proxy. 3) SaaS PASO 2: planes entre $0 y <= $200.000 COP/mes con Wompi COP + RBAC estricto en properties (protectedProcedure) + redirección de agentes a /agent-dashboard + umbral matching >= 85%.",
+    rawText:
+      "Blindaje v34.36: Baileys receipt/notification ACK + Nginx 443 Full Strict + Migración 0014 SaaS COP + Wompi + RBAC properties + Matching >= 85%.",
+    createdAt: "2026-11-22T04:10:00.000Z",
+    active: true
   }
 ];
 

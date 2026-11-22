@@ -10,6 +10,7 @@ import { leadsRouter } from "./routers/leads";
 import { propertiesRouter } from "./routers/properties";
 import { agendaRouter } from "./routers/agenda";
 import { matchingRouter } from "./routers/matching";
+import { billingRouter } from "./routers/billing";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { upsertUser, getUserByOpenId } from "./db";
@@ -94,6 +95,7 @@ export const appRouter = router({
   }),
   janIA: janIARouter,
   matching: matchingRouter,
+  billing: billingRouter,
   github: githubRouter,
   images: imagesRouter,
 
