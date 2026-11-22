@@ -1058,6 +1058,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.37: Importador URL SSRF-safe en 2 pasos + VECY TIENDA + Tienda de Demandas contactShielded + Portal Marca Blanca *.vecygroup.com + OG dinámico.",
     createdAt: "2026-11-22T05:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-auth-vecygroup-cookies-redirect-v34-38",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Blindaje de Autenticación Admin, Cookies .vecygroup.com, Sanitización Same-Origin y Proxy Nginx/Express (v34.38)",
+    directive:
+      "Todo flujo de autenticación, OAuth y redirección en vecygroup.com / www.vecygroup.com debe mantenerse en el origen actual sin saltar al dominio legacy vecy-bienes-raices.vercel.app: 1) shared/authRouting.ts expone sanitizeInternalRedirectPath, isSameOriginUrl, buildLoginPath y buildAuthCallbackUrl (sin query string). 2) Login.tsx espera el intercambio backend (hasBackendUser / hasCompletedExchangeRef) antes de navegar para evitar race condition y errores JOSEAlgNotAllowed. 3) server/_core/index.ts habilita trust proxy=1 y cookies.ts fija domain='.vecygroup.com' en *.vecygroup.com (manteniendo host-only en Vercel/localhost/IP). 4) Supabase Auth requiere Site URL=https://vecygroup.com y Redirect URLs con https://vecygroup.com/** y https://www.vecygroup.com/**.",
+    rawText:
+      "Blindaje v34.38: Login/Admin en vecygroup.com sin redirección a Vercel + cookie .vecygroup.com + sanitización same-origin + eliminación JOSEAlgNotAllowed.",
+    createdAt: "2026-11-22T06:00:00.000Z",
+    active: true
   }
 ];
 

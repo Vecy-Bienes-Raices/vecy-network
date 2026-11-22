@@ -2,6 +2,7 @@ import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
+import { createHash } from "crypto";
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
@@ -14,6 +15,17 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
+type CachedSupabaseUser = {
+  openId: string;
+  email: string;
+  name: string;
+  expiresAt: number;
+};
+
+const SUPABASE_TOKEN_CACHE_TTL_MS = 60_000;
+const MAX_SUPABASE_TOKEN_CACHE = 500;
+const supabaseTokenCache = new Map<string, CachedSupabaseUser>();
+
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -197,11 +209,83 @@ class SDKServer {
       .sign(secretKey);
   }
 
+  private extractJwtAlg(token: string): string | null {
+    try {
+      const firstDot = token.indexOf(".");
+      if (firstDot <= 0) return null;
+      const headerJson = Buffer.from(token.slice(0, firstDot), "base64url").toString("utf8");
+      const parsed = JSON.parse(headerJson);
+      return typeof parsed?.alg === "string" ? parsed.alg : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async validateSupabaseToken(token: string): Promise<CachedSupabaseUser | null> {
+    if (!token) return null;
+    const now = Date.now();
+    const cacheKey = createHash("sha256").update(token).digest("hex");
+    const cached = supabaseTokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached;
+    }
+    if (cached) {
+      supabaseTokenCache.delete(cacheKey);
+    }
+
+    try {
+      const supabaseUrl =
+        process.env.VITE_SUPABASE_URL ||
+        process.env.SUPABASE_URL ||
+        "https://knzmpoprlmbonejshfys.supabase.co";
+      const supabaseAnonKey =
+        process.env.VITE_SUPABASE_ANON_KEY ||
+        process.env.SUPABASE_ANON_KEY ||
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuem1wb3BybG1ib25lanNoZnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjYyMjQsImV4cCI6MjA5MTYwMjIyNH0.yZ3AV1Rt2rmDuP61CA2rJRILpw__vwAJWp3xJUNj_FY";
+      const sbRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: supabaseAnonKey,
+        },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!sbRes.ok) return null;
+      const userData = await sbRes.json();
+      const openId = userData?.id;
+      const email = userData?.email;
+      if (!openId || !email) return null;
+      const name =
+        userData.user_metadata?.full_name ||
+        userData.user_metadata?.name ||
+        String(email).split("@")[0];
+      const entry: CachedSupabaseUser = {
+        openId,
+        email,
+        name,
+        expiresAt: now + SUPABASE_TOKEN_CACHE_TTL_MS,
+      };
+      if (supabaseTokenCache.size >= MAX_SUPABASE_TOKEN_CACHE) {
+        const oldestKey = supabaseTokenCache.keys().next().value;
+        if (oldestKey) supabaseTokenCache.delete(oldestKey);
+      }
+      supabaseTokenCache.set(cacheKey, entry);
+      return entry;
+    } catch (e) {
+      console.warn("[Auth] Supabase direct token validation error:", e);
+      return null;
+    }
+  }
+
   async verifySession(
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
+      return null;
+    }
+
+    const alg = this.extractJwtAlg(cookieValue);
+    if (alg && alg !== "HS256") {
+      // Tokens de Supabase (p.ej. ES256/RS256) se validan vía Supabase sin generar JOSEAlgNotAllowed
       return null;
     }
 
@@ -259,45 +343,52 @@ class SDKServer {
   async authenticateRequest(req: Request): Promise<User> {
     // Regular authentication flow
     const cookies = this.parseCookies(req.headers.cookie);
-    let sessionCookie = cookies.get(COOKIE_NAME);
+    const cookieToken = cookies.get(COOKIE_NAME) || "";
 
     // Fallback to Authorization Header
     const authHeader = req.headers.authorization;
-    if (!sessionCookie && authHeader && authHeader.startsWith("Bearer ")) {
-      sessionCookie = authHeader.substring(7);
+    const bearerToken =
+      authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7).trim() : "";
+
+    const candidates = [cookieToken, bearerToken].filter(
+      (tok, idx, arr) => Boolean(tok) && arr.indexOf(tok) === idx
+    );
+
+    if (candidates.length === 0) {
+      throw ForbiddenError("Invalid session cookie or token");
     }
 
-    let session = await this.verifySession(sessionCookie);
+    let session: { openId: string; appId: string; name: string } | null = null;
+    let sessionCookie = candidates[0];
+    for (const candidate of candidates) {
+      const verified = await this.verifySession(candidate);
+      if (verified) {
+        session = verified;
+        sessionCookie = candidate;
+        break;
+      }
+    }
+
     let user: User | null | undefined = null;
     const signedInAt = new Date();
 
-    if (!session && sessionCookie) {
-      // Intentar validar directamente como token de Supabase
-      try {
-        const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://knzmpoprlmbonejshfys.supabase.co";
-        const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuem1wb3BybG1ib25lanNoZnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjYyMjQsImV4cCI6MjA5MTYwMjIyNH0.yZ3AV1Rt2rmDuP61CA2rJRILpw__vwAJWp3xJUNj_FY";
-        const sbRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-          headers: {
-            Authorization: `Bearer ${sessionCookie}`,
-            apikey: supabaseAnonKey,
-          },
-        });
-        if (sbRes.ok) {
-          const userData = await sbRes.json();
-          const openId = userData.id;
-          const email = userData.email;
-          const name = userData.user_metadata?.full_name || userData.user_metadata?.name || email.split("@")[0];
+    if (!session) {
+      for (const candidate of candidates) {
+        const sbUserData = await this.validateSupabaseToken(candidate);
+        if (sbUserData) {
           await db.upsertUser({
-            openId,
-            name,
-            email,
+            openId: sbUserData.openId,
+            name: sbUserData.name,
+            email: sbUserData.email,
             loginMethod: "supabase",
             lastSignedIn: signedInAt,
           });
-          user = await db.getUserByOpenId(openId);
+          user = await db.getUserByOpenId(sbUserData.openId);
+          if (user) {
+            sessionCookie = candidate;
+            break;
+          }
         }
-      } catch (e) {
-        console.warn("[Auth] Supabase direct token validation error:", e);
       }
     }
 

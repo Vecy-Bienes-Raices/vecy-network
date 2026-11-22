@@ -1,17 +1,10 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
+import { ADMIN_EMAILS_LIST } from "../../shared/authRouting";
 import { sdk } from "./sdk";
 
 // Emails que SIEMPRE tienen acceso de superadministrador
-const SUPERADMIN_EMAILS = [
-  "vecybienesraices@gmail.com",
-  "edduinnova@gmail.com",
-  "edduainnova@gmail.com",
-  "jani79alves@gmail.com",
-  "eduardoariveram@gmail.com",
-  "eddu.mendoza@gmail.com",
-  "mejorpontealdia@gmail.com"
-];
+const SUPERADMIN_EMAILS = ADMIN_EMAILS_LIST;
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -28,16 +21,16 @@ export async function createContext(
   try {
     const hasAuth = !!(opts.req.headers.cookie || opts.req.headers.authorization);
     if (hasAuth) {
-      // Timeout protector de 1200ms: si la validación OAuth/Supabase tarda o está bloqueada por red/pagos,
-      // se resuelve de inmediato con null para que las peticiones y mutaciones NUNCA se congelen ni den 504.
+      // Timeout protector de 3500ms para tolerar latencia puntual al validar tokens Supabase en frío
+      // sin congelar ni devolver 504 si un servicio externo no responde.
       user = await Promise.race([
         sdk.authenticateRequest(opts.req),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200))
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500))
       ]);
     }
 
     // Auto-promote known admin emails on every login
-    if (user && SUPERADMIN_EMAILS.includes(user.email || "")) {
+    if (user && SUPERADMIN_EMAILS.includes((user.email || "").toLowerCase())) {
       if ((user.role as string) !== "admin") {
         try {
           const { getDb } = await import("../db");

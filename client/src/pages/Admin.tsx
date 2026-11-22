@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl, VECY_VERSION } from '@/const';
+import { ADMIN_EMAILS_LIST } from '../../../shared/authRouting';
 import {
   LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, RefreshCw, CalendarCheck, Activity
 } from 'lucide-react';
@@ -156,7 +157,16 @@ export default function Admin() {
           </div>
           <h1 className="font-['Audiowide'] text-xl font-bold text-foreground uppercase tracking-wider mb-2">Iniciar Sesión</h1>
           <p className="text-muted-foreground text-sm mb-6">Debes iniciar sesión con una cuenta autorizada para acceder al panel.</p>
-          <button onClick={() => { window.location.href = getLoginUrl(); }} className="btn-gold w-full">
+          <button
+            onClick={() => {
+              try {
+                localStorage.setItem('vecy_login_return_url', '/admin');
+                sessionStorage.setItem('vecy_login_return_url', '/admin');
+              } catch (_) {}
+              navigate(getLoginUrl('/admin'));
+            }}
+            className="btn-gold w-full"
+          >
             Iniciar Sesión
           </button>
         </div>
@@ -164,15 +174,7 @@ export default function Admin() {
     );
   }
 
-  const ADMIN_EMAILS = [
-    'vecybienesraices@gmail.com',
-    'edduinnova@gmail.com',
-    'edduainnova@gmail.com',
-    'jani79alves@gmail.com',
-    'eduardoariveram@gmail.com',
-    'eddu.mendoza@gmail.com',
-    'mejorpontealdia@gmail.com'
-  ];
+  const ADMIN_EMAILS = ADMIN_EMAILS_LIST;
 
   const isAuthorized = user && (ADMIN_EMAILS.includes((user.email || '').toLowerCase()) || ['admin', 'agent'].includes(user.role as string));
 

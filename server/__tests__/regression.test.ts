@@ -16190,9 +16190,146 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-paso3-url-import-tiendas-marca-blanca-v34-37"
       );
       expect(seed37?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.37");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[7-9]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.37.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[7-9]|[4-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 224: Blindaje Auth Admin vecygroup.com, Cookies .vecygroup.com y Redirección Same-Origin (v34.38)
+  // =========================================================================
+  describe("Suite 224: Auth Admin, Cookies .vecygroup.com y Redirección Same-Origin sin salto a Vercel (v34.38)", () => {
+    it("1. shared/authRouting.ts sanitiza redirects externos (bloquea vecy-bienes-raices.vercel.app y //evil.com) y construye callbacks sin query string", async () => {
+      const {
+        ADMIN_EMAILS_LIST,
+        buildAuthCallbackUrl,
+        buildLoginPath,
+        isSameOriginUrl,
+        resolvePostLoginDestination,
+        sanitizeInternalRedirectPath,
+      } = await import("../../shared/authRouting");
+
+      expect(ADMIN_EMAILS_LIST).toContain("edduainnova@gmail.com");
+      expect(ADMIN_EMAILS_LIST).toContain("vecybienesraices@gmail.com");
+
+      expect(
+        sanitizeInternalRedirectPath("https://vecy-bienes-raices.vercel.app/admin", "https://vecygroup.com")
+      ).toBeNull();
+      expect(sanitizeInternalRedirectPath("//evil.example.com/admin", "https://vecygroup.com")).toBeNull();
+      expect(sanitizeInternalRedirectPath("/\\evil.example.com", "https://vecygroup.com")).toBeNull();
+      expect(sanitizeInternalRedirectPath("/login?redirect=/admin", "https://vecygroup.com")).toBeNull();
+      expect(sanitizeInternalRedirectPath("/admin", "https://vecygroup.com")).toBe("/admin");
+      expect(
+        sanitizeInternalRedirectPath("https://vecygroup.com/admin?tab=matches", "https://vecygroup.com")
+      ).toBe("/admin?tab=matches");
+
+      expect(isSameOriginUrl("https://vecygroup.com/agenda/13?codigo=ID1", "https://vecygroup.com")).toBe(true);
+      expect(isSameOriginUrl("https://vecy-bienes-raices.vercel.app/agenda/13", "https://vecygroup.com")).toBe(false);
+      expect(isSameOriginUrl("//vecy-bienes-raices.vercel.app/", "https://vecygroup.com")).toBe(false);
+
+      expect(buildAuthCallbackUrl("https://vecygroup.com")).toBe("https://vecygroup.com/login");
+      expect(buildAuthCallbackUrl("https://www.vecygroup.com/")).toBe("https://www.vecygroup.com/login");
+      expect(buildLoginPath("/admin", "https://vecygroup.com")).toBe("/login?redirect=%2Fadmin");
+
+      expect(
+        resolvePostLoginDestination({
+          userEmail: "edduainnova@gmail.com",
+          userRole: "user",
+          savedReturn: "https://vecy-bienes-raices.vercel.app/jania",
+          currentOrigin: "https://vecygroup.com",
+        })
+      ).toBe("/admin");
+      expect(
+        resolvePostLoginDestination({
+          userEmail: "agente@inmobiliaria.co",
+          userRole: "agent",
+          redirectQuery: "/admin",
+          currentOrigin: "https://vecygroup.com",
+        })
+      ).toBe("/admin");
+    });
+
+    it("2. cookies.ts asigna domain=.vecygroup.com para vecygroup.com / www / subdominios y omite domain en Vercel, IPs y localhost", async () => {
+      const { getSessionCookieOptions, isSecureRequest, resolveCookieDomain } = await import("../_core/cookies");
+
+      const makeReq = (headers: Record<string, string>, hostname = "localhost", protocol = "http") =>
+        ({ headers, hostname, protocol } as any);
+
+      expect(resolveCookieDomain(makeReq({ host: "vecygroup.com" }, "vecygroup.com", "https"))).toBe(".vecygroup.com");
+      expect(resolveCookieDomain(makeReq({ host: "www.vecygroup.com" }, "www.vecygroup.com", "https"))).toBe(".vecygroup.com");
+      expect(
+        resolveCookieDomain(makeReq({ "x-forwarded-host": "demo.vecygroup.com", host: "127.0.0.1:3000" }))
+      ).toBe(".vecygroup.com");
+      expect(
+        resolveCookieDomain(makeReq({ host: "vecy-bienes-raices.vercel.app" }, "vecy-bienes-raices.vercel.app", "https"))
+      ).toBeUndefined();
+      expect(resolveCookieDomain(makeReq({ host: "13.140.149.144" }, "13.140.149.144", "http"))).toBeUndefined();
+      expect(resolveCookieDomain(makeReq({ host: "localhost:3000" }, "localhost", "http"))).toBeUndefined();
+
+      expect(isSecureRequest(makeReq({ "x-forwarded-proto": "https" }))).toBe(true);
+      expect(isSecureRequest(makeReq({ "cf-visitor": '{"scheme":"https"}' }))).toBe(true);
+
+      const vecyOpts = getSessionCookieOptions(
+        makeReq({ host: "vecygroup.com", "x-forwarded-proto": "https" }, "vecygroup.com", "https")
+      );
+      expect(vecyOpts.domain).toBe(".vecygroup.com");
+      expect(vecyOpts.httpOnly).toBe(true);
+      expect(vecyOpts.sameSite).toBe("lax");
+      expect(vecyOpts.secure).toBe(true);
+
+      const vercelOpts = getSessionCookieOptions(
+        makeReq({ host: "vecy-bienes-raices.vercel.app", "x-forwarded-proto": "https" })
+      );
+      expect(vercelOpts.domain).toBeUndefined();
+    });
+
+    it("3. sdk.verifySession ignora JWTs ES256/RS256 sin lanzar JOSEAlgNotAllowed; Express trust proxy y guardas cliente activos", async () => {
+      const fs = await import("fs");
+      const { sdk } = await import("../_core/sdk");
+
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const es256Header = Buffer.from(JSON.stringify({ alg: "ES256", typ: "JWT" })).toString("base64url");
+        const es256Payload = Buffer.from(JSON.stringify({ sub: "user-123" })).toString("base64url");
+        const result = await sdk.verifySession(`${es256Header}.${es256Payload}.signature`);
+        expect(result).toBeNull();
+        expect(warnSpy).not.toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+      }
+
+      const indexSrc = fs.readFileSync("server/_core/index.ts", "utf-8");
+      expect(indexSrc).toContain('app.set("trust proxy", 1)');
+
+      const loginSrc = fs.readFileSync("client/src/pages/Login.tsx", "utf-8");
+      expect(loginSrc).toContain("hasCompletedExchangeRef");
+      expect(loginSrc).toContain("hasOAuthCallbackInUrl");
+      expect(loginSrc).toContain("buildAuthCallbackUrl");
+
+      const appSrc = fs.readFileSync("client/src/App.tsx", "utf-8");
+      expect(appSrc).toContain("isSameOriginUrl");
+      expect(appSrc).toContain("landedWithOAuthParams");
+
+      const dbSrc = fs.readFileSync("server/db.ts", "utf-8");
+      expect(dbSrc).toContain("ADMIN_EMAILS_LIST");
+
+      const contextSrc = fs.readFileSync("server/_core/context.ts", "utf-8");
+      expect(contextSrc).toContain("ADMIN_EMAILS_LIST");
+    });
+
+    it("4. Verifica semilla de gobernanza v34.38 y versión oficial v34.38 (34.38.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      const seed38 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-auth-vecygroup-cookies-redirect-v34-38"
+      );
+      expect(seed38?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.38");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.38.0");
     });
   });
 });

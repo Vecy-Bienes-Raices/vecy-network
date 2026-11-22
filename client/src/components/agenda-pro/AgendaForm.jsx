@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { supabase } from '../../lib/supabase';
+import { isSameOriginUrl } from '../../../../shared/authRouting';
 import FormInput from './FormInput';
 import { Share2, Check } from 'lucide-react';
 import { toast } from 'sonner';
@@ -185,10 +186,12 @@ function AgendaForm({ propertyName, propertyCode, propertyAddress, isLocked, age
       setSession(session);
       if (_event === 'SIGNED_IN') {
         const returnUrl = localStorage.getItem('vecy_agenda_return_url');
-        if (returnUrl && returnUrl !== window.location.href) {
+        if (returnUrl) {
           localStorage.removeItem('vecy_agenda_return_url');
-          window.location.href = returnUrl;
-          return;
+          if (isSameOriginUrl(returnUrl, window.location.origin) && returnUrl !== window.location.href) {
+            window.location.href = returnUrl;
+            return;
+          }
         }
       }
       if (session) loadProfile(session);

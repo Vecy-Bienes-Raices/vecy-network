@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { InsertUser, users, propertyImages, InsertPropertyImage } from "../drizzle/schema";
+import { ADMIN_EMAILS_LIST } from "../shared/authRouting";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -71,14 +72,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
     }
-    const ADMIN_EMAILS = [
-      'vecybienesraices@gmail.com',
-      'edduinnova@gmail.com',
-      'jani79alves@gmail.com',
-      'eduardoariveram@gmail.com',
-      'eddu.mendoza@gmail.com',
-      'mejorpontealdia@gmail.com'
-    ];
+    const ADMIN_EMAILS = ADMIN_EMAILS_LIST;
 
     if (user.role !== undefined) {
       values.role = user.role;

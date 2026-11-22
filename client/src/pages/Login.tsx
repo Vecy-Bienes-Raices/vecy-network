@@ -6,18 +6,45 @@ import { trpc } from '@/lib/trpc';
 import { getLoginUrl } from '@/const';
 import { Shield, Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { ADMIN_EMAILS_LIST, resolvePostLoginDestination } from '../../../shared/authRouting';
+import {
+  ADMIN_EMAILS_LIST,
+  buildAuthCallbackUrl,
+  resolvePostLoginDestination,
+  sanitizeInternalRedirectPath,
+} from '../../../shared/authRouting';
 
 export { ADMIN_EMAILS_LIST, resolvePostLoginDestination };
 
+const hasOAuthCallbackInUrl = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const combined = `${window.location.search}${window.location.hash}`;
+  return /(?:^|[?&#])(?:access_token|refresh_token|code|error|error_description)=/i.test(combined);
+};
+
+const readUrlAuthError = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return (
+    search.get('error_description') ||
+    hash.get('error_description') ||
+    search.get('error') ||
+    hash.get('error')
+  );
+};
+
 export default function Login() {
   const [, navigate] = useLocation();
-  const { user, refresh } = useAuth();
+  const { user, hasBackendUser, refresh } = useAuth();
   const utils = trpc.useUtils();
   const loginMutation = trpc.auth.loginWithSupabaseToken.useMutation();
 
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const redirectQuery = searchParams.get('redirect') || '';
+  const rawRedirectQuery = searchParams.get('redirect') || '';
+  const redirectQuery =
+    typeof window !== 'undefined'
+      ? sanitizeInternalRedirectPath(rawRedirectQuery, window.location.origin) || ''
+      : sanitizeInternalRedirectPath(rawRedirectQuery) || '';
   const initialModeRegister = searchParams.get('mode') === 'register';
 
   const [email, setEmail] = useState('');
@@ -27,25 +54,57 @@ export default function Login() {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const isExchangingRef = React.useRef(false);
+  const hasCompletedExchangeRef = React.useRef(false);
 
   const ADMIN_EMAILS = ADMIN_EMAILS_LIST;
 
+  const readSavedReturnUrl = (): string => {
+    if (typeof window === 'undefined') return '';
+    const origin = window.location.origin;
+    for (const storage of [window.sessionStorage, window.localStorage]) {
+      try {
+        const raw = storage.getItem('vecy_login_return_url');
+        if (!raw) continue;
+        const safe = sanitizeInternalRedirectPath(raw, origin);
+        if (safe) return safe;
+        storage.removeItem('vecy_login_return_url');
+      } catch (_) {}
+    }
+    return '';
+  };
+
+  const persistSavedReturnUrl = (rawPath?: string | null) => {
+    if (typeof window === 'undefined') return;
+    const safe = sanitizeInternalRedirectPath(rawPath, window.location.origin);
+    if (!safe) return;
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      try {
+        storage.setItem('vecy_login_return_url', safe);
+      } catch (_) {}
+    }
+  };
+
+  const clearSavedReturnUrl = () => {
+    if (typeof window === 'undefined') return;
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      try {
+        storage.removeItem('vecy_login_return_url');
+      } catch (_) {}
+    }
+  };
+
   const resolveDestination = (userEmail: string, userRole?: string): string => {
-    let savedReturn = '';
-    try {
-      savedReturn = localStorage.getItem('vecy_login_return_url') || '';
-    } catch (_) {}
+    const savedReturn = readSavedReturnUrl();
     const dest = resolvePostLoginDestination({
       userEmail,
       userRole,
       redirectQuery,
       savedReturn,
+      currentOrigin: typeof window !== 'undefined' ? window.location.origin : undefined,
     });
     const targetRedirect = redirectQuery || savedReturn;
-    if (targetRedirect && targetRedirect.startsWith('/') && !targetRedirect.startsWith('/login')) {
-      try {
-        localStorage.removeItem('vecy_login_return_url');
-      } catch (_) {}
+    if (targetRedirect) {
+      clearSavedReturnUrl();
     }
     return dest;
   };
@@ -77,8 +136,13 @@ export default function Login() {
       const isAdmin = ADMIN_EMAILS.includes(userEmail) || res?.user?.role === 'admin' || res?.user?.role === 'agent';
 
       await refresh().catch(() => {});
-      
+
       if (isAdmin || res?.user || sbUser) {
+        hasCompletedExchangeRef.current = true;
+        if (typeof window !== 'undefined' && hasOAuthCallbackInUrl()) {
+          const cleanLoginUrl = redirectQuery ? `/login?redirect=${encodeURIComponent(redirectQuery)}` : '/login';
+          window.history.replaceState({}, document.title, cleanLoginUrl);
+        }
         toast.success('Sesión iniciada correctamente');
         navigate(resolveDestination(userEmail, res?.user?.role));
       }
@@ -86,6 +150,7 @@ export default function Login() {
       console.error('[Login] Error syncing session:', err);
       const { data: { user: sbUser } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
       if (sbUser) {
+        hasCompletedExchangeRef.current = true;
         navigate(resolveDestination(sbUser.email || '', undefined));
       } else if (!isSilent) {
         toast.error('Error al iniciar sesión. Intenta nuevamente.');
@@ -99,6 +164,20 @@ export default function Login() {
   // OAuth Redirect Listener
   useEffect(() => {
     let isMounted = true;
+    if (redirectQuery) {
+      persistSavedReturnUrl(redirectQuery);
+    }
+
+    const urlAuthError = readUrlAuthError();
+    if (urlAuthError) {
+      toast.error(`No se pudo completar el acceso: ${urlAuthError}`);
+      if (typeof window !== 'undefined') {
+        const cleanLoginUrl = redirectQuery ? `/login?redirect=${encodeURIComponent(redirectQuery)}` : '/login';
+        window.history.replaceState({}, document.title, cleanLoginUrl);
+      }
+      setLoading(false);
+    }
+
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -126,24 +205,23 @@ export default function Login() {
     };
   }, []);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (esperando siempre que finalice el intercambio con el backend)
   useEffect(() => {
-    if (user) {
-      navigate(resolveDestination(user.email || '', user.role as string));
-    }
-  }, [user]);
+    if (!user) return;
+    if (isExchangingRef.current) return;
+    if (hasOAuthCallbackInUrl() && !hasCompletedExchangeRef.current) return;
+    if (!hasBackendUser && !hasCompletedExchangeRef.current) return;
+    navigate(resolveDestination(user.email || '', user.role as string));
+  }, [user, hasBackendUser]);
 
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
     try {
       setLoading(true);
-      if (redirectQuery) {
-        try {
-          localStorage.setItem('vecy_login_return_url', redirectQuery);
-        } catch (_) {}
+      const pendingReturn = redirectQuery || readSavedReturnUrl();
+      if (pendingReturn) {
+        persistSavedReturnUrl(pendingReturn);
       }
-      const redirectUrl = redirectQuery
-        ? `${window.location.origin}/login?redirect=${encodeURIComponent(redirectQuery)}`
-        : `${window.location.origin}/login`;
+      const redirectUrl = buildAuthCallbackUrl(window.location.origin);
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -167,9 +245,11 @@ export default function Login() {
     setLoading(true);
     try {
       if (isRegister) {
-        const redirectUrl = redirectQuery
-          ? `${window.location.origin}/login?redirect=${encodeURIComponent(redirectQuery)}`
-          : `${window.location.origin}/login`;
+        const pendingReturn = redirectQuery || readSavedReturnUrl();
+        if (pendingReturn) {
+          persistSavedReturnUrl(pendingReturn);
+        }
+        const redirectUrl = buildAuthCallbackUrl(window.location.origin);
         const { data, error } = await supabase.auth.signUp({
           email,
           password,

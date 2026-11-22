@@ -184,7 +184,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.37 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.38 — Noviembre 2026
+
+### Novedades v34.38 (Corrección Integral de Login Admin, Cookies `.vecygroup.com`, Redirecciones Same-Origin y Proxy Nginx/Express — Doctrina Eduardo A. Rivera):
+- **Ruteo y Sanitización Frontend (`shared/authRouting.ts`, `Login.tsx`, `Admin.tsx`, `useAuth.ts`, `main.tsx`, `App.tsx`, `AgendaForm.jsx`, `const.ts`, `supabase.ts`):**
+  1. `sanitizeInternalRedirectPath`, `isSameOriginUrl`, `buildLoginPath` y `buildAuthCallbackUrl` garantizan que todo redirect post-login y callback OAuth permanezca en el dominio actual (`https://vecygroup.com` / `www.vecygroup.com`) sin saltar jamás a `vecy-bienes-raices.vercel.app`.
+  2. Eliminada race condition en `Login.tsx` (`hasCompletedExchangeRef`, `hasBackendUser`, `hasOAuthCallbackInUrl`), preservado `?redirect=/admin` desde `/admin` y `main.tsx`, y añadida recuperación same-origin en `OAuthRedirectRestorer` (`App.tsx`).
+- **Backend, Cookies y Nginx/Express (`server/_core/index.ts`, `cookies.ts`, `env.ts`, `sdk.ts`, `context.ts`, `db.ts`, `routers.ts`):**
+  1. `app.set("trust proxy", 1)`, soporte `APP_URL`/`VITE_APP_URL` en `env.ts`, cookie de sesión con `domain: ".vecygroup.com"` para `vecygroup.com`/`www`/`*.vecygroup.com` (y host-only en Vercel/IP/localhost), más limpieza dual en `auth.logout`.
+  2. `sdk.ts` valida el header JWT para no emitir `JOSEAlgNotAllowed` con tokens `ES256` de Supabase, cachea validaciones `/auth/v1/user` (60s), recorre `[cookieToken, bearerToken]` en orden y unifica `ADMIN_EMAILS_LIST` en `db.ts`, `context.ts`, `routers.ts`, `Admin.tsx` y `useAuth.ts`.
+  3. Nginx VPS configurado con `server_name vecygroup.com www.vecygroup.com *.vecygroup.com _;` y `X-Forwarded-Host $host` en `/api/`, `/uploads/` y `/webhook` + variables `APP_URL`/`VITE_APP_URL`/`PUBLIC_BASE_URL`/`VECY_ROOT_DOMAIN` en `.env`.
+- **Gobernanza y Validación:** Semilla `seed-auth-vecygroup-cookies-redirect-v34-38`, **Suite 224**, bump `v34.38` (`34.38.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.37 — Noviembre 2026
 
 ### Novedades v34.37 (PASO 3 — Importador Inteligente por URL en 2 Pasos, VECY TIENDA, Tienda de Requerimientos Blindada y Portal Marca Blanca — Doctrina Eduardo A. Rivera):
 - **Importador Inteligente por URL (2 Pasos + Cero Medios Copiados):**

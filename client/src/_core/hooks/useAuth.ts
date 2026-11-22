@@ -1,6 +1,7 @@
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
+import { ADMIN_EMAILS_LIST, sanitizeInternalRedirectPath } from "@shared/authRouting";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -9,15 +10,7 @@ type UseAuthOptions = {
   redirectPath?: string;
 };
 
-const ADMIN_EMAILS = [
-  'vecybienesraices@gmail.com',
-  'edduinnova@gmail.com',
-  'edduainnova@gmail.com',
-  'jani79alves@gmail.com',
-  'eduardoariveram@gmail.com',
-  'eddu.mendoza@gmail.com',
-  'mejorpontealdia@gmail.com'
-];
+const ADMIN_EMAILS = ADMIN_EMAILS_LIST;
 
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
@@ -78,6 +71,15 @@ export function useAuth(options?: UseAuthOptions) {
     }
   }, [logoutMutation, utils]);
 
+  useEffect(() => {
+    if (meQuery.isFetched && !meQuery.data && !sbUser && cachedUser) {
+      try {
+        localStorage.removeItem("manus-runtime-user-info");
+      } catch (_) {}
+      setCachedUser(null);
+    }
+  }, [meQuery.isFetched, meQuery.data, sbUser, cachedUser]);
+
   const activeUser = useMemo(() => {
     if (meQuery.data) return meQuery.data;
     if (sbUser) {
@@ -109,6 +111,7 @@ export function useAuth(options?: UseAuthOptions) {
     }
     return {
       user: activeUser,
+      hasBackendUser: Boolean(meQuery.data),
       loading: (meQuery.isLoading && !sbUser && !cachedUser) || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(activeUser),
@@ -116,6 +119,7 @@ export function useAuth(options?: UseAuthOptions) {
   }, [
     activeUser,
     cachedUser,
+    meQuery.data,
     meQuery.error,
     meQuery.isLoading,
     sbUser,
@@ -128,9 +132,17 @@ export function useAuth(options?: UseAuthOptions) {
     if (state.loading) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
-    if (window.location.pathname === redirectPath) return;
+    if (window.location.pathname === redirectPath || window.location.pathname.startsWith("/login")) return;
 
-    window.location.href = redirectPath;
+    const currentInternal = sanitizeInternalRedirectPath(
+      `${window.location.pathname}${window.location.search}`,
+      window.location.origin,
+    );
+    const targetUrl =
+      redirectPath === "/login" && currentInternal
+        ? getLoginUrl(currentInternal)
+        : redirectPath;
+    window.location.href = targetUrl;
   }, [
     redirectOnUnauthenticated,
     redirectPath,

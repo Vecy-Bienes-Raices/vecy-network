@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.38 — Noviembre 2026
+- **Corrección Integral de Login Admin en `vecygroup.com`, Cookies `.vecygroup.com`, Sanitización Same-Origin y Proxy Nginx/Express:**
+  - `shared/authRouting.ts`, `client/src/const.ts`, `client/src/lib/supabase.ts`, `Login.tsx`, `Admin.tsx`, `useAuth.ts`, `main.tsx`, `App.tsx`, `AgendaForm.jsx`: sanitización `sanitizeInternalRedirectPath` e `isSameOriginUrl` bloqueando saltos a orígenes legacy (`vecy-bienes-raices.vercel.app`), callbacks limpios `buildAuthCallbackUrl(origin)` sin query string, sincronización estricta de intercambio backend (`hasBackendUser`/`hasCompletedExchangeRef`) antes de navegar, limpieza de caché obsoleta y recuperación same-origin en `/`.
+  - `server/_core/index.ts`, `cookies.ts`, `env.ts`, `sdk.ts`, `context.ts`, `db.ts`, `routers.ts`: `app.set("trust proxy", 1)`, cookie `.vecygroup.com` para `vecygroup.com`/`www`/`*.vecygroup.com` (host-only en Vercel/IP/localhost), limpieza dual en `auth.logout`, detección de `alg !== HS256` sin errores `JOSEAlgNotAllowed`, caché SHA-256 de 60s para tokens Supabase, fallback `[cookie, bearer]`, unificación `ADMIN_EMAILS_LIST` y soporte `APP_URL`/`VITE_APP_URL`.
+  - Gobernanza y Pruebas: semilla `seed-auth-vecygroup-cookies-redirect-v34-38`, **Suite 224** en `regression.test.ts`, bump `v34.38` (`34.38.0`).
+
 ### 🔖 v34.37 — Noviembre 2026
 - **PASO 3 — Importador Inteligente por URL (2 Pasos), VECY TIENDA, Tienda de Requerimientos y Portal Marca Blanca:**
   - `drizzle/0015_requirement_proposals_and_whitelabel.sql` + `drizzle/schema.ts`: nueva tabla `requirement_proposals` con flujo de firma previa Ley 527 e índices de trazabilidad.

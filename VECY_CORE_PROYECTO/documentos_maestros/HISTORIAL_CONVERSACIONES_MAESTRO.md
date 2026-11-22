@@ -7,6 +7,21 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-22] — JanIA v34.38: Corrección Integral de Login Admin en `vecygroup.com`, Cookies `.vecygroup.com`, Sanitización Same-Origin y Proxy Nginx/Express (Doctrina Eduardo A. Rivera — v34.38 - 34.38.0)
+
+#### 1. Solicitud de Eduardo A. Rivera y Diagnóstico Confirmado
+- Eduardo reportó que al intentar iniciar sesión en el panel `/admin` desde `https://vecygroup.com`, el sistema lo redirigía al dominio viejo de Vercel (`vecy-bienes-raices.vercel.app`).
+- **Diagnóstico Técnico Confirmado en Vivo:**
+  1. En Supabase Auth (`knzmpoprlmbonejshfys.supabase.co`), `Site URL` continuaba apuntando a `https://vecy-bienes-raices.vercel.app`, provocando que OAuth redirigiera a Vercel cuando `redirectTo` no estaba habilitado en *Redirect URLs* (agravado por pasar `?redirect=...` en `redirectTo`).
+  2. En frontend, `Login.tsx` tenía una race condition entre `useAuth` (`sbUser`) y `loginWithSupabaseToken` (navegando antes de obtener la cookie `app_session_id`), `Admin.tsx`/`main.tsx` no preservaban `?redirect=/admin`, y `vecy_login_return_url`/`vecy_agenda_return_url` no validaban same-origin.
+  3. En backend/VPS, faltaba `app.set("trust proxy", 1)` en Express, `cookies.ts` no fijaba `domain: ".vecygroup.com"`, `sdk.ts` emitía `JOSEAlgNotAllowed` ante JWTs `ES256` de Supabase e ignoraba `Bearer` si había cookie previa, `db.ts`/`context.ts` tenían listas/criterios divergentes de superadmin, faltaban `APP_URL`/`VITE_APP_URL`/`PUBLIC_BASE_URL`/`VECY_ROOT_DOMAIN` en `.env` del VPS y `X-Forwarded-Host` en `/api/` de Nginx.
+
+#### 2. Acciones Ejecutadas en `v34.38`
+1. **Ruteo y Sanitización Frontend (`shared/authRouting.ts`, `Login.tsx`, `Admin.tsx`, `useAuth.ts`, `main.tsx`, `App.tsx`, `AgendaForm.jsx`, `const.ts`, `supabase.ts`):** agregados `sanitizeInternalRedirectPath`, `isSameOriginUrl`, `buildLoginPath` y `buildAuthCallbackUrl`; eliminada race condition de intercambio en `Login.tsx`, limpieza de caché obsoleta y recuperación same-origin en `OAuthRedirectRestorer`.
+2. **Backend, Cookies y Auth (`server/_core/index.ts`, `cookies.ts`, `env.ts`, `sdk.ts`, `context.ts`, `db.ts`, `routers.ts`):** `trust proxy = 1`, `domain: ".vecygroup.com"` en subdominios de `vecygroup.com`, limpieza dual en `auth.logout`, silent bypass de `alg !== HS256` + caché de 60s + fallback `[cookie, bearer]` en `sdk.ts`, y unificación de `ADMIN_EMAILS_LIST`.
+3. **Infraestructura VPS + Gobernanza:** añadidos `APP_URL`/`VITE_APP_URL`/`PUBLIC_BASE_URL`/`VECY_ROOT_DOMAIN` en `.env` del VPS, `X-Forwarded-Host` y `www.vecygroup.com` en Nginx, semilla `seed-auth-vecygroup-cookies-redirect-v34-38`, **Suite 224**, bump `v34.38` (`34.38.0`).
+4. **Instrucción Supabase entregada a Eduardo:** cambiar `Site URL` a `https://vecygroup.com` y agregar `https://vecygroup.com/**` y `https://www.vecygroup.com/**` en *Redirect URLs*.
+
 ### 📅 [2026-11-22] — JanIA v34.37: PASO 3 — Importador Inteligente por URL (2 Pasos + SSRF + 0 Medios Copiados), VECY TIENDA, Tienda de Requerimientos Blindada y Portal Marca Blanca (Doctrina Eduardo A. Rivera — v34.37 - 34.37.0)
 
 #### 1. Solicitud de Eduardo A. Rivera

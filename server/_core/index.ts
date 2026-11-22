@@ -28,6 +28,7 @@ process.on("unhandledRejection", (reason, promise) => {
 
 async function startServer() {
   const app = express();
+  app.set("trust proxy", 1);
   const server = createServer(app);
 
   // Enable gzip compression for lightning-fast API responses

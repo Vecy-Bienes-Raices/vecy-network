@@ -10,6 +10,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import FloatingScrollToTop from "./components/FloatingScrollToTop";
 import JanIAFloatingButton from "./components/JanIAFloatingButton";
 import { extractTenantSlugFromHost, isCustomWhiteLabelHost } from "../../shared/whitelabel";
+import { isSameOriginUrl, sanitizeInternalRedirectPath } from "../../shared/authRouting";
 
 // Rutas críticas cargadas de forma prioritaria
 import Home from "./pages/Home";
@@ -109,15 +110,55 @@ function Router() {
  */
 function OAuthRedirectRestorer() {
   useEffect(() => {
-    const returnUrl = localStorage.getItem('vecy_agenda_return_url');
-    if (!returnUrl) return;
-    // Solo restaurar si hay una sesión activa
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && returnUrl !== window.location.href) {
+    if (typeof window === "undefined") return;
+    const currentOrigin = window.location.origin;
+
+    const agendaReturnUrl = localStorage.getItem('vecy_agenda_return_url');
+    if (agendaReturnUrl) {
+      if (!isSameOriginUrl(agendaReturnUrl, currentOrigin)) {
         localStorage.removeItem('vecy_agenda_return_url');
-        window.location.href = returnUrl;
+      } else {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session && agendaReturnUrl !== window.location.href) {
+            localStorage.removeItem('vecy_agenda_return_url');
+            window.location.href = agendaReturnUrl;
+          }
+        });
+        return;
       }
-    });
+    }
+
+    // Si Supabase retornó a la raíz ('/') tras OAuth con sesión activa pero sin cookie/token backend aún,
+    // completar el intercambio en /login dentro del mismo dominio para redirigir al panel correspondiente.
+    const combinedUrl = `${window.location.search}${window.location.hash}`;
+    const landedWithOAuthParams = /(?:^|[?&#])(?:access_token|refresh_token|code)=/i.test(combinedUrl);
+    let pendingLoginReturn = "";
+    try {
+      const raw =
+        sessionStorage.getItem('vecy_login_return_url') ||
+        localStorage.getItem('vecy_login_return_url');
+      const safe = sanitizeInternalRedirectPath(raw, currentOrigin);
+      if (raw && !safe) {
+        localStorage.removeItem('vecy_login_return_url');
+        sessionStorage.removeItem('vecy_login_return_url');
+      } else if (safe) {
+        pendingLoginReturn = safe;
+      }
+    } catch (_) {}
+
+    if (
+      window.location.pathname !== '/login' &&
+      (landedWithOAuthParams || (pendingLoginReturn && !localStorage.getItem('jania-session-token')))
+    ) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          const targetLogin = pendingLoginReturn
+            ? `/login?redirect=${encodeURIComponent(pendingLoginReturn)}`
+            : '/login';
+          window.location.replace(targetLogin);
+        }
+      });
+    }
   }, []);
   return null;
 }

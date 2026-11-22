@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { ADMIN_EMAILS_LIST } from "../shared/authRouting";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { janIARouter } from "./routers/janIA";
@@ -30,6 +31,10 @@ export const appRouter = router({
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      if (cookieOptions.domain) {
+        const { domain: _omitDomain, ...hostOnlyOptions } = cookieOptions;
+        ctx.res.clearCookie(COOKIE_NAME, { ...hostOnlyOptions, maxAge: -1 });
+      }
       return {
         success: true,
       } as const;
@@ -69,9 +74,13 @@ export const appRouter = router({
             lastSignedIn: signedInAt,
           });
 
-          const user = await getUserByOpenId(openId);
+          let user = await getUserByOpenId(openId);
           if (!user) {
             throw new Error("Failed to retrieve user after upsert");
+          }
+          if (user.email && ADMIN_EMAILS_LIST.includes(user.email.toLowerCase()) && (user.role as string) !== "admin") {
+            await upsertUser({ openId, role: "admin", lastSignedIn: signedInAt });
+            user = { ...user, role: "admin" };
           }
 
           const sessionToken = await sdk.createSessionToken(openId, {

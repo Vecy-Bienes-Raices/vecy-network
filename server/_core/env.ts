@@ -12,6 +12,7 @@ export const ENV = {
   wompiEventsSecret: process.env.WOMPI_EVENTS_SECRET ?? "",
   wompiIntegritySecret: process.env.WOMPI_INTEGRITY_SECRET ?? "",
   wompiSandbox: (process.env.WOMPI_SANDBOX ?? "true") !== "false",
-  publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "https://vecygroup.com",
+  appUrl: process.env.APP_URL ?? process.env.PUBLIC_BASE_URL ?? process.env.VITE_APP_URL ?? "https://vecygroup.com",
+  publicBaseUrl: process.env.PUBLIC_BASE_URL ?? process.env.APP_URL ?? process.env.VITE_APP_URL ?? "https://vecygroup.com",
   rootDomain: process.env.VECY_ROOT_DOMAIN ?? "vecygroup.com",
 };
