@@ -6,10 +6,11 @@ import AgentProptechSuite from '@/components/AgentProptechSuite';
 import {
   Building2, MapPin, Bed, Bath, Car, Ruler, Phone, Mail,
   CalendarCheck, Download, EyeOff, Palette, Search, Sparkles,
-  ShieldCheck, ExternalLink, Loader2, Share2, Globe
+  ShieldCheck, ExternalLink, Loader2, Share2, Globe, Send, CheckCircle2
 } from 'lucide-react';
 import ShareModal from '@/components/ShareModal';
 import { extractTenantSlugFromHost } from '../../../shared/whitelabel';
+import { toast } from 'sonner';
 
 interface AgentMicrositeProps {
   hostSlug?: string;
@@ -27,6 +28,27 @@ export default function AgentMicrosite({ hostSlug }: AgentMicrositeProps = {}) {
   const [catalogScope, setCatalogScope] = useState<'all' | 'own' | 'network'>('all');
   const [shareOpen, setShareOpen] = useState(false);
   const [shareConfig, setShareConfig] = useState({ url: '', text: '', title: '' });
+  const [leadName, setLeadName] = useState('');
+  const [leadEmail, setLeadEmail] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
+  const [leadZone, setLeadZone] = useState('');
+  const [leadMsg, setLeadMsg] = useState('');
+  const [leadSent, setLeadSent] = useState(false);
+
+  const captureLeadMutation = trpc.agent.captureMicrositeLead.useMutation({
+    onSuccess: () => {
+      setLeadSent(true);
+      setLeadName('');
+      setLeadEmail('');
+      setLeadPhone('');
+      setLeadZone('');
+      setLeadMsg('');
+      toast.success('¡Solicitud enviada!', {
+        description: 'Tu asesor te responderá muy pronto al correo o WhatsApp.',
+      });
+    },
+    onError: (err) => toast.error('No se pudo enviar tu solicitud', { description: err.message }),
+  });
 
   const { data, isLoading, error } = trpc.agent.getStoreBySubdomain.useQuery(
     { slug: slug || undefined, host: currentHost || undefined },
@@ -413,6 +435,133 @@ export default function AgentMicrosite({ hostSlug }: AgentMicrositeProps = {}) {
             })}
           </div>
         )}
+
+        {/* Formulario directo de captura al CRM del Agente */}
+        <section
+          className={`rounded-3xl border p-6 sm:p-8 shadow-xl ${
+            isMinimalLight
+              ? 'bg-white border-zinc-200 text-zinc-900'
+              : 'bg-zinc-900/85 border-white/15 text-white'
+          }`}
+        >
+          <div className="max-w-3xl mx-auto space-y-5">
+            <div className="text-center space-y-1.5">
+              <h3 className="text-xl sm:text-2xl font-black">
+                ¿Buscas un inmueble específico o asesoría personalizada?
+              </h3>
+              <p className={`text-xs sm:text-sm ${isMinimalLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                Déjanos tus datos y {agencyName} te contactará por correo o WhatsApp con opciones seleccionadas.
+              </p>
+            </div>
+
+            {leadSent ? (
+              <div className="p-6 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+                <p className="text-sm font-bold">¡Recibimos tu solicitud con éxito!</p>
+                <p className="text-xs opacity-80">
+                  Nuestro equipo ya registró tu requerimiento y te enviará información pronto.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setLeadSent(false)}
+                  className="text-xs underline font-bold cursor-pointer"
+                >
+                  Enviar otra consulta
+                </button>
+              </div>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  captureLeadMutation.mutate({
+                    agentUserId: agent.id,
+                    slug: slug || undefined,
+                    name: leadName.trim(),
+                    email: leadEmail.trim(),
+                    phone: leadPhone.trim() || undefined,
+                    preferredZone: leadZone.trim() || undefined,
+                    message: leadMsg.trim() || undefined,
+                  });
+                }}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              >
+                <input
+                  type="text"
+                  required
+                  minLength={2}
+                  placeholder="Tu nombre completo *"
+                  value={leadName}
+                  onChange={(e) => setLeadName(e.target.value)}
+                  className={`px-4 py-3 rounded-xl border text-xs outline-none ${
+                    isMinimalLight
+                      ? 'bg-zinc-50 border-zinc-300 text-zinc-900'
+                      : 'bg-black/60 border-white/15 text-white'
+                  }`}
+                />
+                <input
+                  type="email"
+                  required
+                  placeholder="Tu correo electrónico *"
+                  value={leadEmail}
+                  onChange={(e) => setLeadEmail(e.target.value)}
+                  className={`px-4 py-3 rounded-xl border text-xs outline-none ${
+                    isMinimalLight
+                      ? 'bg-zinc-50 border-zinc-300 text-zinc-900'
+                      : 'bg-black/60 border-white/15 text-white'
+                  }`}
+                />
+                <input
+                  type="tel"
+                  placeholder="Tu WhatsApp / celular"
+                  value={leadPhone}
+                  onChange={(e) => setLeadPhone(e.target.value)}
+                  className={`px-4 py-3 rounded-xl border text-xs outline-none ${
+                    isMinimalLight
+                      ? 'bg-zinc-50 border-zinc-300 text-zinc-900'
+                      : 'bg-black/60 border-white/15 text-white'
+                  }`}
+                />
+                <input
+                  type="text"
+                  placeholder="Zona o barrio de interés"
+                  value={leadZone}
+                  onChange={(e) => setLeadZone(e.target.value)}
+                  className={`px-4 py-3 rounded-xl border text-xs outline-none ${
+                    isMinimalLight
+                      ? 'bg-zinc-50 border-zinc-300 text-zinc-900'
+                      : 'bg-black/60 border-white/15 text-white'
+                  }`}
+                />
+                <textarea
+                  rows={2}
+                  placeholder="Cuéntanos qué inmueble buscas o en qué propiedad estás interesado..."
+                  value={leadMsg}
+                  onChange={(e) => setLeadMsg(e.target.value)}
+                  className={`sm:col-span-2 px-4 py-3 rounded-xl border text-xs outline-none resize-none ${
+                    isMinimalLight
+                      ? 'bg-zinc-50 border-zinc-300 text-zinc-900'
+                      : 'bg-black/60 border-white/15 text-white'
+                  }`}
+                />
+                <div className="sm:col-span-2 flex justify-center pt-1">
+                  <button
+                    type="submit"
+                    disabled={captureLeadMutation.isPending}
+                    className="px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider text-white shadow-lg flex items-center gap-2 cursor-pointer"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {captureLeadMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    Solicitar Asesoría
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </section>
       </main>
 
       {/* Footer del Micro-Sitio del Suscriptor */}

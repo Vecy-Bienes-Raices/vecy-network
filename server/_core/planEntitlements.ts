@@ -28,6 +28,7 @@ export interface SubscriptionPlanDefinition {
   customDomainEnabled: boolean;
   privateJaniaEnabled: boolean;
   emailCampaignsMonthlyQuota: number;
+  maxEmailsPerMonth: number;
   autoRepublishStore: boolean;
   features: string[];
   sortOrder: number;
@@ -49,6 +50,7 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
     customDomainEnabled: false,
     privateJaniaEnabled: false,
     emailCampaignsMonthlyQuota: 0,
+    maxEmailsPerMonth: 0,
     autoRepublishStore: true,
     features: [
       "Hasta 5 inmuebles activos",
@@ -74,6 +76,7 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
     customDomainEnabled: true,
     privateJaniaEnabled: false,
     emailCampaignsMonthlyQuota: 100,
+    maxEmailsPerMonth: 100,
     autoRepublishStore: true,
     features: [
       "Hasta 40 inmuebles activos y 50 requerimientos",
@@ -99,6 +102,7 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
     customDomainEnabled: true,
     privateJaniaEnabled: true,
     emailCampaignsMonthlyQuota: 500,
+    maxEmailsPerMonth: 500,
     autoRepublishStore: true,
     features: [
       "Inmuebles y requerimientos ilimitados",
@@ -125,6 +129,7 @@ export const DEFAULT_PLAN_CATALOG: SubscriptionPlanDefinition[] = [
     customDomainEnabled: true,
     privateJaniaEnabled: true,
     emailCampaignsMonthlyQuota: 1500,
+    maxEmailsPerMonth: 1500,
     autoRepublishStore: true,
     features: [
       "Todo ilimitado: inmuebles, requerimientos e importaciones por URL",
@@ -186,6 +191,7 @@ export async function listSubscriptionPlans(): Promise<SubscriptionPlanDefinitio
         customDomainEnabled: row.customDomainEnabled,
         privateJaniaEnabled: row.privateJaniaEnabled,
         emailCampaignsMonthlyQuota: row.emailCampaignsMonthlyQuota,
+        maxEmailsPerMonth: row.emailCampaignsMonthlyQuota,
         autoRepublishStore: row.autoRepublishStore,
         features: normalizeFeaturesJson(row.featuresJson, fallback.features),
         sortOrder: row.sortOrder,
@@ -362,6 +368,75 @@ export async function assertCanImportByUrl(userId: number, role?: string): Promi
     });
   }
   return ent;
+}
+
+export function checkEmailQuotaLimit(params: {
+  isAdmin: boolean;
+  maxEmailsPerMonth: number;
+  used: number;
+  requestedCount?: number;
+}): { allowed: boolean; remaining: number; reason?: string } {
+  const requested = Math.max(1, params.requestedCount ?? 1);
+  if (params.isAdmin || params.maxEmailsPerMonth < 0) {
+    return { allowed: true, remaining: Number.POSITIVE_INFINITY };
+  }
+  if (params.maxEmailsPerMonth === 0) {
+    return {
+      allowed: false,
+      remaining: 0,
+      reason: "Tu plan actual no incluye envíos de correo automatizado CRM. Mejora tu plan en /planes para activar correos IA.",
+    };
+  }
+  const remaining = Math.max(0, params.maxEmailsPerMonth - Math.max(0, params.used));
+  if (remaining < requested) {
+    return {
+      allowed: false,
+      remaining,
+      reason: `Alcanzaste tu cuota mensual de ${params.maxEmailsPerMonth} correos CRM (${params.used}/${params.maxEmailsPerMonth} usados). Mejora tu plan en /planes.`,
+    };
+  }
+  return { allowed: true, remaining };
+}
+
+export async function assertCanSendEmail(
+  userId: number,
+  role?: string,
+  requestedCount: number = 1,
+): Promise<UserEntitlementsSnapshot> {
+  const ent = await getUserEffectiveEntitlements(userId, role);
+  const check = checkEmailQuotaLimit({
+    isAdmin: ent.isAdmin,
+    maxEmailsPerMonth: ent.plan.maxEmailsPerMonth ?? ent.plan.emailCampaignsMonthlyQuota,
+    used: ent.usage.emailCampaignsUsed,
+    requestedCount,
+  });
+  if (!check.allowed) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: check.reason || "Cuota mensual de correos CRM agotada.",
+    });
+  }
+  return ent;
+}
+
+export async function getEmailQuotaSummary(userId: number, role?: string) {
+  const ent = await getUserEffectiveEntitlements(userId, role);
+  const maxEmailsPerMonth = ent.isAdmin
+    ? -1
+    : (ent.plan.maxEmailsPerMonth ?? ent.plan.emailCampaignsMonthlyQuota);
+  const used = ent.usage.emailCampaignsUsed;
+  const remaining =
+    maxEmailsPerMonth < 0 ? -1 : Math.max(0, maxEmailsPerMonth - used);
+  return {
+    planCode: ent.plan.code,
+    planName: ent.plan.name,
+    isAdmin: ent.isAdmin,
+    periodKey: ent.periodKey,
+    maxEmailsPerMonth,
+    used,
+    remaining,
+    canSend: ent.isAdmin || maxEmailsPerMonth < 0 || remaining > 0,
+  };
 }
 
 export async function incrementUsageQuota(

@@ -5,14 +5,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Copy, Check, Shield, Plus, Search, BarChart3, Zap, Sparkles,
   Loader2, Globe, FileText, Palette, Bot, CalendarCheck, EyeOff,
-  Download, Share2, ExternalLink, TrendingUp, QrCode, Calculator, Wand2, FileSignature
+  Download, Share2, ExternalLink, TrendingUp, QrCode, Calculator, Wand2, FileSignature,
+  Users, Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import UnifiedPublishModal from "@/components/publish/UnifiedPublishModal";
 import AgentProptechSuite from "@/components/AgentProptechSuite";
+import CrmKanbanBoard from "@/components/crm/CrmKanbanBoard";
+import EmailAutomationPanel from "@/components/crm/EmailAutomationPanel";
 
-type DashboardTab = "properties" | "links" | "branding" | "pro_tools" | "analytics" | "claim" | "publish";
+type DashboardTab = "properties" | "crm" | "email_automation" | "links" | "branding" | "pro_tools" | "analytics" | "claim" | "publish";
 type PersonalityOption = "normal" | "audaz" | "profesional" | "extrovertida" | "seria" | "cordial";
 
 const PERSONALITY_OPTIONS: Array<{ id: PersonalityOption; label: string; desc: string }> = [
@@ -26,7 +29,23 @@ const PERSONALITY_OPTIONS: Array<{ id: PersonalityOption; label: string; desc: s
 
 export default function AgentDashboard() {
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<DashboardTab>("properties");
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
+    if (typeof window === "undefined") return "properties";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (
+      t === "crm" ||
+      t === "email_automation" ||
+      t === "branding" ||
+      t === "pro_tools" ||
+      t === "links" ||
+      t === "analytics" ||
+      t === "claim" ||
+      t === "publish"
+    ) {
+      return t;
+    }
+    return "properties";
+  });
   const [isUnifiedModalOpen, setIsUnifiedModalOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
 
@@ -88,6 +107,7 @@ export default function AgentDashboard() {
   const { data: stealthLinks, refetch: refetchLinks, isLoading: loadingLinks } = trpc.agent.getStealthLinks.useQuery();
   const { data: myBrand, refetch: refetchBrand } = trpc.agent.getMyBrandConfig.useQuery(undefined, { retry: false });
   const { data: affiliateStats, refetch: refetchStats } = trpc.affiliates.getMyStats.useQuery(undefined, { retry: false });
+  const { data: crmBoardSummary } = trpc.crm.getBoard.useQuery({ scopeMode: "agency" }, { retry: false });
 
   useEffect(() => {
     if (myBrand) {
@@ -366,6 +386,8 @@ export default function AgentDashboard() {
 
   const tabs = [
     { id: "properties", label: "Mis Inmuebles & Fichas", icon: BarChart3, count: myProperties?.length },
+    { id: "crm", label: "CRM Kanban", icon: Users, count: crmBoardSummary?.kpis?.totalLeads },
+    { id: "email_automation", label: "Correos IA & Secuencias", icon: Mail },
     { id: "branding", label: "Mi Sitio & Marca (Wasi IA)", icon: Palette },
     { id: "pro_tools", label: "Herramientas Pro & Agente IA", icon: Bot },
     { id: "links", label: "Enlaces & Marca Blanca", icon: Zap, count: stealthLinks?.length },
@@ -1649,6 +1671,14 @@ export default function AgentDashboard() {
                 </div>
               </form>
             </div>
+          )}
+
+          {activeTab === "crm" && (
+            <CrmKanbanBoard onOpenEmailPanel={() => setActiveTab("email_automation")} />
+          )}
+
+          {activeTab === "email_automation" && (
+            <EmailAutomationPanel />
           )}
 
         </div>

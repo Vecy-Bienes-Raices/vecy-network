@@ -667,7 +667,7 @@ export default function PropertyDetail() {
                 <div className="space-y-3 pt-4 border-t border-white/10">
                   <button
                     onClick={() => {
-                      navigate(`/agenda/${property.id}?nombre=${encodeURIComponent(property.name)}&codigo=${encodeURIComponent(refCode)}`);
+                      navigate(`/agenda/${property.id}?nombre=${encodeURIComponent(property.name)}&codigo=${encodeURIComponent(refCode)}${effectiveAgentId ? `&agentId=${effectiveAgentId}` : ''}`);
                     }}
                     className="w-full btn-gold py-4 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(191,149,63,0.4)] cursor-pointer"
                   >

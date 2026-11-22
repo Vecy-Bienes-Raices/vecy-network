@@ -991,5 +991,83 @@ SEGUNDA — DISTRIBUCIÓN COLABORATIVA Y NO ELUSIÓN: Las partes intervinientes 
         clausesBody,
       };
     }),
+
+  captureMicrositeLead: publicProcedure
+    .input(z.object({
+      agentUserId: z.number().int().positive().optional(),
+      slug: z.string().max(120).optional(),
+      propertyId: z.number().int().positive().optional(),
+      name: z.string().min(2).max(200),
+      email: z.string().email(),
+      phone: z.string().max(30).optional(),
+      inquiryType: z.enum(["buy", "sell", "rent", "invest", "general"]).default("buy"),
+      estimatedBudget: z.union([z.number(), z.string()]).optional(),
+      preferredCity: z.string().max(100).optional(),
+      preferredZone: z.string().max(150).optional(),
+      message: z.string().max(2500).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      let targetAgentId = input.agentUserId ?? null;
+      let targetAgencyId: number | null = null;
+
+      if (!targetAgentId && input.slug) {
+        const cleanSlug = input.slug.trim().toLowerCase();
+        const [ag] = await db
+          .select({ id: agencies.id, ownerUserId: agencies.ownerUserId })
+          .from(agencies)
+          .where(eq(agencies.slug, cleanSlug))
+          .limit(1);
+        if (ag) {
+          targetAgentId = ag.ownerUserId;
+          targetAgencyId = ag.id;
+        } else {
+          const [usr] = await db
+            .select({ id: users.id, defaultAgencyId: users.defaultAgencyId })
+            .from(users)
+            .where(eq(users.subdomain, cleanSlug))
+            .limit(1);
+          if (usr) {
+            targetAgentId = usr.id;
+            targetAgencyId = usr.defaultAgencyId ?? null;
+          }
+        }
+      }
+
+      if (!targetAgentId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "No se identificó el asesor del portal." });
+      }
+
+      const { captureLeadIntoCrm } = await import("../_core/crmService");
+      const captured = await captureLeadIntoCrm({
+        agentId: targetAgentId,
+        agencyId: targetAgencyId,
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        inquiryType: input.inquiryType,
+        propertyId: input.propertyId ?? null,
+        estimatedBudget: input.estimatedBudget ?? null,
+        preferredCity: input.preferredCity ?? null,
+        preferredZone: input.preferredZone ?? null,
+        message: input.message ?? null,
+        source: "microsite",
+        pipelineStage: "nuevo",
+        temperature: "warm",
+        tags: ["microsite", input.slug ? `portal:${input.slug}` : "marca_blanca"],
+        activityTitle: "Lead capturado desde Portal Marca Blanca",
+        activityBody:
+          input.message?.trim() ||
+          `Nuevo prospecto ${input.name} registrado desde tu portal marca blanca.`,
+      });
+
+      return {
+        success: true,
+        leadId: captured.lead?.id ?? null,
+        created: captured.created,
+      };
+    }),
 });
 

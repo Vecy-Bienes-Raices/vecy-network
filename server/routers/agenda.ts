@@ -1734,6 +1734,41 @@ export async function processAndSaveSolicitud(input: any) {
     console.error(`[AGENDA-CREATE] Error en despacho de WhatsApp para solicitud #${nextSolicitudId}:`, waErr?.message);
   });
 
+  // Captura automática en el CRM Kanban del agente (v34.40 PASO 4, no bloqueante)
+  (async () => {
+    try {
+      const { captureLeadIntoCrm, resolveAgentAndAgencyForProperty } = await import("../_core/crmService");
+      const resolved = await resolveAgentAndAgencyForProperty({
+        explicitAgentId: input.agent_id,
+        codigoInmueble: input.codigo_inmueble,
+        nombreInmueble: input.nombre_inmueble,
+      });
+      if (resolved.agentId) {
+        await captureLeadIntoCrm({
+          agentId: resolved.agentId,
+          agencyId: resolved.agencyId,
+          name: input.solicitante_nombre,
+          email: input.solicitante_email,
+          phone: input.solicitante_celular,
+          documentNumber: input.solicitante_numero_documento,
+          inquiryType: input.opcion_negocio || "buy",
+          message: `Cita agendada #${nextSolicitudId} — ${input.nombre_inmueble || input.servicio_solicitado || "Visita"} (${input.fecha_cita_texto || ""} ${input.hora_cita || ""})`.trim(),
+          source: "agenda",
+          propertyId: resolved.propertyId,
+          pipelineStage: "visita_agendada",
+          temperature: "hot",
+          solicitudId: nextSolicitudId,
+          tags: ["agenda", "visita_agendada"],
+          activityType: "visit",
+          activityTitle: `Cita Agendada #${nextSolicitudId}`,
+          activityBody: `Visita programada para ${input.fecha_cita_texto || "fecha por confirmar"} ${input.hora_cita || ""} (${input.nombre_inmueble || input.codigo_inmueble || "Inmueble"}).`,
+        });
+      }
+    } catch (crmErr: any) {
+      console.warn(`[AGENDA-CRM-CAPTURE] Error no bloqueante registrando lead de solicitud #${nextSolicitudId}:`, crmErr?.message);
+    }
+  })();
+
   return {
     success: true,
     id: newRow?.id,

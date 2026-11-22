@@ -184,7 +184,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.39 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.40 — Noviembre 2026
+
+### Novedades v34.40 (PASO 4 — CRM Inmobiliario Kanban Multi-Tenant y Gestor Automatizado de Correos con IA):
+- **Base de Datos y Cuotas (`drizzle/0016_crm_kanban_and_email_automation.sql`, `drizzle/schema.ts`, `planEntitlements.ts`):**
+  1. Enriquecimiento aditivo de `leads` (`agent_id`, `agency_id`, `requirement_id`, `pipeline_stage`, `temperature`, `estimated_budget`, `next_follow_up_at`, `last_contacted_at`, `tags`, `notes`, `preferred_city`, `preferred_zone`, `referral_token`, `solicitud_id`) y 6 nuevas tablas: `crm_activities`, `email_accounts`, `email_templates` (+4 plantillas sistema), `email_sequences`, `email_sequence_enrollments` y `email_messages`.
+  2. Exposición explícita de `maxEmailsPerMonth` (`0`, `100`, `500`, `1500`) con `checkEmailQuotaLimit`, `assertCanSendEmail` y `getEmailQuotaSummary`.
+- **Backend CRM & Motor Correos IA (`shared/crm.ts`, `crmService.ts`, `routers/crm.ts`, `emailAutomationEngine.ts`, `routers/emailAutomation.ts`, `leads.ts`, `agenda.ts`, `agent.ts`, `notification.ts`, `cronService.ts`):**
+  1. Embudo Kanban de 7 etapas con validación de transiciones y registro automático en `crm_activities`, aislamiento multi-tenant (`canAccessLead`, `canAccessTenantOwnedRecord`) y captura unificada desde micrositios marca blanca (`agent.captureMicrositeLead`), enlaces blindados/sensor (`leads.submitStealthLead`, `leads.submitTrackingLead`) y Agenda (`agenda.create`).
+  2. Cifrado `AES-256-GCM` para credenciales SMTP propias (con bloqueo anti-SSRF) o Relay VECY con `Reply-To`, redacción/respuesta IA con datos reales (`generateAiEmailDraft`), secuencias automáticas (`0h / 24h / 72h` y alerta por Match `>= 85%` en `vrifEvents`) y cron `*/5 * * * *` (`America/Bogota`).
+- **Frontend `/agent-dashboard` (`CrmKanbanBoard.tsx`, `LeadDetailDrawer.tsx`, `EmailAutomationPanel.tsx`, `AgentDashboard.tsx`, `AgentMicrosite.tsx`, `PropertyDetail.tsx`):** integración completa de pestañas `CRM Kanban` y `Correos IA & Secuencias` sin alterar paneles previos, usando `<dialog>` nativo accesible y formulario CRM en micrositios.
+- **Gobernanza y Validación:** `paso4CrmAndEmailAutomation.test.ts` (11/11), semilla `seed-paso4-crm-kanban-email-automation-ia-v34-40`, **Suite 226**, `8/8 archivos, 812/812 tests en verde` (`$0 COP`), bump `v34.40` (`34.40.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.39 — Noviembre 2026
 
 ### Novedades v34.39 (Blindaje Anti-Falsos Positivos de Moderación — Caso Daniel Cáceres `RAFAEL URIBE URIBE` + Fast-Path `Solicitud/Compra` — Doctrina Eduardo A. Rivera):
 - **Moderación Segura sin Falsos Positivos (`server/_core/jania/heuristics.ts`):**

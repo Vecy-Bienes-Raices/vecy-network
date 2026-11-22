@@ -16401,9 +16401,52 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-anti-falso-positivo-moderacion-toponimos-colombia-v34-39"
       );
       expect(seed39?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.39");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:39|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.39.0");
+      expect(pkg.version).toMatch(/^34\.(?:39|[4-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 226: PASO 4 — CRM Inmobiliario Kanban Multi-Tenant y Gestor Automatizado de Correos con IA (v34.40)
+  // =========================================================================
+  describe("Suite 226: PASO 4 — CRM Kanban, Multi-Tenant, SMTP AES-256-GCM y Correos IA (v34.40)", () => {
+    it("1. Verifica migración 0016, tablas CRM/Email en schema.ts, cuota maxEmailsPerMonth y routers montados", async () => {
+      const fs = await import("fs");
+      const sql0016 = fs.readFileSync("drizzle/0016_crm_kanban_and_email_automation.sql", "utf-8");
+      expect(sql0016).toContain('CREATE TABLE IF NOT EXISTS "crm_activities"');
+      expect(sql0016).toContain('CREATE TABLE IF NOT EXISTS "email_accounts"');
+      expect(sql0016).toContain('CREATE TABLE IF NOT EXISTS "email_templates"');
+      expect(sql0016).toContain('CREATE TABLE IF NOT EXISTS "email_sequences"');
+      expect(sql0016).toContain('CREATE TABLE IF NOT EXISTS "email_sequence_enrollments"');
+      expect(sql0016).toContain('CREATE TABLE IF NOT EXISTS "email_messages"');
+
+      const schemaSrc = fs.readFileSync("drizzle/schema.ts", "utf-8");
+      expect(schemaSrc).toContain("export const crmActivities");
+      expect(schemaSrc).toContain("export const emailAccounts");
+      expect(schemaSrc).toContain("export const emailSequences");
+      expect(schemaSrc).toContain("export const emailMessages");
+
+      const routersSrc = fs.readFileSync("server/routers.ts", "utf-8");
+      expect(routersSrc).toContain("crm: crmRouter");
+      expect(routersSrc).toContain("emailAutomation: emailAutomationRouter");
+
+      const agentDashSrc = fs.readFileSync("client/src/pages/AgentDashboard.tsx", "utf-8");
+      expect(agentDashSrc).toContain("CrmKanbanBoard");
+      expect(agentDashSrc).toContain("EmailAutomationPanel");
+    });
+
+    it("2. Verifica versión oficial v34.40 (34.40.0) y semilla v34.40 activa", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed40 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-paso4-crm-kanban-email-automation-ia-v34-40"
+      );
+      expect(seed40?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.40");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.40.0");
     });
   });
 });

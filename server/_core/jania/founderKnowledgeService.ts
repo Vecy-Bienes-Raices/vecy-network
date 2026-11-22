@@ -1082,6 +1082,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.39: Caso Daniel Cáceres RAFAEL URIBE URIBE resuelto en heuristics.ts + Fast-Path Solicitud/Compra en whatsapp-match.ts y propertiesHandler.ts.",
     createdAt: "2026-11-22T18:50:00.000Z",
     active: true
+  },
+  {
+    id: "seed-paso4-crm-kanban-email-automation-ia-v34-40",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "PASO 4 — CRM Inmobiliario Kanban Multi-Tenant y Gestor Automatizado de Correos con IA (v34.40)",
+    directive:
+      "El CRM Kanban de VECY (migración 0016, crmService.ts, routers/crm.ts, CrmKanbanBoard.tsx, LeadDetailDrawer.tsx) aísla estrictamente los leads, actividades y correos por agente o agencia (canAccessLead / canAccessTenantOwnedRecord), captura automáticamente leads desde micrositios marca blanca, enlaces sensor/blindados y Agenda, registra toda transición Kanban en crm_activities y habilita el Gestor Automatizado de Correos con IA (emailAutomationEngine.ts, routers/emailAutomation.ts, EmailAutomationPanel.tsx) con cifrado AES-256-GCM para SMTP propio o Relay VECY con Reply-To, secuencias 0h/24h/72h, alertas por Match >= 85%, cron cada 5 minutos y control estricto de cuota mensual maxEmailsPerMonth.",
+    rawText:
+      "PASO 4 v34.40: CRM Inmobiliario Kanban + Gestor Automatizado de Correos con IA, migración 0016, cifrado SMTP AES-256-GCM, aislamiento multi-tenant y cron 5min.",
+    createdAt: "2026-11-22T20:15:00.000Z",
+    active: true
   }
 ];
 

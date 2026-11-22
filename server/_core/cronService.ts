@@ -2216,6 +2216,24 @@ export function initCronScheduler() {
     }
   }, { timezone: 'America/Bogota' });
 
+  // ✉️ CADA 5 MINUTOS — Procesamiento automático de cola y secuencias de correo CRM con IA (PASO 4 — v34.40)
+  let isProcessingEmailQueue = false;
+  cron.schedule('*/5 * * * *', async () => {
+    if (isProcessingEmailQueue) return;
+    isProcessingEmailQueue = true;
+    try {
+      const { processDueEmailAutomations } = await import('./emailAutomationEngine');
+      const res = await processDueEmailAutomations({ limit: 30 });
+      if (res.sentCount > 0 || res.quotaBlockedCount > 0 || res.failedCount > 0) {
+        console.log('[CRON-CRM-EMAIL] Resultado ciclo 5min:', res);
+      }
+    } catch (err: any) {
+      console.warn('[CRON-CRM-EMAIL] ⚠️ Error procesando cola/secuencias CRM:', err?.message || err);
+    } finally {
+      isProcessingEmailQueue = false;
+    }
+  }, { timezone: 'America/Bogota' });
+
   // 🛡️ GUARDIA DE SEGURIDAD MINUTERA CON BLOQUEO POSTGRESQL Y VENTANA ESTRICTA
   let isCheckingCatchUp = false;
   setInterval(async () => {

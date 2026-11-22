@@ -126,6 +126,12 @@ vrifEvents.on("match:created", async (matchId: number) => {
   } catch (err) {
     console.error(`[NotificationService] Error al procesar notificaciones del Match #${matchId}:`, err);
   }
+  try {
+    const { handleHighMatchEmailAlert } = await import("./emailAutomationEngine");
+    await handleHighMatchEmailAlert(matchId);
+  } catch (emailErr) {
+    console.warn(`[NotificationService] Error no bloqueante en alerta CRM email Match #${matchId}:`, emailErr);
+  }
 });
 
 export async function queueMatchNotifications(matchId: number, triggerSource: string = "match_created"): Promise<void> {

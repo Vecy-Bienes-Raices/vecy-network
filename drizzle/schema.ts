@@ -212,14 +212,36 @@ export const leads = pgTable("leads", {
   inquiryType: inquiryTypeEnum("inquiryType").notNull(),
   message: text("message"),
   status: leadStatusEnum("status").default("new").notNull(),
-  source: varchar("source", { length: 100 }), // janIA, website, whatsapp
+  source: varchar("source", { length: 100 }), // janIA, website, whatsapp, microsite, stealth_link, agenda, manual
   propertyId: integer("propertyId").references(() => properties.id),
+  agentId: integer("agent_id").references(() => users.id),
   agencyId: integer("agency_id"),
   assignedAgentId: integer("assigned_agent_id").references(() => users.id),
   requirementId: integer("requirement_id").references(() => requirements.id),
+  pipelineStage: varchar("pipeline_stage", { length: 40 }).default("nuevo").notNull(),
+  temperature: varchar("temperature", { length: 20 }).default("warm").notNull(),
+  estimatedBudget: decimal("estimated_budget", { precision: 15, scale: 2 }),
+  nextFollowUpAt: timestamp("next_follow_up_at"),
+  lastContactedAt: timestamp("last_contacted_at"),
+  tags: jsonb("tags").$type<string[]>().default([]).notNull(),
+  notes: text("notes"),
+  preferredCity: varchar("preferred_city", { length: 100 }),
+  preferredZone: varchar("preferred_zone", { length: 150 }),
+  referralToken: varchar("referral_token", { length: 255 }),
+  solicitudId: bigint("solicitud_id", { mode: "number" }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_leads_agent_id").on(table.agentId),
+  index("idx_leads_agency_id").on(table.agencyId),
+  index("idx_leads_pipeline_stage").on(table.pipelineStage),
+  index("idx_leads_next_followup").on(table.nextFollowUpAt),
+  index("idx_leads_email").on(table.email),
+  index("idx_leads_solicitud_id").on(table.solicitudId),
+]);
+
+export type Lead = typeof leads.$inferSelect;
+export type InsertLead = typeof leads.$inferInsert;
 
 /**
  * Conversations table - AI chat tracking
@@ -819,3 +841,177 @@ export const requirementProposals = pgTable("requirement_proposals", {
 
 export type RequirementProposal = typeof requirementProposals.$inferSelect;
 export type InsertRequirementProposal = typeof requirementProposals.$inferInsert;
+
+/**
+ * Actividades, notas, tareas y transiciones de etapa del CRM Kanban (PASO 4 — v34.40)
+ */
+export const crmActivities = pgTable("crm_activities", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  agentId: integer("agent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  activityType: varchar("activity_type", { length: 40 }).default("note").notNull(),
+  title: varchar("title", { length: 255 }),
+  body: text("body").notNull(),
+  fromStage: varchar("from_stage", { length: 40 }),
+  toStage: varchar("to_stage", { length: 40 }),
+  dueAt: timestamp("due_at"),
+  completedAt: timestamp("completed_at"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_crm_activities_lead_id").on(table.leadId),
+  index("idx_crm_activities_agent_id").on(table.agentId),
+  index("idx_crm_activities_agency_id").on(table.agencyId),
+  index("idx_crm_activities_created_at").on(table.createdAt),
+]);
+
+export type CrmActivity = typeof crmActivities.$inferSelect;
+export type InsertCrmActivity = typeof crmActivities.$inferInsert;
+
+/**
+ * Identidades de correo del agente (Relay VECY con Reply-To o SMTP propio cifrado AES-256-GCM)
+ */
+export const emailAccounts = pgTable("email_accounts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  mode: varchar("mode", { length: 30 }).default("vecy_relay").notNull(),
+  displayName: varchar("display_name", { length: 180 }).notNull(),
+  fromEmail: varchar("from_email", { length: 320 }),
+  replyToEmail: varchar("reply_to_email", { length: 320 }).notNull(),
+  signatureHtml: text("signature_html"),
+  smtpHost: varchar("smtp_host", { length: 255 }),
+  smtpPort: integer("smtp_port").default(587).notNull(),
+  smtpSecure: boolean("smtp_secure").default(false).notNull(),
+  smtpUser: varchar("smtp_user", { length: 320 }),
+  smtpPasswordEncrypted: text("smtp_password_encrypted"),
+  isVerified: boolean("is_verified").default(false).notNull(),
+  lastVerifiedAt: timestamp("last_verified_at"),
+  lastError: text("last_error"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_email_accounts_user").on(table.userId),
+  index("idx_email_accounts_agency_id").on(table.agencyId),
+]);
+
+export type EmailAccount = typeof emailAccounts.$inferSelect;
+export type InsertEmailAccount = typeof emailAccounts.$inferInsert;
+
+/**
+ * Plantillas de correo (sistema y personalizadas por agente/agencia)
+ */
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  code: varchar("code", { length: 80 }),
+  name: varchar("name", { length: 180 }).notNull(),
+  category: varchar("category", { length: 50 }).default("follow_up").notNull(),
+  subjectTemplate: varchar("subject_template", { length: 300 }).notNull(),
+  bodyHtmlTemplate: text("body_html_template").notNull(),
+  bodyTextTemplate: text("body_text_template"),
+  aiPromptHint: text("ai_prompt_hint"),
+  isSystem: boolean("is_system").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_email_templates_user_id").on(table.userId),
+  index("idx_email_templates_agency_id").on(table.agencyId),
+  index("idx_email_templates_category").on(table.category),
+]);
+
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = typeof emailTemplates.$inferInsert;
+
+/**
+ * Secuencias automatizadas de correos (bienvenida 0h, seguimiento 24h/72h, alerta Match >= 85%)
+ */
+export const emailSequences = pgTable("email_sequences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  name: varchar("name", { length: 180 }).notNull(),
+  description: text("description"),
+  triggerType: varchar("trigger_type", { length: 50 }).default("lead_created").notNull(),
+  stepsJson: jsonb("steps_json").default([]).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  stopOnStageChange: boolean("stop_on_stage_change").default(false).notNull(),
+  stopStagesJson: jsonb("stop_stages_json").default(["cerrado_ganado", "perdido"]).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_email_sequences_user_id").on(table.userId),
+  index("idx_email_sequences_trigger_active").on(table.triggerType, table.isActive),
+  index("idx_email_sequences_agency_id").on(table.agencyId),
+]);
+
+export type EmailSequence = typeof emailSequences.$inferSelect;
+export type InsertEmailSequence = typeof emailSequences.$inferInsert;
+
+/**
+ * Inscripciones activas/históricas de leads en secuencias de correo
+ */
+export const emailSequenceEnrollments = pgTable("email_sequence_enrollments", {
+  id: serial("id").primaryKey(),
+  sequenceId: integer("sequence_id").notNull().references(() => emailSequences.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  currentStepIndex: integer("current_step_index").default(0).notNull(),
+  status: varchar("status", { length: 30 }).default("active").notNull(),
+  nextRunAt: timestamp("next_run_at"),
+  lastSentAt: timestamp("last_sent_at"),
+  contextJson: jsonb("context_json"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_email_enrollments_due").on(table.status, table.nextRunAt),
+  index("idx_email_enrollments_lead_id").on(table.leadId),
+  index("idx_email_enrollments_user_id").on(table.userId),
+  index("idx_email_enrollments_seq_lead").on(table.sequenceId, table.leadId),
+]);
+
+export type EmailSequenceEnrollment = typeof emailSequenceEnrollments.$inferSelect;
+export type InsertEmailSequenceEnrollment = typeof emailSequenceEnrollments.$inferInsert;
+
+/**
+ * Cola y trazabilidad de mensajes de correo CRM
+ */
+export const emailMessages = pgTable("email_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agencyId: integer("agency_id").references(() => agencies.id, { onDelete: "set null" }),
+  leadId: integer("lead_id").references(() => leads.id, { onDelete: "set null" }),
+  accountId: integer("account_id").references(() => emailAccounts.id, { onDelete: "set null" }),
+  sequenceId: integer("sequence_id").references(() => emailSequences.id, { onDelete: "set null" }),
+  enrollmentId: integer("enrollment_id").references(() => emailSequenceEnrollments.id, { onDelete: "set null" }),
+  direction: varchar("direction", { length: 20 }).default("outbound").notNull(),
+  toEmail: varchar("to_email", { length: 320 }).notNull(),
+  fromEmail: varchar("from_email", { length: 320 }).notNull(),
+  replyToEmail: varchar("reply_to_email", { length: 320 }),
+  subject: varchar("subject", { length: 300 }).notNull(),
+  bodyHtml: text("body_html").notNull(),
+  bodyText: text("body_text"),
+  status: varchar("status", { length: 30 }).default("queued").notNull(),
+  providerMessageId: varchar("provider_message_id", { length: 255 }),
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  errorMessage: text("error_message"),
+  aiGenerated: boolean("ai_generated").default(false).notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_email_messages_user_id").on(table.userId),
+  index("idx_email_messages_lead_id").on(table.leadId),
+  index("idx_email_messages_queue").on(table.status, table.scheduledFor),
+  index("idx_email_messages_agency_id").on(table.agencyId),
+]);
+
+export type EmailMessage = typeof emailMessages.$inferSelect;
+export type InsertEmailMessage = typeof emailMessages.$inferInsert;

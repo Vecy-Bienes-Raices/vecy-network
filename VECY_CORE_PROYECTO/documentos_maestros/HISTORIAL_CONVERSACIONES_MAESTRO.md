@@ -7,6 +7,18 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-22] — JanIA v34.40: PASO 4 — CRM Inmobiliario Kanban Multi-Tenant y Gestor Automatizado de Correos con IA (v34.40 - 34.40.0)
+
+#### 1. Solicitud / Alcance PASO 4
+- Implementar de forma 100% aditiva (sin alterar `whatsapp-match.ts` ni romper las 799 pruebas existentes) el **CRM Inmobiliario Kanban Multi-Tenant** y el **Gestor Automatizado de Correos con IA** integrado en `/agent-dashboard`.
+
+#### 2. Acciones Ejecutadas en `v34.40`
+1. **Migración `0016_crm_kanban_and_email_automation.sql` + `drizzle/schema.ts` + `planEntitlements.ts`:** enriquecida tabla `leads` (`agent_id`, `pipeline_stage`, `temperature`, `estimated_budget`, `next_follow_up_at`, `last_contacted_at`, `tags`, `notes`, `preferred_city`, `preferred_zone`, `referral_token`, `solicitud_id`), creadas `crm_activities`, `email_accounts`, `email_templates` (+4 plantillas sistema), `email_sequences`, `email_sequence_enrollments` y `email_messages`, y añadida verificación de cuota `maxEmailsPerMonth` (`assertCanSendEmail`, `checkEmailQuotaLimit`, `getEmailQuotaSummary`).
+2. **Backend CRM y Captura Automática (`shared/crm.ts`, `server/_core/crmService.ts`, `server/routers/crm.ts`, `leads.ts`, `agenda.ts`, `agent.ts`):** aislamiento multi-tenant estricto por agente/agencia, tablero Kanban de 7 etapas (`nuevo` -> `cerrado_ganado`/`perdido`), actividades/tareas/resúmenes IA, y captura automática de prospectos desde micrositios marca blanca, enlaces sensor/stealth y Agenda.
+3. **Motor Automatizado de Correos con IA (`server/_core/emailAutomationEngine.ts`, `server/routers/emailAutomation.ts`, `notification.ts`, `cronService.ts`):** cifrado `AES-256-GCM` para SMTP propio con bloqueo anti-SSRF o Relay VECY con `Reply-To`, redactado/respuesta IA con datos reales del lead e inmueble, secuencias `0h / 24h / 72h`, alerta automática ante Match `>= 85%` y procesamiento en cron `*/5 * * * *`.
+4. **Frontend `/agent-dashboard` y Micrositios (`CrmKanbanBoard.tsx`, `LeadDetailDrawer.tsx`, `EmailAutomationPanel.tsx`, `AgentDashboard.tsx`, `AgentMicrosite.tsx`, `PropertyDetail.tsx`, `index.css`):** tablero Kanban/lista con Drag & Drop, drawer lateral `<dialog>` nativo con historial, redactor IA y matches `>= 85%`, consola de identidad SMTP/secuencias/cola/plantillas y captura directa en micrositios marca blanca.
+5. **Pruebas y Gobernanza:** creada suite offline `server/__tests__/paso4CrmAndEmailAutomation.test.ts` (11/11), semilla `seed-paso4-crm-kanban-email-automation-ia-v34-40`, **Suite 226** en `regression.test.ts`, validado `npm run check` (0 errores), `NODE_ENV=test npx vitest run --testTimeout=35000` (**8/8 archivos, 812/812 tests en verde** | `$0 COP`) y `npm run build` limpio; bump `v34.40` (`34.40.0`).
+
 ### 📅 [2026-11-22] — JanIA v34.39: Blindaje Anti-Falsos Positivos de Moderación (Caso Daniel Cáceres — `RAFAEL URIBE URIBE`), Topónimos Colombianos y Fast-Path `Solicitud CASA / Negocio COMPRA` (Doctrina Eduardo A. Rivera — v34.39 - 34.39.0)
 
 #### 1. Solicitud de Eduardo A. Rivera y Diagnóstico Forense en BD

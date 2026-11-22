@@ -816,4 +816,49 @@
   }
 }
 
+/* ============================================================================
+   MODERN WEB GUIDANCE: NATIVE DIALOG TOP-LAYER, DRAWER & POST-INTERACTION VALIDATION
+   ============================================================================ */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+dialog.vecy-native-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog.vecy-native-drawer[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.vecy-field-error {
+  display: none;
+  color: #fb7185;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.vecy-field-input:is(:user-invalid, .user-invalid-fallback) {
+  border-color: #f43f5e;
+  background-color: rgba(244, 63, 94, 0.08);
+}
+
+.vecy-field-input:is(:user-invalid, .user-invalid-fallback) + .vecy-field-error {
+  display: block;
+}
+
+.vecy-field-input:user-valid {
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+
 

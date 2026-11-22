@@ -12,6 +12,8 @@ import { propertiesRouter } from "./routers/properties";
 import { agendaRouter } from "./routers/agenda";
 import { matchingRouter } from "./routers/matching";
 import { billingRouter } from "./routers/billing";
+import { crmRouter } from "./routers/crm";
+import { emailAutomationRouter } from "./routers/emailAutomation";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { upsertUser, getUserByOpenId } from "./db";
@@ -105,6 +107,8 @@ export const appRouter = router({
   janIA: janIARouter,
   matching: matchingRouter,
   billing: billingRouter,
+  crm: crmRouter,
+  emailAutomation: emailAutomationRouter,
   github: githubRouter,
   images: imagesRouter,
 

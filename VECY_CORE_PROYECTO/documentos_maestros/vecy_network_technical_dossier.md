@@ -330,6 +330,14 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.40 — Noviembre 2026
+- **PASO 4 — CRM Inmobiliario Kanban Multi-Tenant y Gestor Automatizado de Correos con IA:**
+  - `drizzle/0016_crm_kanban_and_email_automation.sql` + `drizzle/schema.ts`: extensión aditiva de `leads` y nuevas tablas `crm_activities`, `email_accounts`, `email_templates`, `email_sequences`, `email_sequence_enrollments` y `email_messages`.
+  - `shared/crm.ts`, `server/_core/crmService.ts`, `server/routers/crm.ts`, `server/_core/planEntitlements.ts`: embudo Kanban de 7 etapas, aislamiento estricto por agente/agencia (`canAccessLead`), cuotas `maxEmailsPerMonth` y captura automática desde `agent.captureMicrositeLead`, `leads.submitStealthLead`, `leads.submitTrackingLead` y `agenda.create`.
+  - `server/_core/emailAutomationEngine.ts`, `server/routers/emailAutomation.ts`, `server/_core/notification.ts`, `server/_core/cronService.ts`: cifrado `AES-256-GCM` para SMTP propio con validación anti-SSRF o Relay VECY (`Reply-To`), redactado/respuesta IA con datos reales, secuencias automáticas (`0h/24h/72h` + Match `>= 85%`) y cron `*/5 * * * *`.
+  - `client/src/components/crm/*`, `AgentDashboard.tsx`, `AgentMicrosite.tsx`, `PropertyDetail.tsx`, `index.css`: integración completa en `/agent-dashboard` con `<dialog>` nativo y validación post-interacción.
+  - Gobernanza y Pruebas: `server/__tests__/paso4CrmAndEmailAutomation.test.ts` (11/11), semilla `seed-paso4-crm-kanban-email-automation-ia-v34-40`, **Suite 226** en `regression.test.ts`, **8/8 archivos, 812/812 tests en verde** (`$0 COP`), bump `v34.40` (`34.40.0`).
+
 ### 🔖 v34.39 — Noviembre 2026
 - **Blindaje Anti-Falsos Positivos de Moderación (Caso Daniel Cáceres — `RAFAEL URIBE URIBE`) y Fast-Path `Solicitud CASA / Negocio COMPRA`:**
   - `server/_core/jania/heuristics.ts`: añadido `hasStrongRealEstateListingSignals()`, limpieza previa de topónimos/hitos/empresas colombianas (`Rafael Uribe Uribe`, `Mesa de los Santos`, `Eduardo Santos`, `Parque Jaime Duque`, `Ecopetrol`, `Uribe Meta`) en `checkStrictOffTopic()`, protección de apellidos sueltos (`petro`/`uribe`/`duque`/`santos`) salvo contexto político explícito sin ancla predial, y refinamiento regex de `esMensajeSpamOBasura()` (`"curso de"`/`"candidato"`/`"elecciones"`).
