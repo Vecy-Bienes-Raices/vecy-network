@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.39 — Noviembre 2026
+- **Blindaje Anti-Falsos Positivos de Moderación (Caso Daniel Cáceres — `RAFAEL URIBE URIBE`) y Fast-Path `Solicitud CASA / Negocio COMPRA`:**
+  - `server/_core/jania/heuristics.ts`: añadido `hasStrongRealEstateListingSignals()`, limpieza previa de topónimos/hitos/empresas colombianas (`Rafael Uribe Uribe`, `Mesa de los Santos`, `Eduardo Santos`, `Parque Jaime Duque`, `Ecopetrol`, `Uribe Meta`) en `checkStrictOffTopic()`, protección de apellidos sueltos (`petro`/`uribe`/`duque`/`santos`) salvo contexto político explícito sin ancla predial, y refinamiento regex de `esMensajeSpamOBasura()` (`"curso de"`/`"candidato"`/`"elecciones"`).
+  - `server/_core/whatsapp-match.ts` & `server/_core/jania/handlers/propertiesHandler.ts`: incorporados `solicitud`, `solicito`, `compra`, `honorarios` y `negocio compra` en `isPossibleListing`, `isDetDemand` e `isExplicitDemand`.
+  - Gobernanza y Pruebas: semilla `seed-anti-falso-positivo-moderacion-toponimos-colombia-v34-39`, **Suite 225** en `regression.test.ts`, bump `v34.39` (`34.39.0`).
+
 ### 🔖 v34.38 — Noviembre 2026
 - **Corrección Integral de Login Admin en `vecygroup.com`, Cookies `.vecygroup.com`, Sanitización Same-Origin y Proxy Nginx/Express:**
   - `shared/authRouting.ts`, `client/src/const.ts`, `client/src/lib/supabase.ts`, `Login.tsx`, `Admin.tsx`, `useAuth.ts`, `main.tsx`, `App.tsx`, `AgendaForm.jsx`: sanitización `sanitizeInternalRedirectPath` e `isSameOriginUrl` bloqueando saltos a orígenes legacy (`vecy-bienes-raices.vercel.app`), callbacks limpios `buildAuthCallbackUrl(origin)` sin query string, sincronización estricta de intercambio backend (`hasBackendUser`/`hasCompletedExchangeRef`) antes de navegar, limpieza de caché obsoleta y recuperación same-origin en `/`.

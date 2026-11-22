@@ -25,6 +25,19 @@ export function isOutsideWorkingHours(): boolean {
   return hour < 8 || hour >= 20;
 }
 
+export function hasStrongRealEstateListingSignals(text: string): boolean {
+  if (!text || text.trim() === "") return false;
+  const hasRealEstateType =
+    /\b(?:apartamento|apto|casa|finca|lote|bodega|local|oficina|consultorio|edificio|hotel|caba[ñn]a|loft|apartaestudio|penthouse|d[úu]plex|triplex|inmueble|propiedad|predio|terreno|villa)\b/i.test(
+      text
+    );
+  const hasRealEstateCommercial =
+    /\b(?:venta|se\s+vende|vendo|compra|compro|arriendo|se\s+arrienda|alquiler|permuta|solicitud|solicito|requerimiento|busco|presupuesto|canon|honorarios|comisi[oó]n|estrato|alcobas?|habitaciones?|ba[ñn]os?|garajes?|parqueaderos?|m2|mts2?|metros|millones|cr[eé]dito|escritura|declaraci[oó]n\s+de\s+construcci[oó]n|predial|aval[úu]o|ley\s*820)\b/i.test(
+      text
+    );
+  return hasRealEstateType && hasRealEstateCommercial;
+}
+
 export function esMensajeSpamOBasura(text: string): { isSpam: boolean; reason: string } {
   if (!text || text.trim() === "") return { isSpam: false, reason: "" };
   const n = text.toLowerCase();
@@ -40,7 +53,7 @@ export function esMensajeSpamOBasura(text: string): { isSpam: boolean; reason: s
     n.includes("capacitación") ||
     n.includes("seminario") ||
     n.includes("taller de ventas") ||
-    n.includes("curso de") ||
+    /\bcurso\s+de\s+(?:ventas|marketing|trading|pauta|inversi[oó]n|redes|coaching|ia|inteligencia\s+artificial|bienes\s+ra[ií]ces|corretaje|broker)\b/i.test(n) ||
     n.includes("congreso de") ||
     n.includes("evento inmobiliario") ||
     n.includes("inmoverso")
@@ -49,7 +62,7 @@ export function esMensajeSpamOBasura(text: string): { isSpam: boolean; reason: s
   }
 
   // 2. Publicidad de Terceros / Marketing No Predial / Pauta en Meta / Software / Cursos / Coaching
-  const marketingPatterns = [
+  const strictMarketingPatterns = [
     "campaña en meta",
     "campana en meta",
     "campañas en meta",
@@ -73,8 +86,6 @@ export function esMensajeSpamOBasura(text: string): { isSpam: boolean; reason: s
     "agencia de marketing",
     "agencia digital",
     "agencia de publicidad",
-    "marketing inmobiliario",
-    "marketing digital",
     "servicio de marketing",
     "servicios de marketing",
     "estrategias de marketing",
@@ -106,17 +117,24 @@ export function esMensajeSpamOBasura(text: string): { isSpam: boolean; reason: s
     "curso de pauta"
   ];
 
-  if (marketingPatterns.some(pat => n.includes(pat))) {
+  const contextualMarketingPatterns = [
+    "marketing inmobiliario",
+    "marketing digital"
+  ];
+
+  if (
+    strictMarketingPatterns.some(pat => n.includes(pat)) ||
+    (!hasStrongRealEstateListingSignals(n) && contextualMarketingPatterns.some(pat => n.includes(pat)))
+  ) {
     return { isSpam: true, reason: "Publicidad de marketing, pauta en redes, venta de software o coaching no inmobiliario." };
   }
 
   // 3. Política, Religión o Spam Ideológico
   if (
-    n.includes("vota por") ||
-    n.includes("partido politico") ||
-    n.includes("partido político") ||
-    n.includes("candidato") ||
-    n.includes("elecciones") ||
+    /\bvota\s+por\b/i.test(n) ||
+    /\bpartido\s+pol[ií]tico\b/i.test(n) ||
+    /\bcandidato\s+(?:a\s+la|al|presidencial|pol[ií]tico)\b/i.test(n) ||
+    /\belecciones\s+(?:presidenciales|regionales|al\s+congreso)\b/i.test(n) ||
     n.includes("cadena de oracion") ||
     n.includes("cadena de oración") ||
     n.includes("comparte esta cadena")
@@ -409,15 +427,40 @@ export function checkStrictOffTopic(text: string): { isOffTopic: boolean; reason
     }
   }
 
-  // 2. Política partidista / Proselitismo
-  const politicalKeywords = [
-    'petro', 'uribe', 'duque', 'santos', 'rodolfo hernandez', 'fico gutiérrez', 'claudia lópez',
-    'partido político', 'partido politico', 'campaña política', 'campaña politica', 'votaciones',
-    'candidato a la alcaldía', 'candidato al concejo', 'senado', 'cámara de representantes',
-    'consulta popular', 'plebiscito', 'izquierdista', 'derechista', 'uribista', 'petrista', 'elecciones presidenciales'
-  ];
-  if (politicalKeywords.some(kw => clean.includes(kw))) {
+  // 2. Política partidista / Proselitismo (blindado contra topónimos como Rafael Uribe Uribe, Mesa de los Santos, Parque Jaime Duque, Ecopetrol y apellidos en fichas reales)
+  const textForPolitics = clean
+    .replace(
+      /\b(?:rafael\s+uribe(?:\s+uribe)?|localidad\s+(?:de\s+)?rafael\s+uribe(?:\s+uribe)?|barrio\s+uribe(?:\s+uribe)?|sector\s+uribe|municipio\s+(?:de\s+)?uribe|uribe\s*[-,]?\s*meta|av(?:enida|\.)?\s+(?:rafael\s+)?uribe|mesa\s+de\s+los\s+santos|los\s+santos|eduardo\s+santos|todos\s+los\s+santos|parque\s+jaime\s+duque|jaime\s+duque|ecopetrol|petrobras|petroqu[ií]mic\w*|petroler\w*|petr[oó]leo)\b/gi,
+      " "
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const explicitProselitismRegex =
+    /\b(?:vota\s+por|votemos\s+por|partido\s+pol[ií]tico|campa[ñn]a\s+pol[ií]tica|candidato\s+a\s+la\s+alcald[ií]a|candidato\s+al\s+concejo|candidato\s+presidencial|elecciones\s+presidenciales|consulta\s+popular|plebiscito|proselitismo|uribista|petrista|izquierdista|derechista|fuera\s+petro|abajo\s+petro|viva\s+petro|viva\s+uribe)\b/i;
+
+  if (explicitProselitismRegex.test(textForPolitics)) {
     return { isOffTopic: true, reason: 'temas políticos o proselitismo' };
+  }
+
+  if (!hasStrongRealEstateListingSignals(clean)) {
+    const politicalLeaderFullNameRegex =
+      /\b(?:gustavo\s+petro|[aá]lvaro\s+uribe|iv[aá]n\s+duque|juan\s+manuel\s+santos|rodolfo\s+hern[aá]ndez|fico\s+guti[eé]rrez|claudia\s+l[oó]pez)\b/i;
+    const surnameInPoliticalContext =
+      /\b(?:petro|uribe|duque|santos)\b/i.test(textForPolitics) &&
+      /\b(?:presidente|expresidente|gobierno|congreso|senado|c[aá]mara\s+de\s+representantes|pol[ií]tic[ao]s?|votaciones|votar|voto|elecciones|reforma|corrupci[oó]n|izquierda|derecha|marcha|paro\s+nacional|ministro)\b/i.test(
+        textForPolitics
+      );
+    const pureElectoralDebateRegex =
+      /\b(?:votaciones|c[aá]mara\s+de\s+representantes|senado\s+de\s+la\s+rep[úu]blica)\b/i;
+
+    if (
+      politicalLeaderFullNameRegex.test(textForPolitics) ||
+      surnameInPoliticalContext ||
+      pureElectoralDebateRegex.test(textForPolitics)
+    ) {
+      return { isOffTopic: true, reason: 'temas políticos o proselitismo' };
+    }
   }
 
   // 3. Religión / Cadenas de oración

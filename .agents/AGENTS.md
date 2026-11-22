@@ -184,7 +184,16 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.38 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.39 — Noviembre 2026
+
+### Novedades v34.39 (Blindaje Anti-Falsos Positivos de Moderación — Caso Daniel Cáceres `RAFAEL URIBE URIBE` + Fast-Path `Solicitud/Compra` — Doctrina Eduardo A. Rivera):
+- **Moderación Segura sin Falsos Positivos (`server/_core/jania/heuristics.ts`):**
+  1. Diagnóstico confirmado en BD (`messages #69638`): el requerimiento legítimo de Daniel Cáceres (*"Solicitud CASA / Sector RAFAEL URIBE URIBE O ALREDEDORES (SUR BOGOTÁ) / Negocio COMPRA"*) disparó la alerta política en Grupo 1 por subcadena ciega `'uribe'` en `checkStrictOffTopic()`.
+  2. Añadido `hasStrongRealEstateListingSignals()`, limpieza previa de topónimos/hitos/empresas colombianas (`Rafael Uribe Uribe`, `Mesa de los Santos`, `Eduardo Santos`, `Parque Jaime Duque`, `Ecopetrol`, `Uribe Meta`), evaluación de apellidos sueltos (`petro`/`uribe`/`duque`/`santos`) solo en contexto político real sin señales inmobiliarias, y corrección de `"curso de"` (`"en curso de escrituración"`) / `"candidato"` / `"elecciones"` en `esMensajeSpamOBasura()`.
+- **Fast-Path `Solicitud CASA / Negocio COMPRA` (`whatsapp-match.ts`, `propertiesHandler.ts`):** incluidos `solicitud`, `solicito`, `compra`, `honorarios` y `negocio compra` en `isPossibleListing`, `isDetDemand` e `isExplicitDemand`.
+- **Gobernanza y Validación:** Semilla `seed-anti-falso-positivo-moderacion-toponimos-colombia-v34-39`, **Suite 225**, bump `v34.39` (`34.39.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.38 — Noviembre 2026
 
 ### Novedades v34.38 (Corrección Integral de Login Admin, Cookies `.vecygroup.com`, Redirecciones Same-Origin y Proxy Nginx/Express — Doctrina Eduardo A. Rivera):
 - **Ruteo y Sanitización Frontend (`shared/authRouting.ts`, `Login.tsx`, `Admin.tsx`, `useAuth.ts`, `main.tsx`, `App.tsx`, `AgendaForm.jsx`, `const.ts`, `supabase.ts`):**

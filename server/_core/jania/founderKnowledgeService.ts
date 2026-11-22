@@ -1070,6 +1070,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.38: Login/Admin en vecygroup.com sin redirección a Vercel + cookie .vecygroup.com + sanitización same-origin + eliminación JOSEAlgNotAllowed.",
     createdAt: "2026-11-22T06:00:00.000Z",
     active: true
+  },
+  {
+    id: "seed-anti-falso-positivo-moderacion-toponimos-colombia-v34-39",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Blindaje Anti-Falsos Positivos de Moderación (RAFAEL URIBE URIBE / Topónimos y Apellidos Colombianos) + Fast-Path Solicitud Compra (v34.39)",
+    directive:
+      "JAMÁS amonestar ni bloquear ofertas o demandas inmobiliarias legítimas en Grupo 1 por coincidencias de palabras políticas sobre topónimos, localidades o apellidos colombianos (ej. 'Rafael Uribe Uribe', 'Mesa de los Santos', 'Parque Jaime Duque', 'Ecopetrol', 'en curso de escrituración'). checkStrictOffTopic() y esMensajeSpamOBasura() en heuristics.ts deben limpiar dichos topónimos/términos antes de evaluar filtros políticos y respetar hasStrongRealEstateListingSignals(). El patrón 'Solicitud CASA / Negocio COMPRA' debe clasificarse inmediatamente como REQUERIMIENTO (📝) a $0 COP.",
+    rawText:
+      "Blindaje v34.39: Caso Daniel Cáceres RAFAEL URIBE URIBE resuelto en heuristics.ts + Fast-Path Solicitud/Compra en whatsapp-match.ts y propertiesHandler.ts.",
+    createdAt: "2026-11-22T18:50:00.000Z",
+    active: true
   }
 ];
 

@@ -7,6 +7,19 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-22] — JanIA v34.39: Blindaje Anti-Falsos Positivos de Moderación (Caso Daniel Cáceres — `RAFAEL URIBE URIBE`), Topónimos Colombianos y Fast-Path `Solicitud CASA / Negocio COMPRA` (Doctrina Eduardo A. Rivera — v34.39 - 34.39.0)
+
+#### 1. Solicitud de Eduardo A. Rivera y Diagnóstico Forense en BD
+- Eduardo adjuntó captura de Grupo 1 donde JanIA amonestó y eliminó (`🚫` + `AVISO DE MODERACIÓN`) el requerimiento legítimo de Daniel Cáceres (`Solicitud CASA / Sector RAFAEL URIBE URIBE O ALREDEDORES (SUR BOGOTÁ) / Negocio COMPRA / Presupuesto 380 MILLONES`), y solicitó auditoría integral de bitácoras `.md`, versión web, despliegues GitHub/VPS, Baileys y base de datos.
+- **Causa Raíz Confirmada en `messages #69638` (20 Nov 14:03 COL) y `heuristics.ts`:**
+  1. `checkStrictOffTopic()` (`server/_core/jania/heuristics.ts:413-421`) evaluaba `'uribe'`, `'petro'`, `'duque'` y `'santos'` por `clean.includes(kw)` sin limpiar topónimos colombianos ni proteger publicaciones con señales inmobiliarias reales, colisionando `'uribe'` con la localidad **`RAFAEL URIBE URIBE`**.
+  2. Además, `esMensajeSpamOBasura()` contenía subcadenas amplias (`"curso de"`, `"candidato"`, `"elecciones"`), y `isDetDemand` / `isExplicitDemand` en `propertiesHandler.ts` no contemplaban `"Solicitud CASA ... Negocio COMPRA"`.
+
+#### 2. Acciones Ejecutadas en `v34.39`
+1. **Blindaje de Moderación (`server/_core/jania/heuristics.ts`):** implementado `hasStrongRealEstateListingSignals()`, limpieza previa de topónimos/hitos/empresas (`Rafael Uribe Uribe`, `Mesa de los Santos`, `Eduardo Santos`, `Parque Jaime Duque`, `Ecopetrol`, `petroquímica`, `Uribe Meta`), filtro de proselitismo explícito vs. menciones políticas reales sin ancla predial, y precisión de expresiones regulares en `esMensajeSpamOBasura()`.
+2. **Detección `Solicitud/Compra` (`whatsapp-match.ts`, `propertiesHandler.ts`):** agregados `solicitud`, `solicito`, `compra`, `honorarios` y `negocio compra` en `isPossibleListing`, `isDetDemand` e `isExplicitDemand`.
+3. **Gobernanza y Validación:** semilla `seed-anti-falso-positivo-moderacion-toponimos-colombia-v34-39`, **Suite 225 (4/4)**, bump `v34.39` (`34.39.0`) reflejado en bitácoras `.md`, web `vecygroup.com` y VPS.
+
 ### 📅 [2026-11-22] — JanIA v34.38: Corrección Integral de Login Admin en `vecygroup.com`, Cookies `.vecygroup.com`, Sanitización Same-Origin y Proxy Nginx/Express (Doctrina Eduardo A. Rivera — v34.38 - 34.38.0)
 
 #### 1. Solicitud de Eduardo A. Rivera y Diagnóstico Confirmado

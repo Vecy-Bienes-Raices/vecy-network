@@ -2234,9 +2234,9 @@ Por lo tanto, DEBES hacer lo siguiente:
       (() => {
         const cleanLower = messageToProcess.toLowerCase();
         const detData = extractFallbackDataFromText(messageToProcess);
-        const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+        const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|solicitud(?:\s+de)?\s+(?:casa|apto|apartamento|bodega|oficina|lote|finca|local|edificio|consultorio|inmueble)|negocio\s*:?\s*compra|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
         const hasDetPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanLower);
-        const hasDetTx = /\b(?:arriendo|arrienda|renta|rento|rentamos|alquilo|alquiler|canon|vendo|venta|vende|permuta)\b/i.test(cleanLower);
+        const hasDetTx = /\b(?:arriendo|arrienda|renta|rento|rentamos|alquilo|alquiler|canon|vendo|venta|vende|compra|compro|permuta)\b/i.test(cleanLower);
         const isHighConfidenceListing = (hasDetPropType && hasDetTx && (detData.price > 0 || detData.rentPrice > 0 || detData.area > 0 || detData.bedrooms > 0));
         const isHighConfidenceDemand = (isDetDemand && (hasDetPropType || detData.presupuestoMax > 0));
         return isHighConfidenceListing || isHighConfidenceDemand;
@@ -2244,7 +2244,7 @@ Por lo tanto, DEBES hacer lo siguiente:
     ) {
       const cleanLower = messageToProcess.toLowerCase();
       const detData = extractFallbackDataFromText(messageToProcess);
-      const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|solicitud(?:\s+de)?\s+(?:casa|apto|apartamento|bodega|oficina|lote|finca|local|edificio|consultorio|inmueble)|negocio\s*:?\s*compra|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
       const isExplicitVentaClean = /\b(?:venta|vendo|vendemos|se vende|en venta|venta directa|valor venta|precio venta|para venta)\b/i.test(cleanLower);
       const isRent = detData.transactionType === "arriendo" || (!isExplicitVentaClean && (cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler")));
       const isPermuta = detData.transactionType.includes("permuta");
@@ -3146,7 +3146,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
 
       const fbData = extractFallbackDataFromText(rawMsg);
-      const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|solicitud(?:\s+de)?\s+(?:casa|apto|apartamento|bodega|oficina|lote|finca|local|edificio|consultorio|inmueble)|negocio\s*:?\s*compra|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
       const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|vr renta|vr vta|canon|alquilo|alquilamos|alquiler|disponible|apto familiar|venta directa|arriendo directo)\b/i.test(cleanLower);
 
       const origenTipo = (isGroup || groupJid) ? "grupo" : "contacto_directo";

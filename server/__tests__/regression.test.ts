@@ -16327,9 +16327,83 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-auth-vecygroup-cookies-redirect-v34-38"
       );
       expect(seed38?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.38");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:3[89]|[4-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.38.0");
+      expect(pkg.version).toMatch(/^34\.(?:3[89]|[4-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 225: Blindaje Anti-Falsos Positivos de Moderación (Caso Daniel Cáceres — RAFAEL URIBE URIBE)
+  // + Fast-Path Solicitud Compra (v34.39)
+  // =========================================================================
+  describe("Suite 225: Anti-Falso Positivo de Moderación (RAFAEL URIBE URIBE / Topónimos) y Fast-Path Solicitud Compra (v34.39)", () => {
+    it("1. Caso real Daniel Cáceres (Sector RAFAEL URIBE URIBE O ALREDEDORES, Solicitud CASA, Negocio COMPRA) no dispara moderación ni spam", async () => {
+      const {
+        checkStrictOffTopic,
+        esMensajeSpamOBasura,
+        hasStrongRealEstateListingSignals,
+      } = await import("../_core/jania/heuristics");
+
+      const msgDaniel =
+        "Solicitud CASA\n" +
+        "Sector RAFAEL URIBE URIBE O ALREDEDORES (SUR BOGOTÁ)\n" +
+        "Negocio COMPRA\n" +
+        "Características 4 HABITACIONES, CON LA DECLARACIÓN DE CONSTRUCCIÓN\n" +
+        "Presupuesto 380 MILLONES\n" +
+        "Forma de pago CRÉDITO Y RECURSOS PROPIOS\n" +
+        "Honorarios 50/50";
+
+      expect(hasStrongRealEstateListingSignals(msgDaniel)).toBe(true);
+      expect(checkStrictOffTopic(msgDaniel).isOffTopic).toBe(false);
+      expect(esMensajeSpamOBasura(msgDaniel).isSpam).toBe(false);
+    });
+
+    it("2. Topónimos, hitos, apellidos colombianos y frases como 'en curso de escrituración' nunca disparan falsos positivos", async () => {
+      const { checkStrictOffTopic, esMensajeSpamOBasura } = await import("../_core/jania/heuristics");
+
+      const legitimateRealEstateMessages = [
+        "Vendo espectacular casa campestre en Mesa de los Santos, Santander, 4 alcobas, 3 baños, $650 millones.",
+        "Busco apartamento en venta en Barrio Eduardo Santos o cerca al Parque Jaime Duque, 3 habitaciones, hasta $420 millones.",
+        "Ofrezco bodega industrial cerca a Ecopetrol y zona petroquímica, 800 m2 en arriendo $18 millones.",
+        "Busco lote o finca en Municipio de Uribe, Meta para proyecto agrícola, presupuesto $300 millones.",
+        "Vendo apartamento en Chicó, 2 alcobas, 2 garajes, con cesión en curso de escrituración. Contacto asesora Isabel Cristina Duque / Carlos Uribe.",
+      ];
+
+      for (const msg of legitimateRealEstateMessages) {
+        expect(checkStrictOffTopic(msg).isOffTopic).toBe(false);
+        expect(esMensajeSpamOBasura(msg).isSpam).toBe(false);
+      }
+    });
+
+    it("3. Proselitismo político real, links externos y cadenas religiosas siguen siendo bloqueados por checkStrictOffTopic", async () => {
+      const { checkStrictOffTopic } = await import("../_core/jania/heuristics");
+
+      expect(checkStrictOffTopic("Vota por Petro en elecciones presidenciales").isOffTopic).toBe(true);
+      expect(checkStrictOffTopic("Álvaro Uribe presidente, únete a la campaña política").isOffTopic).toBe(true);
+      expect(checkStrictOffTopic("Únete ya a https://chat.whatsapp.com/FakeGroup12345").isOffTopic).toBe(true);
+      expect(checkStrictOffTopic("Cadena de oración reenvía este mensaje a 10 personas").isOffTopic).toBe(true);
+    });
+
+    it("4. Verifica Fast-Path 'Solicitud/Negocio Compra' en whatsapp-match.ts y propertiesHandler.ts, semilla y versión v34.39 (34.39.0)", async () => {
+      const fs = await import("fs");
+      const waSrc = fs.readFileSync("server/_core/whatsapp-match.ts", "utf-8");
+      expect(waSrc).toContain('textLower.includes("solicitud")');
+      expect(waSrc).toContain('textLower.includes("honorarios")');
+
+      const propsHandlerSrc = fs.readFileSync("server/_core/jania/handlers/propertiesHandler.ts", "utf-8");
+      expect(propsHandlerSrc).toContain("negocio\\s*:?\\s*compra");
+      expect(propsHandlerSrc).toContain("solicitud(?:\\s+de)?\\s+(?:casa");
+
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+      const seed39 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-anti-falso-positivo-moderacion-toponimos-colombia-v34-39"
+      );
+      expect(seed39?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.39");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.39.0");
     });
   });
 });

@@ -2099,6 +2099,10 @@ export class JaniaMatchBot {
               textLower.includes("permuta") ||
               textLower.includes("requiero") ||
               textLower.includes("requerimiento") ||
+              textLower.includes("solicitud") ||
+              textLower.includes("solicito") ||
+              textLower.includes("compra") ||
+              textLower.includes("honorarios") ||
               textLower.includes("casa") ||
               textLower.includes("apto") ||
               textLower.includes("apartamento") ||
