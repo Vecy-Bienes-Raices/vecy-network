@@ -26,7 +26,9 @@ function maskAdvisorDisplayName(rawName?: string | null): string {
  * Protege la privacidad y antielusión de los requerimientos expuestos en la Tienda de Demandas (/demandas):
  * elimina teléfonos, correos, enlaces directos y datos personales manteniendo intacta la ficha técnica.
  */
-export function shieldRequirementForPublicView<T extends Record<string, any>>(req: T): T & {
+export function shieldRequirementForPublicView<T extends Record<string, any>>(
+  req: T
+): Omit<T, "contactShielded" | "idUsuarioWhatsapp" | "nombreUsuarioWhatsapp"> & {
   contactShielded: true;
   idUsuarioWhatsapp: null;
   nombreUsuarioWhatsapp: string;

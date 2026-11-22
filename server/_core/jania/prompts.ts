@@ -185,7 +185,9 @@ export function evaluateRequirementCompleteness(dataOrText: {
   transactionType?: string;
   propertyType?: string;
   city?: string;
+  ciudadDeseada?: string;
   zone?: string;
+  zonaDeseada?: string;
   presupuestoMax?: number | string;
   adminFee?: number | string;
   rawText?: string;
@@ -230,7 +232,7 @@ export function evaluateRequirementCompleteness(dataOrText: {
   }
 
   // 4. Zonas difusas (Cobertura nacional: todo Bogotá y toda Colombia)
-  const zone = (data.zone || '').trim();
+  const zone = (data.zone || data.zonaDeseada || '').trim();
   const isGenericZone = !zone || zone.toLowerCase() === 'na' || /^(bogota|bogotá|bogota, d\.c\.|colombia|medellin|medellín|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|armenia|santa marta|villavicencio|ibague|ibagué|cucuta|cúcuta|norte|sur|oriente|occidente|centro|ciudad|varios)$/i.test(zone);
   const textHasZone = /\b(chico|rosales|cedritos|chapinero|salitre|santa barbara|usaquen|teusaquillo|suba|kennedy|bosa|engativa|fontibon|puente aranda|restrepo|venecia|castilla|tintal|modelia|hayuelos|candelaria|macarena|poblado|laureles|envigado|sabaneta|pance|ciudad jardin|bocagrande|cabecera|cañaveral|canaveral|alto prado|riomar|cerritos|rodadero|vereda|corregimiento|localidad|comuna)\b/i.test(text);
   if (isGenericZone && !textHasZone) {
@@ -246,7 +248,7 @@ export function evaluateRequirementCompleteness(dataOrText: {
     fichaTecnica: isIncomplete ? generateFichaTecnicaRequerimientoIncompleto({
       transactionType: data.transactionType,
       propertyType: hasValidPropType ? (propType || 'Apartamento') : undefined,
-      city: data.city,
+      city: data.city || data.ciudadDeseada,
       zone: !isGenericZone ? zone : undefined,
       budget: budgetNum > 0 ? budgetNum : undefined,
       adminClarified: !missing.some(m => m.includes('administración')) ? 'Aclarada' : undefined,
