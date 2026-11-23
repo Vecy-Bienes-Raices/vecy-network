@@ -184,7 +184,19 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.43 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.44 — Noviembre 2026
+
+### Novedades v34.44 (PASO 7 — Gestor Webmail Simplificado y Chulitos Visuales tipo Mailsuite `✓✓`):
+- **Indicadores tipo Mailsuite (`shared/mailsuiteStatus.ts`, `MailsuiteCheckIndicator.tsx`, `client/src/index.css`):**
+  1. `openCount === 0` (`sent_unread`): `✓` verde `#10B981` + `✓` gris `#9CA3AF` (`"Enviado · Pendiente de lectura"`).
+  2. `openCount >= 1` (`opened_read`): dos chulitos verdes `✓✓` (`#10B981`) con tooltip accesible (`popover="hint"` + `interestfor` + fallback) mostrando primera y última apertura en `America/Bogota`, lecturas y clics.
+  3. Estados `queued`, `draft` y `failed`/`quota_blocked` en gris/rojo diferenciados.
+- **Gestor Webmail Directo y Accesos (`EmailAutomationPanel.tsx`, `LeadDetailDrawer.tsx`, `Admin.tsx`, `AgentDashboard.tsx`, `routers/emailAutomation.ts`):**
+  1. Pestaña principal `"Redactar y Enviados"` con envío directo o a lead CRM (sin `leadId` obligatorio en `sendEmail`/`generateAiDraft`), `"Redactar con IA"`, `"Enviar Correo Certificado"` y tabla de enviados con chulitos `✓✓` + `"PDF Ley 527"`.
+  2. Pestaña secundaria `"Configuración y Automatización"` para SMTP, secuencias, plantillas y cola; pestaña `"Correos Certificados"` en `/admin` y botón `"Redactar Correo"` en `/agent-dashboard`.
+- **Gobernanza y Validación:** `mailsuiteCheckAndWebmailV34_44.test.ts`, semilla `seed-paso7-webmail-mailsuite-checks-v34-44`, **Suite 230** en `regression.test.ts`, bump `v34.44` (`34.44.0`), cero cambios en `whatsapp-match.ts`.
+
+## 🔖 VERSIÓN ANTERIOR: v34.43 — Noviembre 2026
 
 ### Novedades v34.43 (Redirección 301 SEO `Vercel -> vecygroup.com`, `/sitemap.xml` & `/robots.txt` Canónicos y Correo Certificado tipo Mailsuite Ley 527 de 1999):
 - **SEO & Redirección 301 (`vercel.json`, `server/_core/seoService.ts`, `server/_core/index.ts`, `client/public/robots.txt`, `client/public/sitemap.xml`, `client/index.html`):**

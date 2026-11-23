@@ -5,7 +5,7 @@ import { getLoginUrl, VECY_VERSION } from '@/const';
 import { ADMIN_EMAILS_LIST, isAdminUser } from '../../../shared/authRouting';
 import AuthLoadingScreen from '@/components/AuthLoadingScreen';
 import {
-  LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, RefreshCw, CalendarCheck, Activity
+  LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, RefreshCw, CalendarCheck, Mail, Activity
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { getColombiaCurrentDateString } from '@/lib/dateUtils';
@@ -15,6 +15,7 @@ const AdminProperties = lazy(() => import('@/components/admin/AdminProperties'))
 const AdminRequirements = lazy(() => import('@/components/admin/AdminRequirements'));
 const AdminMatches = lazy(() => import('@/components/admin/AdminMatches'));
 const AdminAgenda = lazy(() => import('@/components/admin/AdminAgenda'));
+const EmailAutomationPanel = lazy(() => import('@/components/crm/EmailAutomationPanel'));
 const AdminTelemetry = lazy(() => import('@/components/admin/AdminTelemetry'));
 
 function TabLoadingSkeleton() {
@@ -31,6 +32,7 @@ const tabs = [
   { id: 'requirements', label: 'Requerimientos', icon: ClipboardList },
   { id: 'matches', label: 'Coincidencias', icon: Sparkles },
   { id: 'agenda', label: 'Citas y Agenda', icon: CalendarCheck },
+  { id: 'emails', label: 'Correos Certificados', icon: Mail },
   { id: 'telemetry', label: 'Telemetría API', icon: Activity },
 ];
 
@@ -94,8 +96,13 @@ export default function Admin() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window === 'undefined') return 'matches';
+    const validTabs = ['properties', 'requirements', 'matches', 'agenda', 'emails', 'telemetry'];
+    const urlTab = new URLSearchParams(window.location.search).get('tab');
+    if (urlTab && validTabs.includes(urlTab)) {
+      return urlTab;
+    }
     const saved = localStorage.getItem('vecy_admin_active_tab');
-    if (saved && ['properties', 'requirements', 'matches', 'agenda', 'telemetry'].includes(saved)) {
+    if (saved && validTabs.includes(saved)) {
       return saved;
     }
     return 'matches';
@@ -223,6 +230,7 @@ export default function Admin() {
       case 'requirements':  Component = <AdminRequirements />; break;
       case 'matches':       Component = <AdminMatches />; break;
       case 'agenda':        Component = <AdminAgenda />; break;
+      case 'emails':        Component = <div className="pt-6"><EmailAutomationPanel /></div>; break;
       case 'telemetry':     Component = <AdminTelemetry />; break;
       default:              Component = <AdminProperties />; break;
     }

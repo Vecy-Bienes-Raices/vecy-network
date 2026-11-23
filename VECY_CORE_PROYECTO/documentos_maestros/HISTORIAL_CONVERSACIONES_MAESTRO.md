@@ -7,6 +7,17 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-23] — JanIA v34.44: PASO 7 — Gestor Webmail Simplificado en `vecygroup.com` y Chulitos Visuales tipo Mailsuite (`✓✓`) (v34.44 - 34.44.0)
+
+#### 1. Solicitud / Alcance PASO 7
+- Crear el componente reutilizable `MailsuiteCheckIndicator` (`✓✓` verde/gris para enviado sin abrir vs `✓✓` dos verdes para leído con timestamps `America/Bogota` y conteo de clics/aperturas), reorganizar `EmailAutomationPanel.tsx` en vista principal `"Redactar y Enviados"` estilo webmail y pestaña secundaria `"Configuración y Automatización"`, habilitar acceso directo desde `/agent-dashboard` y `/admin` y permitir envíos/borradores IA sin exigir `leadId` obligatorio, sin tocar `server/_core/whatsapp-match.ts`.
+
+#### 2. Acciones Ejecutadas en `v34.44`
+1. **Lógica Mailsuite y Tooltip Accesible (`shared/mailsuiteStatus.ts`, `MailsuiteCheckIndicator.tsx`, `client/src/index.css`):** resolución determinista de estados (`sent_unread`, `opened_read`, `queued`, `draft`, `error`) con colores `#10B981`, `#9CA3AF` y `#EF4444`, formato de fechas `America/Bogota` y popover `popover="hint"` + `interestfor` con fallback para navegadores sin anchor positioning.
+2. **Router Webmail sin `leadId` Obligatorio (`server/routers/emailAutomation.ts`):** `generateAiDraft` y `sendEmail` aceptan `leadId` opcional/nullable para enviar a cualquier correo destinatario directo, manteniendo aislamiento multi-tenant en `getOverview` para administradores y agencias.
+3. **Webmail Directo e Integración UI (`EmailAutomationPanel.tsx`, `LeadDetailDrawer.tsx`, `Admin.tsx`, `AgentDashboard.tsx`):** pestaña principal `"Redactar y Enviados"` (formulario limpio con validación `:user-invalid` post-interacción, `"Redactar con IA"`, `"Enviar Correo Certificado"`, filtros `Leídos ✓✓` / `Pendientes de lectura ✓✓` y descarga `"PDF Ley 527"`), pestaña secundaria `"Configuración y Automatización"`, integración en `LeadDetailDrawer.tsx`, nueva pestaña `"Correos Certificados"` en `/admin` y botón rápido `"Redactar Correo"` en `/agent-dashboard`.
+4. **Pruebas y Gobernanza:** suite offline `server/__tests__/mailsuiteCheckAndWebmailV34_44.test.ts` (`$0 COP`), semilla `seed-paso7-webmail-mailsuite-checks-v34-44`, **Suite 230** en `regression.test.ts` y bump oficial a `v34.44` (`34.44.0`).
+
 ### 📅 [2026-11-23] — JanIA v34.43: Redirección 301 SEO (`Vercel -> vecygroup.com`), Sitemap/Robots Canónicos y Correo Certificado tipo Mailsuite (Ley 527 de 1999) (v34.43 - 34.43.0)
 
 #### 1. Solicitud / Alcance

@@ -78,7 +78,16 @@ export const emailAutomationRouter = router({
       .from(emailSequenceEnrollments)
       .where(eq(emailSequenceEnrollments.userId, ctx.user.id));
 
-    const messages = await db
+    const messageOwnerWhere = scope.isAdmin
+      ? undefined
+      : scope.agencyIdsAsManager.length > 0
+        ? or(
+            eq(emailMessages.userId, ctx.user.id),
+            inArray(emailMessages.agencyId, scope.agencyIdsAsManager),
+          )
+        : eq(emailMessages.userId, ctx.user.id);
+
+    const baseMessagesQuery = db
       .select({
         id: emailMessages.id,
         status: emailMessages.status,
@@ -91,8 +100,11 @@ export const emailAutomationRouter = router({
         certificateCode: emailMessages.certificateCode,
         leadId: emailMessages.leadId,
       })
-      .from(emailMessages)
-      .where(eq(emailMessages.userId, ctx.user.id));
+      .from(emailMessages);
+
+    const messages = messageOwnerWhere
+      ? await baseMessagesQuery.where(messageOwnerWhere)
+      : await baseMessagesQuery;
 
     const openedMessages = messages.filter((m) => Number(m.openCount ?? 0) > 0);
     const totalOpens = messages.reduce((sum, m) => sum + Number(m.openCount ?? 0), 0);
@@ -617,7 +629,10 @@ export const emailAutomationRouter = router({
   generateAiDraft: protectedProcedure
     .input(
       z.object({
-        leadId: z.number().int().positive(),
+        leadId: z.number().int().positive().optional().nullable(),
+        recipientName: z.string().max(160).optional().nullable(),
+        recipientEmail: z.string().email().optional().nullable(),
+        subjectHint: z.string().max(280).optional().nullable(),
         intent: z
           .enum(["welcome", "followup_24h", "followup_72h", "match_alert", "visit_confirmation", "reply"])
           .default("welcome"),
@@ -634,9 +649,19 @@ export const emailAutomationRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
       }
       const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
-      const lead = await assertLeadAccess(scope, input.leadId);
+      const resolvedLead = input.leadId
+        ? await assertLeadAccess(scope, input.leadId)
+        : {
+            name:
+              input.recipientName?.trim() ||
+              (input.recipientEmail
+                ? input.recipientEmail.split("@")[0].replace(/[._-]+/g, " ")
+                : "Cliente"),
+            email: input.recipientEmail?.trim().toLowerCase() ?? undefined,
+            propertyId: null,
+          };
 
-      const propId = input.propertyId ?? lead.propertyId;
+      const propId = input.propertyId ?? resolvedLead.propertyId;
       const property = propId
         ? (await db.select().from(properties).where(eq(properties.id, propId)).limit(1))[0] ?? null
         : null;
@@ -652,9 +677,15 @@ export const emailAutomationRouter = router({
       }
       const userTheme = (ctx.user.themeConfig as any) || {};
       const resolvedAgencyName = agencyName || userTheme.agencyName || ctx.user.name || "Vecy Bienes Raíces";
+      const combinedInstructions = [
+        input.subjectHint?.trim() ? `Asunto o tema sugerido: ${input.subjectHint.trim()}` : null,
+        input.customInstructions?.trim() || null,
+      ]
+        .filter(Boolean)
+        .join(" | ");
 
       return await generateAiEmailDraft({
-        lead,
+        lead: resolvedLead,
         property,
         matchScore: input.matchScore ?? null,
         agentName: ctx.user.name || resolvedAgencyName,
@@ -662,7 +693,7 @@ export const emailAutomationRouter = router({
         agentPhone: userTheme.contactPhone || ctx.user.phone || "+57 316 6569719",
         intent: input.intent,
         tone: input.tone,
-        customInstructions: input.customInstructions,
+        customInstructions: combinedInstructions || null,
         incomingMessage: input.incomingMessage,
       });
     }),
@@ -670,7 +701,7 @@ export const emailAutomationRouter = router({
   sendEmail: protectedProcedure
     .input(
       z.object({
-        leadId: z.number().int().positive(),
+        leadId: z.number().int().positive().optional().nullable(),
         toEmail: z.string().email().optional(),
         subject: z.string().min(2).max(280),
         bodyHtml: z.string().min(2).max(30000),
@@ -682,8 +713,14 @@ export const emailAutomationRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
-      const lead = await assertLeadAccess(scope, input.leadId);
-      const targetEmail = (input.toEmail || lead.email || "").trim();
+      const lead = input.leadId ? await assertLeadAccess(scope, input.leadId) : null;
+      const targetEmail = (input.toEmail || lead?.email || "").trim();
+      if (!targetEmail) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Indica un correo destinatario o selecciona un cliente del CRM.",
+        });
+      }
 
       const parsedSchedule = input.scheduledFor ? new Date(input.scheduledFor) : null;
       const scheduledDate =
@@ -692,8 +729,8 @@ export const emailAutomationRouter = router({
       return await sendOrQueueCrmEmail({
         userId: ctx.user.id,
         userRole: ctx.user.role,
-        agencyId: lead.agencyId ?? scope.defaultAgencyId,
-        leadId: lead.id,
+        agencyId: lead?.agencyId ?? scope.defaultAgencyId,
+        leadId: lead?.id ?? null,
         toEmail: targetEmail,
         subject: input.subject,
         bodyHtml: input.bodyHtml,

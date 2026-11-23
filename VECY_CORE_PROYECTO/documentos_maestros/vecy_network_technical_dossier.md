@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.44 — Noviembre 2026
+- **PASO 7 — Gestor Webmail Simplificado en `vecygroup.com` y Chulitos Visuales tipo Mailsuite (`v34.44.0`):**
+  - `shared/mailsuiteStatus.ts`, `client/src/components/crm/MailsuiteCheckIndicator.tsx`, `client/src/index.css`: resolución pura y componente SVG reutilizable para `sent_unread` (`✓` `#10B981` + `✓` `#9CA3AF` · `"Enviado · Pendiente de lectura"`), `opened_read` (`✓✓` `#10B981` con detalle horario `America/Bogota`, total lecturas y clics vía `popover="hint"` + `interestfor` + fallback) y estados `queued`/`draft`/`error`.
+  - `server/routers/emailAutomation.ts`, `EmailAutomationPanel.tsx`, `LeadDetailDrawer.tsx`, `Admin.tsx`, `AgentDashboard.tsx`: envío y borrador IA sin exigir `leadId` obligatorio, interfaz webmail principal `"Redactar y Enviados"` + pestaña secundaria `"Configuración y Automatización"`, pestaña `"Correos Certificados"` en `/admin` y acceso rápido `"Redactar Correo"` en `/agent-dashboard`.
+  - Gobernanza y Pruebas: `mailsuiteCheckAndWebmailV34_44.test.ts` (`$0 COP`), semilla `seed-paso7-webmail-mailsuite-checks-v34-44`, **Suite 230** en `regression.test.ts`, bump `v34.44` (`34.44.0`) y cero cambios en `whatsapp-match.ts`.
+
 ### 🔖 v34.43 — Noviembre 2026
 - **Redirección 301 SEO (`Vercel -> vecygroup.com`), Sitemap/Robots Canónicos y Correo Certificado tipo Mailsuite Ley 527 de 1999 (`v34.43.0`):**
   - `vercel.json`, `server/_core/seoService.ts`, `server/_core/index.ts`, `client/public/robots.txt`, `client/public/sitemap.xml`, `client/index.html`: redirección permanente `301` desde `vecy-bienes-raices.vercel.app` hacia `https://vecygroup.com/:path*` preservando `/api/*` y `/uploads/*`; `/robots.txt` y `/sitemap.xml` servidos exclusivamente bajo `https://vecygroup.com` (con publicaciones activas `/property/:id`).

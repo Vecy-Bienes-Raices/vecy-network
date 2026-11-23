@@ -35,8 +35,13 @@ export default function AgentDashboard() {
     if (typeof window === "undefined") return "properties";
     const t = new URLSearchParams(window.location.search).get("tab");
     if (
+      t === "emails" ||
+      t === "email_automation"
+    ) {
+      return "email_automation";
+    }
+    if (
       t === "crm" ||
-      t === "email_automation" ||
       t === "branding" ||
       t === "pro_tools" ||
       t === "legal_suite" ||
@@ -390,7 +395,7 @@ export default function AgentDashboard() {
   const tabs = [
     { id: "properties", label: "Mis Inmuebles & Fichas", icon: BarChart3, count: myProperties?.length },
     { id: "crm", label: "CRM Kanban", icon: Users, count: crmBoardSummary?.kpis?.totalLeads },
-    { id: "email_automation", label: "Correos IA & Secuencias", icon: Mail },
+    { id: "email_automation", label: "Correos Certificados", icon: Mail },
     { id: "branding", label: "Mi Sitio & Marca (Wasi IA)", icon: Palette },
     { id: "pro_tools", label: "Herramientas Pro & Agente IA", icon: Bot },
     { id: "legal_suite", label: "Suite Legal SaaS", icon: FileCheck2 },
@@ -438,6 +443,15 @@ export default function AgentDashboard() {
               >
                 <Sparkles className="w-4 h-4 text-black" />
                 <span>+ Subir Inmueble Completo (Estudio IA)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("email_automation")}
+                className="px-4 py-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Redactar Correo</span>
               </button>
 
               {mySiteSlug && (

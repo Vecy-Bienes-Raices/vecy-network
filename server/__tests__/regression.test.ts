@@ -16704,9 +16704,69 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-seo-301-vecygroup-correo-certificado-ley527-v34-43",
       );
       expect(seed43?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.43");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:4[3-9]|[5-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.43.0");
+      expect(pkg.version).toMatch(/^34\.(?:4[3-9]|[5-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 230: PASO 7 — GESTOR WEBMAIL SIMPLIFICADO Y CHULITOS VISUALES TIPO MAILSUITE (v34.44)
+  // =========================================================================
+  describe("Suite 230: PASO 7 — Webmail Simplificado y Chulitos Mailsuite (v34.44)", () => {
+    it("1. Verifica lógica Mailsuite (sent_unread ✓✓ verde/gris vs opened_read ✓✓ dos verdes), componente y accesos en Admin/AgentDashboard", async () => {
+      const fs = await import("fs");
+      const { resolveMailsuiteVisualStatus, MAILSUITE_COLOR_GREEN, MAILSUITE_COLOR_GRAY } = await import(
+        "../../shared/mailsuiteStatus"
+      );
+
+      const unread = resolveMailsuiteVisualStatus({ status: "sent", openCount: 0 });
+      expect(unread.state).toBe("sent_unread");
+      expect(unread.firstCheckColor).toBe(MAILSUITE_COLOR_GREEN);
+      expect(unread.secondCheckColor).toBe(MAILSUITE_COLOR_GRAY);
+
+      const read = resolveMailsuiteVisualStatus({
+        status: "sent",
+        openCount: 2,
+        clickCount: 1,
+        firstOpenedAt: "2026-11-23T14:04:12.000Z",
+        lastOpenedAt: "2026-11-23T15:10:00.000Z",
+      });
+      expect(read.state).toBe("opened_read");
+      expect(read.firstCheckColor).toBe(MAILSUITE_COLOR_GREEN);
+      expect(read.secondCheckColor).toBe(MAILSUITE_COLOR_GREEN);
+
+      expect(fs.existsSync("client/src/components/crm/MailsuiteCheckIndicator.tsx")).toBe(true);
+      const panelSrc = fs.readFileSync("client/src/components/crm/EmailAutomationPanel.tsx", "utf-8");
+      expect(panelSrc).toContain("Redactar y Enviados");
+      expect(panelSrc).toContain("Configuración y Automatización");
+      expect(panelSrc).toContain("Enviar Correo Certificado");
+      expect(panelSrc).toContain("MailsuiteCheckIndicator");
+
+      const drawerSrc = fs.readFileSync("client/src/components/crm/LeadDetailDrawer.tsx", "utf-8");
+      expect(drawerSrc).toContain("MailsuiteCheckIndicator");
+
+      const adminSrc = fs.readFileSync("client/src/pages/Admin.tsx", "utf-8");
+      expect(adminSrc).toContain("EmailAutomationPanel");
+      expect(adminSrc).toContain("Correos Certificados");
+
+      const agentDashSrc = fs.readFileSync("client/src/pages/AgentDashboard.tsx", "utf-8");
+      expect(agentDashSrc).toContain("Correos Certificados");
+      expect(agentDashSrc).toContain("Redactar Correo");
+    });
+
+    it("2. Verifica semilla de gobernanza v34.44 y versión oficial v34.44 (34.44.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      const seed44 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-paso7-webmail-mailsuite-checks-v34-44",
+      );
+      expect(seed44?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.44");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.44.0");
     });
   });
 });

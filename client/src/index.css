@@ -1018,3 +1018,67 @@ progress.vecy-loading-spinner:indeterminate {
   }
 }
 
+/* Tooltips de rastreo Mailsuite (interest-triggered-tooltips + fallbacks) */
+.vecy-mailsuite-tooltip {
+  max-width: 18rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.75rem;
+  background-color: #0b0f17;
+  color: #f4f4f5;
+  border: 1px solid rgba(191, 149, 63, 0.45);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+  text-align: left;
+  z-index: 60;
+}
+
+.vecy-mailsuite-tooltip:is(:popover-open, .\:popover-open) {
+  display: block;
+}
+
+@supports (position-area: block-start) {
+  .vecy-mailsuite-tooltip {
+    inset: auto;
+    margin: 0 0 8px 0;
+    position-area: block-start;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+  }
+}
+
+@supports not (position-area: block-start) {
+  .vecy-mailsuite-tooltip {
+    position: fixed;
+    inset: var(--tooltip-fallback-top, 16px) auto auto var(--tooltip-fallback-left, 16px);
+    margin: 0;
+  }
+
+  .vecy-mailsuite-tooltip[data-fallback-side="above"] {
+    transform: translateY(-100%);
+  }
+}
+
+/* Pestañas accesibles del Gestor Webmail (WCAG 1.4.1 indicador de forma + borde) */
+.vecy-mail-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.vecy-mail-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.vecy-mail-tab {
+  position: relative;
+  flex: none;
+}
+
+.vecy-mail-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0.5rem 0;
+  border-block-end: 3px solid currentColor;
+  border-radius: 9999px;
+}
+

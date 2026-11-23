@@ -1154,6 +1154,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "v34.43: Redirección 301 Vercel->vecygroup.com, robots/sitemap canónicos y Correo Certificado tipo Mailsuite con SHA-256 y Constancia PDF Ley 527 de 1999.",
     createdAt: "2026-11-23T05:30:00.000Z",
     active: true
+  },
+  {
+    id: "seed-paso7-webmail-mailsuite-checks-v34-44",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "PASO 7 — Gestor Webmail Simplificado y Chulitos Visuales tipo Mailsuite (v34.44)",
+    directive:
+      "En https://vecygroup.com (/admin pestaña 'Correos Certificados' y /agent-dashboard 'Correos Certificados'), el gestor de correos ofrece la vista principal 'Redactar y Enviados' estilo webmail sencillo (Para directo o cliente CRM, Asunto, Mensaje con botón opcional 'Redactar con IA', envío directo sin exigir leadId obligatorio y tabla inferior con descarga 'PDF Ley 527'), separando SMTP, plantillas, cola y secuencias en la pestaña secundaria 'Configuración y Automatización'. Además, MailsuiteCheckIndicator muestra ✓✓ verde (#10B981) + gris (#9CA3AF) para 'Enviado · Pendiente de lectura' (openCount === 0) y ✓✓ dos verdes (#10B981) cuando se registra lectura (openCount >= 1) con tooltip de fecha y hora exacta en America/Bogota y conteo de aperturas/clics.",
+    rawText:
+      "PASO 7 v34.44: Webmail simplificado ('Redactar y Enviados' vs 'Configuración y Automatización') en vecygroup.com y chulitos visuales ✓✓ tipo Mailsuite.",
+    createdAt: "2026-11-23T06:50:00.000Z",
+    active: true
   }
 ];
 

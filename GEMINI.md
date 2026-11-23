@@ -1,4 +1,15 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.43.0 — 2026-11-23)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.44.0 — 2026-11-23)
+- **JanIA Server & Web Portal:** `v34.44` (`34.44.0`) — **PASO 7: Gestor de Correos Simplificado en `vecygroup.com` y Chulitos Visuales tipo Mailsuite (`✓✓`)** (100% aditivo sin modificar `server/_core/whatsapp-match.ts`).
+  1. **Indicadores Visuales tipo Mailsuite (`shared/mailsuiteStatus.ts`, `client/src/components/crm/MailsuiteCheckIndicator.tsx`, `client/src/index.css`):**
+     - `sent_unread` (`openCount === 0`): dos chulitos (`✓` `#10B981` + `✓` `#9CA3AF`) con etiqueta `"Enviado · Pendiente de lectura"`.
+     - `opened_read` (`openCount >= 1`): dos chulitos verde esmeralda (`✓✓` `#10B981`) con popover/toggletip accesible (`popover="hint"` + `interestfor` + fallback) mostrando primera/última apertura en `America/Bogota`, total de lecturas y clics en enlaces.
+     - `queued` / `draft` / `failed` / `quota_blocked`: íconos claros en gris o rojo según el estado.
+  2. **Gestor Webmail Directo y Accesos (`/admin` + `/agent-dashboard` — `EmailAutomationPanel.tsx`, `LeadDetailDrawer.tsx`, `Admin.tsx`, `AgentDashboard.tsx`, `server/routers/emailAutomation.ts`):**
+     - Pestaña principal `"Redactar y Enviados"` estilo webmail (Para directo o cliente CRM sin exigir `leadId` obligatorio en `sendEmail`/`generateAiDraft`, Asunto, Mensaje con `"Redactar con IA"`, `"Enviar Correo Certificado"`, filtros de lectura y botón `"PDF Ley 527"`).
+     - Pestaña secundaria `"Configuración y Automatización"` para SMTP AES-256-GCM / Relay VECY, secuencias, plantillas y cola programada, además de pestaña directa `"Correos Certificados"` en `/admin` y acceso rápido `"Redactar Correo"` en `/agent-dashboard`.
+- **Gobernanza y Regresión:** Semilla `seed-paso7-webmail-mailsuite-checks-v34-44`, `mailsuiteCheckAndWebmailV34_44.test.ts`, **Suite 230** en `regression.test.ts`, bump `v34.44` (`34.44.0`).
+
+### 📦 HISTÓRICO RECIENTE (v34.43.0 — 2026-11-23)
 - **JanIA Server & Web Portal:** `v34.43` (`34.43.0`) — **Redirección 301 SEO (`Vercel -> vecygroup.com`), `/sitemap.xml` & `/robots.txt` Canónicos y Correo Certificado tipo Mailsuite (Ley 527 de 1999)** (100% aditivo sin modificar `server/_core/whatsapp-match.ts`).
   1. **Redirección 301 y SEO Google Search Console (`vercel.json`, `server/_core/seoService.ts`, `server/_core/index.ts`, `client/public/robots.txt`, `client/public/sitemap.xml`, `client/index.html`):**
      - `vercel.json` configura redirección permanente `301` (`statusCode: 301`) desde `vecy-bienes-raices.vercel.app` hacia `https://vecygroup.com/:path*`, excluyendo `/api/*` y `/uploads/*` para preservar los rewrites hacia el VPS.

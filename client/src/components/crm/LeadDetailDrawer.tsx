@@ -13,10 +13,9 @@ import {
   Loader2,
   Building2,
   SendHorizonal,
-  Eye,
-  MousePointerClick,
   FileDown,
 } from "lucide-react";
+import MailsuiteCheckIndicator from "./MailsuiteCheckIndicator";
 import {
   CRM_PIPELINE_STAGES,
   CRM_SOURCE_LABELS,
@@ -785,74 +784,55 @@ export default function LeadDetailDrawer({
                       Sin correos enviados todavía.
                     </p>
                   ) : (
-                    detail.emails.map((m: any) => {
-                      const opens = Number(m.openCount ?? 0);
-                      const clicks = Number(m.clickCount ?? 0);
-                      return (
-                        <div key={m.id} className="p-3 rounded-xl bg-card border border-border text-xs space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-bold text-white truncate">{m.subject}</span>
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase shrink-0 ${
-                                m.status === "sent"
-                                  ? "bg-emerald-500/20 text-emerald-300"
-                                  : m.status === "queued"
-                                    ? "bg-sky-500/20 text-sky-300"
-                                    : "bg-rose-500/20 text-rose-300"
-                              }`}
-                            >
-                              {m.status}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-zinc-400 line-clamp-2">{m.bodyText}</p>
-                          <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-border/60">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span
-                                className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold ${
-                                  opens > 0
-                                    ? "bg-amber-500/20 text-amber-300"
-                                    : "bg-secondary text-zinc-400"
-                                }`}
-                              >
-                                <Eye className="w-3 h-3" />
-                                {opens > 0 ? `Abierto (${opens}x)` : "Sin abrir"}
-                              </span>
-                              <span
-                                className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold ${
-                                  clicks > 0
-                                    ? "bg-cyan-500/20 text-cyan-300"
-                                    : "bg-secondary text-zinc-400"
-                                }`}
-                              >
-                                <MousePointerClick className="w-3 h-3" />
-                                Clics ({clicks})
-                              </span>
-                              {m.contentSha256 && (
-                                <span className="text-[10px] font-mono text-zinc-400">
-                                  SHA-256: {String(m.contentSha256).slice(0, 10)}...
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              disabled={downloadingEmailId === m.id}
-                              onClick={() => {
-                                setDownloadingEmailId(m.id);
-                                downloadCertMutation.mutate({ messageId: m.id });
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary text-[10px] font-black uppercase inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              {downloadingEmailId === m.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <FileDown className="w-3 h-3" />
-                              )}
-                              Constancia PDF (Ley 527)
-                            </button>
-                          </div>
+                    detail.emails.map((m: any) => (
+                      <div key={m.id} className="p-3 rounded-xl bg-card border border-border text-xs space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-bold text-white truncate">{m.subject}</span>
+                          <MailsuiteCheckIndicator
+                            status={m.status}
+                            openCount={m.openCount}
+                            clickCount={m.clickCount}
+                            firstOpenedAt={m.firstOpenedAt}
+                            lastOpenedAt={m.lastOpenedAt}
+                            sentAt={m.sentAt}
+                            scheduledFor={m.scheduledFor}
+                            errorMessage={m.errorMessage}
+                            compact
+                          />
                         </div>
-                      );
-                    })
+                        <p className="text-[11px] text-zinc-400 line-clamp-2">{m.bodyText}</p>
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-border/60">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {m.contentSha256 && (
+                              <span className="text-[10px] font-mono text-zinc-400">
+                                SHA-256: {String(m.contentSha256).slice(0, 10)}...
+                              </span>
+                            )}
+                            {m.notifyOnOpen && (
+                              <span className="text-[10px] text-amber-300 font-semibold">
+                                Aviso en vivo activo
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={downloadingEmailId === m.id}
+                            onClick={() => {
+                              setDownloadingEmailId(m.id);
+                              downloadCertMutation.mutate({ messageId: m.id });
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary text-[10px] font-black uppercase inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            {downloadingEmailId === m.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <FileDown className="w-3 h-3" />
+                            )}
+                            Constancia PDF (Ley 527)
+                          </button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
