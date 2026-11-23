@@ -1012,3 +1012,372 @@ export async function sendAppointmentAddressEmail(
     return { success: false, error: err?.message };
   }
 }
+
+export interface CertifiedEmailEvidencePayload {
+  messageId: number;
+  certificateCode: string;
+  contentSha256: string;
+  evidenceSha256: string;
+  fromEmail: string;
+  replyToEmail?: string | null;
+  toEmail: string;
+  leadName?: string | null;
+  subject: string;
+  status: string;
+  providerMessageId?: string | null;
+  sentAtIso: string;
+  sentAtBogota: string;
+  openCount: number;
+  firstOpenedAtBogota?: string | null;
+  lastOpenedAtBogota?: string | null;
+  lastOpenIp?: string | null;
+  lastOpenUserAgent?: string | null;
+  clickCount: number;
+  firstClickedAtBogota?: string | null;
+  lastClickedAtBogota?: string | null;
+  lastClickIp?: string | null;
+  lastClickUserAgent?: string | null;
+  attachments?: Array<{
+    filename: string;
+    contentType?: string;
+    sizeBytes?: number;
+    sha256?: string;
+  }>;
+  bodyExcerpt?: string | null;
+  events?: Array<{
+    type: "open" | "click";
+    occurredAtIso: string;
+    occurredAtBogota: string;
+    ip?: string | null;
+    userAgent?: string | null;
+    targetUrl?: string | null;
+  }>;
+  generatedAtBogota?: string;
+}
+
+export function sanitizePdfWinAnsiText(input: string | null | undefined): string {
+  return String(input || "")
+    .replace(/[\u2014\u2013]/g, "-")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u2022/g, "*")
+    .replace(/\u2265/g, ">=")
+    .replace(/\u2264/g, "<=")
+    .replace(/\r/g, "")
+    .replace(/[^\u0020-\u007E\u00A0-\u00FF\n]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+export async function createCertifiedEmailEvidencePdf(
+  payload: CertifiedEmailEvidencePayload,
+): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  let page = pdfDoc.addPage([612, 792]);
+  const { width, height } = page.getSize();
+
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontMono = await pdfDoc.embedFont(StandardFonts.Courier);
+
+  const black = rgb(0.08, 0.08, 0.09);
+  const gray = rgb(0.35, 0.35, 0.38);
+  const gold = rgb(0.749, 0.584, 0.247);
+  const lightGoldBg = rgb(0.98, 0.97, 0.94);
+  const margin = 44;
+  const maxContentWidth = width - margin * 2;
+
+  const verifyUrl = `https://vecygroup.com/api/email/certificate/verify/${encodeURIComponent(payload.certificateCode)}`;
+
+  let qrImage: any = null;
+  try {
+    const qrBuf = await QRCode.toBuffer(verifyUrl, {
+      width: 140,
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+    });
+    qrImage = await pdfDoc.embedPng(qrBuf);
+  } catch {
+    qrImage = null;
+  }
+
+  const drawFooter = (targetPage: any) => {
+    const footerText = sanitizePdfWinAnsiText(
+      `Vecy Bienes Raíces S.A.S. | CUV: ${payload.certificateCode} | Ley 527/1999 | https://vecygroup.com/`,
+    );
+    const fw = fontRegular.widthOfTextAtSize(footerText, 7.5);
+    targetPage.drawText(footerText, {
+      x: Math.max(margin, (width - fw) / 2),
+      y: 22,
+      font: fontRegular,
+      size: 7.5,
+      color: gray,
+    });
+  };
+
+  let y = height - margin;
+  const ensureSpace = (needed: number) => {
+    if (y - needed < 45) {
+      drawFooter(page);
+      page = pdfDoc.addPage([612, 792]);
+      y = height - margin;
+    }
+  };
+
+  const drawWrappedLine = (
+    text: string,
+    opts?: { font?: any; size?: number; color?: any; x?: number; lineHeight?: number },
+  ) => {
+    const f = opts?.font || fontRegular;
+    const size = opts?.size || 9.5;
+    const color = opts?.color || black;
+    const x = opts?.x ?? margin;
+    const lh = opts?.lineHeight || size + 4;
+    const availWidth = width - margin - x;
+
+    const clean = sanitizePdfWinAnsiText(text) || "-";
+    const paragraphs = clean.split("\n");
+    for (const para of paragraphs) {
+      const words = para.split(" ").filter(Boolean);
+      if (words.length === 0) {
+        y -= lh;
+        continue;
+      }
+      let line = "";
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (f.widthOfTextAtSize(candidate, size) <= availWidth) {
+          line = candidate;
+        } else {
+          if (line) {
+            ensureSpace(lh);
+            page.drawText(line, { x, y, font: f, size, color });
+            y -= lh;
+          }
+          if (f.widthOfTextAtSize(word, size) > availWidth) {
+            let chunk = "";
+            for (const ch of word) {
+              const nextChunk = chunk + ch;
+              if (f.widthOfTextAtSize(nextChunk, size) > availWidth) {
+                ensureSpace(lh);
+                page.drawText(chunk, { x, y, font: f, size, color });
+                y -= lh;
+                chunk = ch;
+              } else {
+                chunk = nextChunk;
+              }
+            }
+            line = chunk;
+          } else {
+            line = word;
+          }
+        }
+      }
+      if (line) {
+        ensureSpace(lh);
+        page.drawText(line, { x, y, font: f, size, color });
+        y -= lh;
+      }
+    }
+  };
+
+  const drawSectionHeader = (title: string) => {
+    ensureSpace(26);
+    y -= 6;
+    page.drawRectangle({
+      x: margin,
+      y: y - 14,
+      width: maxContentWidth,
+      height: 18,
+      color: lightGoldBg,
+      borderColor: gold,
+      borderWidth: 0.6,
+    });
+    page.drawText(sanitizePdfWinAnsiText(title), {
+      x: margin + 8,
+      y: y - 9,
+      font: fontBold,
+      size: 9.5,
+      color: gold,
+    });
+    y -= 24;
+  };
+
+  const drawKeyValue = (label: string, value: string, mono = false) => {
+    const cleanLabel = sanitizePdfWinAnsiText(label);
+    const cleanValue = sanitizePdfWinAnsiText(value || "N/D") || "N/D";
+    ensureSpace(15);
+    page.drawText(cleanLabel, {
+      x: margin + 4,
+      y,
+      font: fontBold,
+      size: 8.5,
+      color: gray,
+    });
+    drawWrappedLine(cleanValue, {
+      x: margin + 150,
+      font: mono ? fontMono : fontRegular,
+      size: mono ? 8 : 8.8,
+      color: black,
+      lineHeight: 12.5,
+    });
+  };
+
+  // Encabezado oficial
+  page.drawRectangle({
+    x: margin,
+    y: y - 56,
+    width: maxContentWidth,
+    height: 60,
+    color: rgb(0.05, 0.05, 0.06),
+    borderColor: gold,
+    borderWidth: 1.2,
+  });
+
+  try {
+    const logoBytes = Buffer.from(vecyLogoBase64.split(",")[1], "base64");
+    const logoImg = await pdfDoc.embedPng(logoBytes);
+    page.drawImage(logoImg, { x: margin + 10, y: y - 48, width: 42, height: 42 });
+  } catch {
+    // Logo opcional en entorno sin canvas
+  }
+
+  page.drawText(
+    sanitizePdfWinAnsiText("CONSTANCIA PROBATORIA DE CORREO ELECTRÓNICO CERTIFICADO"),
+    { x: margin + 62, y: y - 16, font: fontBold, size: 11.2, color: gold },
+  );
+  page.drawText(
+    sanitizePdfWinAnsiText("Ley 527 de 1999 y Decreto 2364 de 2012 (República de Colombia) | Trazabilidad Mailsuite VECY"),
+    { x: margin + 62, y: y - 31, font: fontRegular, size: 8, color: rgb(0.92, 0.92, 0.92) },
+  );
+  page.drawText(
+    sanitizePdfWinAnsiText(`CUV: ${payload.certificateCode} | Emisión: ${payload.generatedAtBogota || payload.sentAtBogota}`),
+    { x: margin + 62, y: y - 44, font: fontMono, size: 7.5, color: rgb(0.85, 0.78, 0.55) },
+  );
+  y -= 72;
+
+  // Bloque 1: Transmisión Electrónica
+  drawSectionHeader("1. DATOS DEL MENSAJE DE DATOS Y TRANSMISIÓN CERTIFICADA");
+  drawKeyValue("ID Registro CRM:", `#${payload.messageId}`);
+  drawKeyValue("Remitente Certificado:", payload.fromEmail);
+  drawKeyValue("Responder a (Reply-To):", payload.replyToEmail || payload.fromEmail);
+  drawKeyValue("Destinatario:", `${payload.leadName ? `${payload.leadName} <${payload.toEmail}>` : payload.toEmail}`);
+  drawKeyValue("Asunto:", payload.subject);
+  drawKeyValue("Estado de Entrega:", String(payload.status || "sent").toUpperCase());
+  drawKeyValue("ID Proveedor SMTP:", payload.providerMessageId || "N/D", true);
+  drawKeyValue("Sello Envío (Colombia):", payload.sentAtBogota);
+  drawKeyValue("Sello Envío (UTC ISO):", payload.sentAtIso, true);
+
+  // Bloque 2: Rastreo tipo Mailsuite
+  drawSectionHeader("2. TRAZABILIDAD DE APERTURAS Y CLICS EN TIEMPO REAL");
+  drawKeyValue("Total de Aperturas:", `${payload.openCount} registro(s)`);
+  drawKeyValue("Primera Apertura:", payload.firstOpenedAtBogota || "Aún sin registrar");
+  drawKeyValue("Última Apertura:", payload.lastOpenedAtBogota || "Aún sin registrar");
+  drawKeyValue("Última IP / Agente Apertura:", `${payload.lastOpenIp || "N/D"} | ${(payload.lastOpenUserAgent || "N/D").slice(0, 90)}`);
+  drawKeyValue("Total de Clics en Enlaces:", `${payload.clickCount} clic(s)`);
+  drawKeyValue("Primer / Último Clic:", `${payload.firstClickedAtBogota || "N/D"} / ${payload.lastClickedAtBogota || "N/D"}`);
+  drawKeyValue("Última IP / Agente Clic:", `${payload.lastClickIp || "N/D"} | ${(payload.lastClickUserAgent || "N/D").slice(0, 90)}`);
+
+  const events = Array.isArray(payload.events) ? payload.events.slice(-15) : [];
+  if (events.length > 0) {
+    ensureSpace(22);
+    y -= 2;
+    page.drawText("Cronología reciente de eventos rastreados:", {
+      x: margin + 4,
+      y,
+      font: fontBold,
+      size: 8.5,
+      color: gray,
+    });
+    y -= 13;
+    for (const ev of events) {
+      const evDesc =
+        ev.type === "click"
+          ? `[CLIC] ${ev.occurredAtBogota} | IP: ${ev.ip || "N/D"} | URL: ${(ev.targetUrl || "").slice(0, 55)}`
+          : `[APERTURA] ${ev.occurredAtBogota} | IP: ${ev.ip || "N/D"}`;
+      drawWrappedLine(`- ${evDesc}`, {
+        x: margin + 10,
+        font: fontMono,
+        size: 7.4,
+        color: black,
+        lineHeight: 11,
+      });
+    }
+  }
+
+  // Bloque 3: Integridad Criptográfica SHA-256 y Adjuntos
+  drawSectionHeader("3. INTEGRIDAD CRIPTOGRÁFICA SHA-256 Y ADJUNTOS (ART. 9 LEY 527/1999)");
+  drawKeyValue("SHA-256 Mensaje Original:", payload.contentSha256, true);
+  drawKeyValue("SHA-256 Cadena Probatoria:", payload.evidenceSha256, true);
+  const attachList = Array.isArray(payload.attachments) ? payload.attachments : [];
+  if (attachList.length === 0) {
+    drawKeyValue("Adjuntos Declarados:", "Sin archivos adjuntos en la transmisión.");
+  } else {
+    drawKeyValue(
+      "Adjuntos Declarados:",
+      attachList
+        .map((a) => `${a.filename} (${a.sizeBytes ?? 0} bytes${a.sha256 ? `, sha256:${a.sha256.slice(0, 12)}...` : ""})`)
+        .join("; "),
+    );
+  }
+  if (payload.bodyExcerpt) {
+    drawKeyValue("Extracto del Contenido:", payload.bodyExcerpt.slice(0, 380));
+  }
+
+  // Bloque 4: Sello Digital y QR
+  ensureSpace(88);
+  y -= 8;
+  page.drawRectangle({
+    x: margin,
+    y: y - 72,
+    width: maxContentWidth,
+    height: 72,
+    color: lightGoldBg,
+    borderColor: gold,
+    borderWidth: 1,
+  });
+
+  if (qrImage) {
+    page.drawImage(qrImage, {
+      x: margin + 10,
+      y: y - 64,
+      width: 56,
+      height: 56,
+    });
+  }
+
+  const sealX = margin + 76;
+  page.drawText(
+    sanitizePdfWinAnsiText("VALIDACIÓN JURÍDICA ELECTRÓNICA — LEY 527 DE 1999 (COLOMBIA)"),
+    { x: sealX, y: y - 16, font: fontBold, size: 8.5, color: gold },
+  );
+  page.drawText(
+    sanitizePdfWinAnsiText(
+      "Este certificado acredita el origen, integridad SHA-256, fecha cierta de envío y registro de lectura del mensaje de datos",
+    ),
+    { x: sealX, y: y - 28, font: fontRegular, size: 7.4, color: black },
+  );
+  page.drawText(
+    sanitizePdfWinAnsiText(
+      "conforme a los artículos 6, 7, 8, 9, 10, 11, 20 y 21 de la Ley 527 de 1999 y el Decreto 2364 de 2012.",
+    ),
+    { x: sealX, y: y - 39, font: fontRegular, size: 7.4, color: black },
+  );
+  page.drawText(sanitizePdfWinAnsiText(`CUV: ${payload.certificateCode}`), {
+    x: sealX,
+    y: y - 51,
+    font: fontBold,
+    size: 7.8,
+    color: black,
+  });
+  page.drawText(sanitizePdfWinAnsiText(`Verificación: ${verifyUrl}`), {
+    x: sealX,
+    y: y - 62,
+    font: fontMono,
+    size: 6.5,
+    color: gray,
+  });
+
+  drawFooter(page);
+  return await pdfDoc.save();
+}

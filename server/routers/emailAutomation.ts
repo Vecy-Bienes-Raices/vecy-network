@@ -20,6 +20,7 @@ import {
   resolveUserTenantScope,
 } from "../_core/crmService";
 import {
+  buildEmailEvidencePayloadFromRow,
   encryptSmtpSecret,
   enrollLeadInSequence,
   ensureDefaultEmailSequencesForUser,
@@ -29,6 +30,7 @@ import {
   validateSmtpHostSafety,
   verifySmtpConnection,
 } from "../_core/emailAutomationEngine";
+import { createCertifiedEmailEvidencePdf } from "../_core/emailContractService";
 import { getEmailQuotaSummary } from "../_core/planEntitlements";
 import { type EmailSequenceStep } from "../../shared/crm";
 
@@ -77,9 +79,32 @@ export const emailAutomationRouter = router({
       .where(eq(emailSequenceEnrollments.userId, ctx.user.id));
 
     const messages = await db
-      .select({ id: emailMessages.id, status: emailMessages.status })
+      .select({
+        id: emailMessages.id,
+        status: emailMessages.status,
+        openCount: emailMessages.openCount,
+        clickCount: emailMessages.clickCount,
+        lastOpenedAt: emailMessages.lastOpenedAt,
+        lastClickedAt: emailMessages.lastClickedAt,
+        toEmail: emailMessages.toEmail,
+        subject: emailMessages.subject,
+        certificateCode: emailMessages.certificateCode,
+        leadId: emailMessages.leadId,
+      })
       .from(emailMessages)
       .where(eq(emailMessages.userId, ctx.user.id));
+
+    const openedMessages = messages.filter((m) => Number(m.openCount ?? 0) > 0);
+    const totalOpens = messages.reduce((sum, m) => sum + Number(m.openCount ?? 0), 0);
+    const totalClicks = messages.reduce((sum, m) => sum + Number(m.clickCount ?? 0), 0);
+    const recentTrackingActivity = messages
+      .filter((m) => Number(m.openCount ?? 0) > 0 || Number(m.clickCount ?? 0) > 0)
+      .sort((a, b) => {
+        const ta = new Date(a.lastClickedAt || a.lastOpenedAt || 0).getTime();
+        const tb = new Date(b.lastClickedAt || b.lastOpenedAt || 0).getTime();
+        return tb - ta;
+      })
+      .slice(0, 10);
 
     return {
       account: sanitizeEmailAccount(accountRow ?? null),
@@ -87,11 +112,15 @@ export const emailAutomationRouter = router({
       defaultDisplayName: ctx.user.name || "Asesor Inmobiliario VECY",
       quota,
       agencyId: scope.defaultAgencyId,
+      recentTrackingActivity,
       stats: {
         sent: messages.filter((m) => m.status === "sent").length,
         queued: messages.filter((m) => m.status === "queued").length,
         failed: messages.filter((m) => m.status === "failed").length,
         quotaBlocked: messages.filter((m) => m.status === "quota_blocked").length,
+        openedCount: openedMessages.length,
+        totalOpens,
+        totalClicks,
         activeSequences: sequences.filter((s) => s.isActive).length,
         totalSequences: sequences.length,
         activeEnrollments: enrollments.filter((e) => e.status === "active").length,
@@ -648,6 +677,7 @@ export const emailAutomationRouter = router({
         bodyText: z.string().max(30000).optional(),
         scheduledFor: z.string().optional().nullable(),
         aiGenerated: z.boolean().default(false),
+        notifyOnOpen: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -670,6 +700,7 @@ export const emailAutomationRouter = router({
         bodyText: input.bodyText,
         scheduledFor: scheduledDate,
         aiGenerated: input.aiGenerated,
+        notifyOnOpen: input.notifyOnOpen,
       });
     }),
 
@@ -731,4 +762,75 @@ export const emailAutomationRouter = router({
       limit: 25,
     });
   }),
+
+  getCertificatePdf: protectedProcedure
+    .input(z.object({ messageId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+      }
+      const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
+      const [msg] = await db
+        .select()
+        .from(emailMessages)
+        .where(eq(emailMessages.id, input.messageId))
+        .limit(1);
+
+      if (!msg) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Correo certificado no encontrado." });
+      }
+      if (!canAccessTenantOwnedRecord(scope, msg)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Sin permisos sobre este correo." });
+      }
+
+      let leadName: string | null = null;
+      if (msg.leadId) {
+        const [lead] = await db
+          .select({ name: leads.name })
+          .from(leads)
+          .where(eq(leads.id, msg.leadId))
+          .limit(1);
+        leadName = lead?.name ?? null;
+      }
+
+      const evidence = buildEmailEvidencePayloadFromRow(msg, leadName);
+      const pdfBytes = await createCertifiedEmailEvidencePdf(evidence);
+
+      return {
+        filename: `Constancia_Ley527_${evidence.certificateCode}.pdf`,
+        certificateCode: evidence.certificateCode,
+        contentSha256: evidence.contentSha256,
+        evidenceSha256: evidence.evidenceSha256,
+        pdfBase64: Buffer.from(pdfBytes).toString("base64"),
+      };
+    }),
+
+  toggleNotifyOnOpen: protectedProcedure
+    .input(z.object({ messageId: z.number().int().positive(), notifyOnOpen: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+      }
+      const scope = await resolveUserTenantScope(ctx.user.id, ctx.user.role);
+      const [msg] = await db
+        .select()
+        .from(emailMessages)
+        .where(eq(emailMessages.id, input.messageId))
+        .limit(1);
+
+      if (!msg) throw new TRPCError({ code: "NOT_FOUND" });
+      if (!canAccessTenantOwnedRecord(scope, msg)) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const [updated] = await db
+        .update(emailMessages)
+        .set({ notifyOnOpen: input.notifyOnOpen, updatedAt: new Date() })
+        .where(eq(emailMessages.id, msg.id))
+        .returning();
+
+      return updated;
+    }),
 });

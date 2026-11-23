@@ -1142,6 +1142,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Blindaje v34.42: Auth Cero Parpadeo en vecygroup.com, captura OAuth pre-createClient, AuthLoadingScreen con <progress> accesible y verificación Site URL en Supabase.",
     createdAt: "2026-11-23T04:40:00.000Z",
     active: true
+  },
+  {
+    id: "seed-seo-301-vecygroup-correo-certificado-ley527-v34-43",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Redirección 301 SEO a vecygroup.com, Sitemap/Robots y Correo Certificado tipo Mailsuite Ley 527 de 1999 (v34.43)",
+    directive:
+      "El portal web canónico para Google Search Console y SEO es https://vecygroup.com: vercel.json redirige permanentemente (301) desde vecy-bienes-raices.vercel.app hacia https://vecygroup.com/:path* (preservando /api/* y /uploads/*) y /sitemap.xml y /robots.txt se sirven con URLs exclusivamente bajo https://vecygroup.com. Además, todo correo CRM despachado por emailAutomationEngine incluye píxel de apertura (/api/email/track/open/:token.png), enlaces rastreables (/api/email/track/click/:token) con sello America/Bogota, IP y User-Agent, hashes SHA-256 de integridad (remitente @vecygroup.com, asunto, cuerpo, adjuntos y eventos) y Constancia Probatoria PDF descargable bajo Ley 527 de 1999.",
+    rawText:
+      "v34.43: Redirección 301 Vercel->vecygroup.com, robots/sitemap canónicos y Correo Certificado tipo Mailsuite con SHA-256 y Constancia PDF Ley 527 de 1999.",
+    createdAt: "2026-11-23T05:30:00.000Z",
+    active: true
   }
 ];
 

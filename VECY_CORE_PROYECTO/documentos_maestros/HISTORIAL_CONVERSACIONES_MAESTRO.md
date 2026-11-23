@@ -7,6 +7,17 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-23] — JanIA v34.43: Redirección 301 SEO (`Vercel -> vecygroup.com`), Sitemap/Robots Canónicos y Correo Certificado tipo Mailsuite (Ley 527 de 1999) (v34.43 - 34.43.0)
+
+#### 1. Solicitud / Alcance
+- Configurar redirección `301` de `vecy-bienes-raices.vercel.app` hacia `https://vecygroup.com/:path*` preservando `/api/*` y `/uploads/*`, unificar `/sitemap.xml` y `/robots.txt` exclusivamente bajo `https://vecygroup.com`, e implementar un sistema propio de correo certificado y rastreo tipo Mailsuite con constancia PDF bajo la Ley 527 de 1999 sin tocar `server/_core/whatsapp-match.ts`.
+
+#### 2. Acciones Ejecutadas en `v34.43`
+1. **Redirección 301 y SEO Canónico (`vercel.json`, `seoService.ts`, `index.ts`, `robots.txt`, `sitemap.xml`, `client/index.html`):** regla `301` en `vercel.json` con lookahead negativo para `/api` y `/uploads`, servicio dinámico y estático de `/robots.txt` y `/sitemap.xml` exclusivamente sobre `https://vecygroup.com`, y actualización de meta tags canónicos/OpenGraph/JSON-LD en `client/index.html`.
+2. **Migración `0018` y Rastreo/Integridad SHA-256 (`drizzle/0018_certified_email_tracking_ley527.sql`, `drizzle/schema.ts`, `emailAutomationEngine.ts`):** columnas de rastreo/integridad en `email_messages`, nueva tabla `email_tracked_links`, píxel `1x1` PNG (`/api/email/track/open/:token.png`), redirección rastreada (`/api/email/track/click/:token`), sellos `America/Bogota`, IP, User-Agent, hashes `SHA-256` (`content_sha256` y `evidence_sha256` con remitente `@vecygroup.com`) y notificación opcional en tiempo real al abrir (`notifyOnOpen`).
+3. **Constancia Probatoria PDF Ley 527 y UI (`emailContractService.ts`, `emailAutomation.ts`, `index.ts`, `EmailAutomationPanel.tsx`, `LeadDetailDrawer.tsx`):** implementado `createCertifiedEmailEvidencePdf` con QR hacia `/api/email/certificate/verify/:cuv`, endpoint `/api/email/certificate/:messageId/pdf`, procedimiento `getCertificatePdf` y botones de descarga directa + columnas/badges de rastreo y alertas en vivo en el CRM.
+4. **Pruebas y Gobernanza:** creada suite offline `server/__tests__/certifiedEmailAndSeoV34_43.test.ts` (`$0 COP`), semilla `seed-seo-301-vecygroup-correo-certificado-ley527-v34-43`, **Suite 229** en `regression.test.ts` y bump a `v34.43` (`34.43.0`).
+
 ### 📅 [2026-11-22] — JanIA v34.42: Auditoría `Navbar.tsx` / OAuth `vecygroup.com`, Eliminación Total de Parpadeo `/` -> `/admin` y Confirmación Supabase `Site URL` (v34.42 - 34.42.0)
 
 #### 1. Solicitud de Eduardo A. Rivera y Diagnóstico Confirmado en Vivo

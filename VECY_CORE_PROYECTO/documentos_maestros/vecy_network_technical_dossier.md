@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.43 — Noviembre 2026
+- **Redirección 301 SEO (`Vercel -> vecygroup.com`), Sitemap/Robots Canónicos y Correo Certificado tipo Mailsuite Ley 527 de 1999 (`v34.43.0`):**
+  - `vercel.json`, `server/_core/seoService.ts`, `server/_core/index.ts`, `client/public/robots.txt`, `client/public/sitemap.xml`, `client/index.html`: redirección permanente `301` desde `vecy-bienes-raices.vercel.app` hacia `https://vecygroup.com/:path*` preservando `/api/*` y `/uploads/*`; `/robots.txt` y `/sitemap.xml` servidos exclusivamente bajo `https://vecygroup.com` (con publicaciones activas `/property/:id`).
+  - `drizzle/0018_certified_email_tracking_ley527.sql`, `drizzle/schema.ts`, `server/_core/emailAutomationEngine.ts`, `server/_core/emailContractService.ts`, `server/routers/emailAutomation.ts`, `EmailAutomationPanel.tsx`, `LeadDetailDrawer.tsx`: rastreo de aperturas (`1x1` PNG) y clics en enlaces, IP/User-Agent y marca `America/Bogota`, hashes `SHA-256` (`content_sha256` con remitente `@vecygroup.com` y `evidence_sha256`), alertas opcionales de lectura en tiempo real y Constancia Probatoria PDF descargable con código QR bajo Ley 527 de 1999 (`createCertifiedEmailEvidencePdf`).
+  - Gobernanza y Pruebas: `certifiedEmailAndSeoV34_43.test.ts` (`$0 COP`), semilla `seed-seo-301-vecygroup-correo-certificado-ley527-v34-43`, **Suite 229** en `regression.test.ts`, bump `v34.43` (`34.43.0`) y cero cambios en `whatsapp-match.ts`.
+
 ### 🔖 v34.42 — Noviembre 2026
 - **Auditoría `Navbar.tsx` / OAuth `vecygroup.com`, Compuerta Anti-Parpadeo `/` -> `/admin` y Confirmación Supabase `Site URL` (`v34.42.0`):**
   - Confirmado que `Navbar.tsx` navega internamente (`getLoginUrl()`), `.env` y Nginx `:443` del VPS apuntan a `vecygroup.com`, y que el salto hacia Vercel proviene de `Site URL = https://vecy-bienes-raices.vercel.app` en el panel de Supabase (`HTTP/2 303` verificado en `/auth/v1/callback`).

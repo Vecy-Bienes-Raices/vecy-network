@@ -1013,6 +1013,24 @@ export const emailMessages = pgTable("email_messages", {
   errorMessage: text("error_message"),
   aiGenerated: boolean("ai_generated").default(false).notNull(),
   metadata: jsonb("metadata"),
+  trackingToken: varchar("tracking_token", { length: 64 }),
+  certificateCode: varchar("certificate_code", { length: 80 }),
+  contentSha256: varchar("content_sha256", { length: 64 }),
+  evidenceSha256: varchar("evidence_sha256", { length: 64 }),
+  attachmentsJson: jsonb("attachments_json").default([]).notNull(),
+  openCount: integer("open_count").default(0).notNull(),
+  firstOpenedAt: timestamp("first_opened_at"),
+  lastOpenedAt: timestamp("last_opened_at"),
+  lastOpenIp: varchar("last_open_ip", { length: 64 }),
+  lastOpenUserAgent: text("last_open_user_agent"),
+  clickCount: integer("click_count").default(0).notNull(),
+  firstClickedAt: timestamp("first_clicked_at"),
+  lastClickedAt: timestamp("last_clicked_at"),
+  lastClickIp: varchar("last_click_ip", { length: 64 }),
+  lastClickUserAgent: text("last_click_user_agent"),
+  notifyOnOpen: boolean("notify_on_open").default(false).notNull(),
+  openNotifiedAt: timestamp("open_notified_at"),
+  trackingEventsJson: jsonb("tracking_events_json").default([]).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
@@ -1024,6 +1042,27 @@ export const emailMessages = pgTable("email_messages", {
 
 export type EmailMessage = typeof emailMessages.$inferSelect;
 export type InsertEmailMessage = typeof emailMessages.$inferInsert;
+
+export const emailTrackedLinks = pgTable("email_tracked_links", {
+  id: serial("id").primaryKey(),
+  emailMessageId: integer("email_message_id")
+    .notNull()
+    .references(() => emailMessages.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 64 }).notNull(),
+  targetUrl: text("target_url").notNull(),
+  clickCount: integer("click_count").default(0).notNull(),
+  firstClickedAt: timestamp("first_clicked_at"),
+  lastClickedAt: timestamp("last_clicked_at"),
+  lastIp: varchar("last_ip", { length: 64 }),
+  lastUserAgent: text("last_user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_email_tracked_links_token").on(table.token),
+  index("idx_email_tracked_links_msg_id").on(table.emailMessageId),
+]);
+
+export type EmailTrackedLink = typeof emailTrackedLinks.$inferSelect;
+export type InsertEmailTrackedLink = typeof emailTrackedLinks.$inferInsert;
 
 /**
  * Canales privados de JanIA por suscripción (Web Widget RAG + WhatsApp Cloud API BYO-Number) — PASO 5 (v34.41)

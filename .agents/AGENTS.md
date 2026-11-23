@@ -184,7 +184,18 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.42 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.43 — Noviembre 2026
+
+### Novedades v34.43 (Redirección 301 SEO `Vercel -> vecygroup.com`, `/sitemap.xml` & `/robots.txt` Canónicos y Correo Certificado tipo Mailsuite Ley 527 de 1999):
+- **SEO & Redirección 301 (`vercel.json`, `server/_core/seoService.ts`, `server/_core/index.ts`, `client/public/robots.txt`, `client/public/sitemap.xml`, `client/index.html`):**
+  1. `vercel.json` redirige permanentemente (`301`) `vecy-bienes-raices.vercel.app` -> `https://vecygroup.com/:path*` preservando `/api/*` y `/uploads/*`.
+  2. `/robots.txt` y `/sitemap.xml` servidos con todas las URLs canónicas exclusivamente en `https://vecygroup.com` (incluyendo publicaciones activas `/property/:id`).
+- **Correo Certificado tipo Mailsuite Ley 527 de 1999 (`drizzle/0018_certified_email_tracking_ley527.sql`, `drizzle/schema.ts`, `emailAutomationEngine.ts`, `emailContractService.ts`, `routers/emailAutomation.ts`, `server/_core/index.ts`, `EmailAutomationPanel.tsx`, `LeadDetailDrawer.tsx`):**
+  1. Rastreo de aperturas (`/api/email/track/open/:token.png` píxel PNG 1x1) y clics (`/api/email/track/click/:token`) con sellos `America/Bogota`, IP y User-Agent, además de alertas opcionales en tiempo real (`notifyOnOpen` y polling en vivo).
+  2. Hash `SHA-256` de contenido (`@vecygroup.com`, destinatario, asunto, contenido, adjuntos y sello de envío) + hash de cadena probatoria + Constancia Probatoria PDF descargable Ley 527 (`createCertifiedEmailEvidencePdf`) con código QR y verificación pública `/api/email/certificate/verify/:cuv`.
+- **Gobernanza y Validación:** Semilla `seed-seo-301-vecygroup-correo-certificado-ley527-v34-43`, `certifiedEmailAndSeoV34_43.test.ts`, **Suite 229** en `regression.test.ts`, bump `v34.43` (`34.43.0`), cero cambios en `whatsapp-match.ts`.
+
+## 🔖 VERSIÓN ANTERIOR: v34.42 — Noviembre 2026
 
 ### Novedades v34.42 (Auditoría `Navbar.tsx` / OAuth `vecygroup.com`, Compuerta Anti-Parpadeo `/` -> `/admin` y Verificación Supabase `Site URL`):
 - **Auditoría Confirmada (`Navbar.tsx`, `.env`, Nginx, Supabase Live Probe):**

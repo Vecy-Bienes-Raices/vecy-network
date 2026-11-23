@@ -3638,7 +3638,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const indexHtml = fs.readFileSync(indexPath, "utf-8");
       expect(indexHtml).toContain('<html lang="es">');
       expect(indexHtml).toContain('name="google-site-verification" content="k2GZoVOfwT26BtxH5lFwOt38KbO4NBHCBM3Lrb4wutE"');
-      expect(indexHtml).toContain('https://vecy-bienes-raices.vercel.app/sitemap.xml');
+      expect(indexHtml).toMatch(/https:\/\/(?:vecygroup\.com|vecy-bienes-raices\.vercel\.app)\/sitemap\.xml/);
       expect(indexHtml).toContain('"@type": ["RealEstateAgent", "Organization"]');
       expect(indexHtml).toContain('+573166569719');
 
@@ -3646,15 +3646,15 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const robotsPath = path.resolve(__dirname, "../../client/public/robots.txt");
       expect(fs.existsSync(robotsPath)).toBe(true);
       const robotsContent = fs.readFileSync(robotsPath, "utf-8");
-      expect(robotsContent).toContain("Sitemap: https://vecy-bienes-raices.vercel.app/sitemap.xml");
+      expect(robotsContent).toMatch(/Sitemap:\s*https:\/\/(?:vecygroup\.com|vecy-bienes-raices\.vercel\.app)\/sitemap\.xml/);
 
       // Validar sitemap.xml
       const sitemapPath = path.resolve(__dirname, "../../client/public/sitemap.xml");
       expect(fs.existsSync(sitemapPath)).toBe(true);
       const sitemapContent = fs.readFileSync(sitemapPath, "utf-8");
-      expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/");
-      expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/ofertas");
-      expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/demandas");
+      expect(sitemapContent).toMatch(/https:\/\/(?:vecygroup\.com|vecy-bienes-raices\.vercel\.app)\//);
+      expect(sitemapContent).toMatch(/https:\/\/(?:vecygroup\.com|vecy-bienes-raices\.vercel\.app)\/ofertas/);
+      expect(sitemapContent).toMatch(/https:\/\/(?:vecygroup\.com|vecy-bienes-raices\.vercel\.app)\/demandas/);
     });
 
     it("Doctrina v32.86: Portafolio de Servicios de Autor, Bóveda JanIA Express y Protección de Dirección", async () => {
@@ -16645,9 +16645,68 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-auth-zero-flicker-vecygroup-navbar-oauth-v34-42",
       );
       expect(seed42?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.42");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:4[2-9]|[5-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.42.0");
+      expect(pkg.version).toMatch(/^34\.(?:4[2-9]|[5-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 229: REDIRECCIÓN 301 SEO, SITEMAP/ROBOTS vecygroup.com Y CORREO CERTIFICADO LEY 527 (v34.43)
+  // =========================================================================
+  describe("Suite 229: Redirección 301 SEO (Vercel -> vecygroup.com), Sitemap/Robots y Correo Certificado Ley 527 (v34.43)", () => {
+    it("1. Verifica migración 0018, esquema emailTrackedLinks, vercel.json 301, seoService y endpoints REST", async () => {
+      const fs = await import("fs");
+
+      const vercelCfg = JSON.parse(fs.readFileSync("vercel.json", "utf-8"));
+      expect(vercelCfg.redirects?.[0]?.statusCode).toBe(301);
+      expect(vercelCfg.redirects?.[0]?.destination).toBe("https://vecygroup.com/:path*");
+
+      expect(fs.existsSync("server/_core/seoService.ts")).toBe(true);
+      const mig0018 = fs.readFileSync("drizzle/0018_certified_email_tracking_ley527.sql", "utf-8");
+      expect(mig0018).toContain('ADD COLUMN IF NOT EXISTS "tracking_token"');
+      expect(mig0018).toContain('ADD COLUMN IF NOT EXISTS "content_sha256"');
+      expect(mig0018).toContain('ADD COLUMN IF NOT EXISTS "evidence_sha256"');
+      expect(mig0018).toContain('CREATE TABLE IF NOT EXISTS "email_tracked_links"');
+
+      const schemaSrc = fs.readFileSync("drizzle/schema.ts", "utf-8");
+      expect(schemaSrc).toContain("export const emailTrackedLinks");
+      expect(schemaSrc).toContain("contentSha256");
+      expect(schemaSrc).toContain("evidenceSha256");
+
+      const indexSrc = fs.readFileSync("server/_core/index.ts", "utf-8");
+      expect(indexSrc).toContain("app.get('/robots.txt'");
+      expect(indexSrc).toContain("app.get('/sitemap.xml'");
+      expect(indexSrc).toContain("app.get('/api/email/track/open/:token'");
+      expect(indexSrc).toContain("app.get('/api/email/track/click/:token'");
+      expect(indexSrc).toContain("app.get('/api/email/certificate/:messageId/pdf'");
+      expect(indexSrc).toContain("app.get('/api/email/certificate/verify/:cuv'");
+    });
+
+    it("2. Verifica botones Constancia PDF Ley 527 / alertas en UI, semilla v34.43 y versión oficial v34.43 (34.43.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      const routerSrc = fs.readFileSync("server/routers/emailAutomation.ts", "utf-8");
+      expect(routerSrc).toContain("getCertificatePdf: protectedProcedure");
+      expect(routerSrc).toContain("toggleNotifyOnOpen: protectedProcedure");
+
+      const panelSrc = fs.readFileSync("client/src/components/crm/EmailAutomationPanel.tsx", "utf-8");
+      expect(panelSrc).toContain("PDF Ley 527");
+      expect(panelSrc).toContain("Alertas en vivo de apertura");
+
+      const drawerSrc = fs.readFileSync("client/src/components/crm/LeadDetailDrawer.tsx", "utf-8");
+      expect(drawerSrc).toContain("Constancia PDF (Ley 527)");
+      expect(drawerSrc).toContain("notifyOnOpen");
+
+      const seed43 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-seo-301-vecygroup-correo-certificado-ley527-v34-43",
+      );
+      expect(seed43?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.43");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.43.0");
     });
   });
 });

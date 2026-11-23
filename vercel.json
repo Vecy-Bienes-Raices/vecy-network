@@ -1,4 +1,17 @@
 {
+  "redirects": [
+    {
+      "source": "/:path((?!api(?:/|$)|uploads(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "vecy-bienes-raices.vercel.app"
+        }
+      ],
+      "destination": "https://vecygroup.com/:path*",
+      "statusCode": 301
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",

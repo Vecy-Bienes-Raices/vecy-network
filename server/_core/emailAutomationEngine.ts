@@ -10,17 +10,20 @@ import {
   emailSequenceEnrollments,
   emailSequences,
   emailTemplates,
+  emailTrackedLinks,
   leads,
   properties,
   propertyMatches,
   requirements,
   users,
   type EmailAccount,
+  type EmailMessage,
   type EmailSequence,
   type EmailSequenceEnrollment,
   type Lead,
   type Property,
 } from "../../drizzle/schema";
+import type { CertifiedEmailEvidencePayload } from "./emailContractService";
 import { ENV } from "./env";
 import { invokeLLM } from "./llm";
 import { formatShortGreetingName } from "./nameAndGenderResolver";
@@ -39,6 +42,204 @@ import {
 } from "../../shared/crm";
 
 const ALLOWED_SMTP_PORTS = new Set([25, 465, 587, 2525]);
+
+export const CERTIFIED_SENDER_DEFAULT =
+  process.env.SMTP_CERTIFIED_FROM_EMAIL || "notificaciones@vecygroup.com";
+
+export const TRANSPARENT_1X1_PNG_BUFFER = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  "base64",
+);
+
+export interface EmailAttachmentDigest {
+  filename: string;
+  contentType?: string;
+  sizeBytes?: number;
+  sha256?: string;
+}
+
+export interface EmailTrackingEvent {
+  type: "open" | "click";
+  occurredAtIso: string;
+  occurredAtBogota: string;
+  ip?: string | null;
+  userAgent?: string | null;
+  targetUrl?: string | null;
+}
+
+export function formatBogotaTimestamp(date?: Date | string | null): string {
+  if (!date) return "N/D";
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "N/D";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "00";
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} COT (America/Bogota)`;
+}
+
+function formatBogotaCompactDate(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "00";
+  return `${get("year")}${get("month")}${get("day")}`;
+}
+
+export function generateTrackingToken(): string {
+  return crypto.randomBytes(24).toString("hex");
+}
+
+export function generateEmailCertificateCode(contentSha256: string, sentAt: Date): string {
+  const safeDate = Number.isNaN(sentAt.getTime()) ? new Date() : sentAt;
+  const datePart = formatBogotaCompactDate(safeDate);
+  const hashPart = String(contentSha256 || "").slice(0, 8).toUpperCase().padEnd(8, "0");
+  return `VECY-MAIL-${datePart}-${hashPart}`;
+}
+
+export function computeCertifiedEmailHash(input: {
+  fromEmail: string;
+  toEmail: string;
+  replyToEmail?: string | null;
+  subject: string;
+  bodyHtml: string;
+  bodyText?: string | null;
+  attachments?: EmailAttachmentDigest[];
+  sentAt: Date | string;
+}): string {
+  const sentDate = input.sentAt instanceof Date ? input.sentAt : new Date(input.sentAt);
+  const safeSentDate = Number.isNaN(sentDate.getTime()) ? new Date(0) : sentDate;
+  const normalizedAttachments = [...(input.attachments || [])]
+    .map((a) => ({
+      filename: String(a.filename || "").trim(),
+      contentType: String(a.contentType || "application/octet-stream").trim().toLowerCase(),
+      sizeBytes: Number(a.sizeBytes || 0),
+      sha256: String(a.sha256 || "").trim().toLowerCase(),
+    }))
+    .sort((a, b) => a.filename.localeCompare(b.filename));
+
+  const canonicalPayload = JSON.stringify({
+    standard: "LEY-527-1999-COLOMBIA",
+    fromEmail: String(input.fromEmail || "").trim().toLowerCase(),
+    toEmail: String(input.toEmail || "").trim().toLowerCase(),
+    replyToEmail: String(input.replyToEmail || "").trim().toLowerCase(),
+    subject: String(input.subject || ""),
+    bodyHtml: String(input.bodyHtml || ""),
+    bodyText: String(input.bodyText || ""),
+    attachments: normalizedAttachments,
+    sentAtIso: safeSentDate.toISOString(),
+    sentAtBogota: formatBogotaTimestamp(safeSentDate),
+  });
+
+  return crypto.createHash("sha256").update(canonicalPayload, "utf8").digest("hex");
+}
+
+export function computeEvidenceChainHash(input: {
+  contentSha256: string;
+  certificateCode: string;
+  providerMessageId?: string | null;
+  sentAtIso: string;
+  firstOpenedAtIso?: string | null;
+  lastOpenedAtIso?: string | null;
+  openCount: number;
+  firstClickedAtIso?: string | null;
+  lastClickedAtIso?: string | null;
+  clickCount: number;
+  eventsCount: number;
+}): string {
+  const canonicalEvidence = JSON.stringify({
+    standard: "LEY-527-1999-CADENA-PROBATORIA",
+    contentSha256: String(input.contentSha256 || ""),
+    certificateCode: String(input.certificateCode || ""),
+    providerMessageId: String(input.providerMessageId || ""),
+    sentAtIso: String(input.sentAtIso || ""),
+    firstOpenedAtIso: input.firstOpenedAtIso || null,
+    lastOpenedAtIso: input.lastOpenedAtIso || null,
+    openCount: Number(input.openCount || 0),
+    firstClickedAtIso: input.firstClickedAtIso || null,
+    lastClickedAtIso: input.lastClickedAtIso || null,
+    clickCount: Number(input.clickCount || 0),
+    eventsCount: Number(input.eventsCount || 0),
+  });
+  return crypto.createHash("sha256").update(canonicalEvidence, "utf8").digest("hex");
+}
+
+export function instrumentEmailHtmlForTracking(params: {
+  html: string;
+  openTrackingToken: string;
+  baseUrl?: string;
+  createLinkToken?: (targetUrl: string) => string;
+}): { html: string; trackedLinks: Array<{ token: string; targetUrl: string }> } {
+  const cleanBase = (
+    params.baseUrl ||
+    ENV.publicBaseUrl ||
+    ENV.appUrl ||
+    "https://vecygroup.com"
+  )
+    .trim()
+    .replace(/\/+$/, "");
+
+  const tokenByUrl = new Map<string, string>();
+  const trackedLinks: Array<{ token: string; targetUrl: string }> = [];
+
+  const rewrittenHtml = String(params.html || "").replace(
+    /<a\b([^>]*?)\bhref=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
+    (fullMatch, beforeAttr: string, quote: string, rawUrl: string, afterAttr: string) => {
+      if (rawUrl.includes("/api/email/track/")) {
+        return fullMatch;
+      }
+      const cleanUrl = rawUrl.replace(/&amp;/g, "&").trim();
+      let token = tokenByUrl.get(cleanUrl);
+      if (!token) {
+        token = params.createLinkToken
+          ? params.createLinkToken(cleanUrl)
+          : generateTrackingToken();
+        tokenByUrl.set(cleanUrl, token);
+        trackedLinks.push({ token, targetUrl: cleanUrl });
+      }
+      const trackedUrl = `${cleanBase}/api/email/track/click/${encodeURIComponent(token)}`;
+      return `<a${beforeAttr} href=${quote}${trackedUrl}${quote}${afterAttr}>`;
+    },
+  );
+
+  const pixelUrl = `${cleanBase}/api/email/track/open/${encodeURIComponent(params.openTrackingToken)}.png`;
+  const pixelImg = `<img src="${pixelUrl}" alt="" width="1" height="1" style="display:block;width:1px;height:1px;opacity:0;border:0;overflow:hidden;" />`;
+
+  const finalHtml = /<\/body>/i.test(rewrittenHtml)
+    ? rewrittenHtml.replace(/<\/body>/i, `${pixelImg}\n</body>`)
+    : `${rewrittenHtml}\n${pixelImg}`;
+
+  return {
+    html: finalHtml,
+    trackedLinks,
+  };
+}
+
+export function extractClientIpFromHeaders(
+  headers: Record<string, string | string[] | undefined>,
+  fallbackIp?: string | null,
+): string | null {
+  const cfIp = headers["cf-connecting-ip"];
+  const xff = headers["x-forwarded-for"];
+  const xri = headers["x-real-ip"];
+  const pickFirst = (val?: string | string[]) => {
+    if (!val) return "";
+    const str = Array.isArray(val) ? val[0] : val;
+    return String(str || "").split(",")[0].trim();
+  };
+  const resolved = pickFirst(cfIp) || pickFirst(xff) || pickFirst(xri) || String(fallbackIp || "").trim();
+  return resolved ? resolved.slice(0, 64) : null;
+}
 
 function deriveAes256Key(masterSecret?: string): Buffer {
   const seed =
@@ -540,6 +741,7 @@ export interface ResolvedSendingIdentity {
   mode: "vecy_relay" | "custom_smtp";
   displayName: string;
   fromEmail: string;
+  certifiedFromEmail: string;
   replyToEmail: string;
   signatureHtml: string | null;
   agencyName: string;
@@ -558,6 +760,11 @@ export async function resolveSendingIdentityForUser(
 ): Promise<ResolvedSendingIdentity> {
   const db = await getDb();
   const defaultRelayUser = process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || "vecybienesraices@gmail.com";
+  const certifiedRelayEmail =
+    process.env.SMTP_CERTIFIED_FROM_EMAIL ||
+    (process.env.SMTP_FROM_EMAIL?.toLowerCase().includes("@vecygroup.com")
+      ? process.env.SMTP_FROM_EMAIL
+      : CERTIFIED_SENDER_DEFAULT);
 
   if (!db) {
     return {
@@ -565,6 +772,7 @@ export async function resolveSendingIdentityForUser(
       mode: "vecy_relay",
       displayName: "Vecy Bienes Raíces",
       fromEmail: defaultRelayUser,
+      certifiedFromEmail: certifiedRelayEmail,
       replyToEmail: defaultRelayUser,
       signatureHtml: null,
       agencyName: "Vecy Bienes Raíces",
@@ -614,11 +822,13 @@ export async function resolveSendingIdentityForUser(
     if (!safety.valid) {
       throw new Error(safety.reason || "Configuración SMTP propia bloqueada por seguridad.");
     }
+    const customFrom = accountRow.fromEmail || accountRow.smtpUser;
     return {
       accountId: accountRow.id,
       mode: "custom_smtp",
       displayName: accountRow.displayName || agencyName,
-      fromEmail: accountRow.fromEmail || accountRow.smtpUser,
+      fromEmail: customFrom,
+      certifiedFromEmail: customFrom,
       replyToEmail: fallbackReplyTo,
       signatureHtml: accountRow.signatureHtml ?? null,
       agencyName,
@@ -638,6 +848,7 @@ export async function resolveSendingIdentityForUser(
     mode: "vecy_relay",
     displayName: accountRow?.displayName || userRow?.name || agencyName,
     fromEmail: defaultRelayUser,
+    certifiedFromEmail: certifiedRelayEmail,
     replyToEmail: fallbackReplyTo,
     signatureHtml: accountRow?.signatureHtml ?? null,
     agencyName,
@@ -742,6 +953,9 @@ export interface SendCrmEmailInput {
   bodyText?: string;
   scheduledFor?: Date | null;
   aiGenerated?: boolean;
+  notifyOnOpen?: boolean;
+  attachments?: EmailAttachmentDigest[];
+  baseUrl?: string;
   metadata?: Record<string, unknown>;
   skipThrowOnQuota?: boolean;
   transportSender?: TransportSenderFn;
@@ -787,7 +1001,7 @@ export async function sendOrQueueCrmEmail(input: SendCrmEmailInput) {
         enrollmentId: input.enrollmentId ?? null,
         direction: "outbound",
         toEmail: input.toEmail.trim().toLowerCase(),
-        fromEmail: identity.fromEmail,
+        fromEmail: identity.certifiedFromEmail,
         replyToEmail: identity.replyToEmail,
         subject: input.subject.slice(0, 300),
         bodyHtml: input.bodyHtml,
@@ -796,6 +1010,8 @@ export async function sendOrQueueCrmEmail(input: SendCrmEmailInput) {
         errorMessage: quotaCheck.reason || "Cuota mensual de correos agotada.",
         scheduledFor: input.scheduledFor ?? null,
         aiGenerated: Boolean(input.aiGenerated),
+        notifyOnOpen: Boolean(input.notifyOnOpen),
+        attachmentsJson: input.attachments ?? [],
         metadata: input.metadata ?? null,
       })
       .returning();
@@ -816,6 +1032,26 @@ export async function sendOrQueueCrmEmail(input: SendCrmEmailInput) {
   const plainText = input.bodyText?.trim() || htmlToPlainText(input.bodyHtml);
 
   if (isFutureSchedule) {
+    const trackingToken = generateTrackingToken();
+    const contentSha256 = computeCertifiedEmailHash({
+      fromEmail: identity.certifiedFromEmail,
+      toEmail: input.toEmail.trim().toLowerCase(),
+      replyToEmail: identity.replyToEmail,
+      subject: input.subject.slice(0, 300),
+      bodyHtml: wrappedHtml,
+      bodyText: plainText,
+      attachments: input.attachments ?? [],
+      sentAt: input.scheduledFor!,
+    });
+    const certificateCode = generateEmailCertificateCode(contentSha256, input.scheduledFor!);
+    const evidenceSha256 = computeEvidenceChainHash({
+      contentSha256,
+      certificateCode,
+      sentAtIso: input.scheduledFor!.toISOString(),
+      openCount: 0,
+      clickCount: 0,
+      eventsCount: 0,
+    });
     const [queuedMsg] = await db
       .insert(emailMessages)
       .values({
@@ -827,7 +1063,7 @@ export async function sendOrQueueCrmEmail(input: SendCrmEmailInput) {
         enrollmentId: input.enrollmentId ?? null,
         direction: "outbound",
         toEmail: input.toEmail.trim().toLowerCase(),
-        fromEmail: identity.fromEmail,
+        fromEmail: identity.certifiedFromEmail,
         replyToEmail: identity.replyToEmail,
         subject: input.subject.slice(0, 300),
         bodyHtml: wrappedHtml,
@@ -835,6 +1071,12 @@ export async function sendOrQueueCrmEmail(input: SendCrmEmailInput) {
         status: "queued",
         scheduledFor: input.scheduledFor!,
         aiGenerated: Boolean(input.aiGenerated),
+        notifyOnOpen: Boolean(input.notifyOnOpen),
+        attachmentsJson: input.attachments ?? [],
+        trackingToken,
+        certificateCode,
+        contentSha256,
+        evidenceSha256,
         metadata: input.metadata ?? null,
       })
       .returning();
@@ -857,6 +1099,9 @@ export async function sendOrQueueCrmEmail(input: SendCrmEmailInput) {
     wrappedHtml,
     plainText,
     aiGenerated: Boolean(input.aiGenerated),
+    notifyOnOpen: Boolean(input.notifyOnOpen),
+    attachments: input.attachments ?? [],
+    baseUrl: input.baseUrl,
     metadata: input.metadata ?? null,
     transportSender: input.transportSender,
   });
@@ -875,6 +1120,9 @@ async function dispatchPreparedEmailMessage(params: {
   wrappedHtml: string;
   plainText: string;
   aiGenerated: boolean;
+  notifyOnOpen?: boolean;
+  attachments?: EmailAttachmentDigest[];
+  baseUrl?: string;
   metadata: Record<string, unknown> | null;
   transportSender?: TransportSenderFn;
 }) {
@@ -883,29 +1131,65 @@ async function dispatchPreparedEmailMessage(params: {
 
   const sender = params.transportSender || defaultNodemailerSend;
   const now = new Date();
+  const trackingToken = generateTrackingToken();
+  const cleanTo = params.toEmail.trim().toLowerCase();
+  const attachments = params.attachments ?? [];
+
+  const contentSha256 = computeCertifiedEmailHash({
+    fromEmail: params.identity.certifiedFromEmail,
+    toEmail: cleanTo,
+    replyToEmail: params.identity.replyToEmail,
+    subject: params.subject,
+    bodyHtml: params.wrappedHtml,
+    bodyText: params.plainText,
+    attachments,
+    sentAt: now,
+  });
+  const certificateCode = generateEmailCertificateCode(contentSha256, now);
+  const instrumented = instrumentEmailHtmlForTracking({
+    html: params.wrappedHtml,
+    openTrackingToken: trackingToken,
+    baseUrl: params.baseUrl,
+  });
 
   try {
     const sendResult = await sender(
       {
         from: params.identity.fromEmail,
-        to: params.toEmail,
+        to: cleanTo,
         replyTo: params.identity.replyToEmail,
         subject: params.subject,
-        html: params.wrappedHtml,
+        html: instrumented.html,
         text: params.plainText,
       },
       params.identity,
     );
+
+    const evidenceSha256 = computeEvidenceChainHash({
+      contentSha256,
+      certificateCode,
+      providerMessageId: sendResult.messageId,
+      sentAtIso: now.toISOString(),
+      openCount: 0,
+      clickCount: 0,
+      eventsCount: 0,
+    });
 
     let savedMsg;
     if (params.existingMessageId) {
       const [updated] = await db
         .update(emailMessages)
         .set({
+          fromEmail: params.identity.certifiedFromEmail,
           status: "sent",
           providerMessageId: sendResult.messageId,
           sentAt: now,
           errorMessage: null,
+          trackingToken,
+          certificateCode,
+          contentSha256,
+          evidenceSha256,
+          attachmentsJson: attachments,
           updatedAt: now,
         })
         .where(eq(emailMessages.id, params.existingMessageId))
@@ -922,8 +1206,8 @@ async function dispatchPreparedEmailMessage(params: {
           sequenceId: params.sequenceId,
           enrollmentId: params.enrollmentId,
           direction: "outbound",
-          toEmail: params.toEmail,
-          fromEmail: params.identity.fromEmail,
+          toEmail: cleanTo,
+          fromEmail: params.identity.certifiedFromEmail,
           replyToEmail: params.identity.replyToEmail,
           subject: params.subject,
           bodyHtml: params.wrappedHtml,
@@ -932,10 +1216,27 @@ async function dispatchPreparedEmailMessage(params: {
           providerMessageId: sendResult.messageId,
           sentAt: now,
           aiGenerated: params.aiGenerated,
+          notifyOnOpen: Boolean(params.notifyOnOpen),
+          attachmentsJson: attachments,
+          trackingToken,
+          certificateCode,
+          contentSha256,
+          evidenceSha256,
           metadata: params.metadata,
         })
         .returning();
       savedMsg = inserted;
+    }
+
+    if (savedMsg?.id && instrumented.trackedLinks.length > 0) {
+      await db.insert(emailTrackedLinks).values(
+        instrumented.trackedLinks.map((lnk) => ({
+          emailMessageId: savedMsg.id,
+          token: lnk.token,
+          targetUrl: lnk.targetUrl,
+          clickCount: 0,
+        })),
+      );
     }
 
     await incrementUsageQuota(params.userId, "emailCampaignsUsed", 1);
@@ -954,11 +1255,13 @@ async function dispatchPreparedEmailMessage(params: {
         agentId: params.userId,
         agencyId: params.agencyId,
         activityType: "email",
-        title: `Correo enviado: ${params.subject}`.slice(0, 250),
+        title: `Correo certificado enviado: ${params.subject}`.slice(0, 250),
         body: params.plainText.slice(0, 1200),
         metadata: {
           emailMessageId: savedMsg?.id ?? null,
-          toEmail: params.toEmail,
+          certificateCode,
+          contentSha256,
+          toEmail: cleanTo,
           aiGenerated: params.aiGenerated,
           sequenceId: params.sequenceId,
         },
@@ -994,8 +1297,8 @@ async function dispatchPreparedEmailMessage(params: {
           sequenceId: params.sequenceId,
           enrollmentId: params.enrollmentId,
           direction: "outbound",
-          toEmail: params.toEmail,
-          fromEmail: params.identity.fromEmail,
+          toEmail: cleanTo,
+          fromEmail: params.identity.certifiedFromEmail,
           replyToEmail: params.identity.replyToEmail,
           subject: params.subject,
           bodyHtml: params.wrappedHtml,
@@ -1003,6 +1306,8 @@ async function dispatchPreparedEmailMessage(params: {
           status: "failed",
           errorMessage: errText,
           aiGenerated: params.aiGenerated,
+          notifyOnOpen: Boolean(params.notifyOnOpen),
+          attachmentsJson: attachments,
           metadata: params.metadata,
         })
         .returning();
@@ -1342,6 +1647,10 @@ export async function processDueEmailAutomations(options?: {
       wrappedHtml: msg.bodyHtml,
       plainText: msg.bodyText || htmlToPlainText(msg.bodyHtml),
       aiGenerated: msg.aiGenerated,
+      notifyOnOpen: Boolean(msg.notifyOnOpen),
+      attachments: Array.isArray(msg.attachmentsJson)
+        ? (msg.attachmentsJson as EmailAttachmentDigest[])
+        : [],
       metadata: (msg.metadata as Record<string, unknown>) || null,
       transportSender: options?.transportSender,
     });
@@ -1651,4 +1960,403 @@ export async function handleHighMatchEmailAlert(matchId: number): Promise<{
   }
 
   return { enrolledLeads };
+}
+
+async function dispatchOpenNotificationAlert(params: {
+  msg: EmailMessage;
+  eventType: "open" | "click";
+  occurredAt: Date;
+  ip?: string | null;
+  targetUrl?: string | null;
+  alertSender?: TransportSenderFn;
+}) {
+  try {
+    if (process.env.NODE_ENV === "test" && !params.alertSender) {
+      return;
+    }
+    const db = await getDb();
+    let targetEmail = params.msg.replyToEmail || "";
+    if (!targetEmail && db) {
+      const [u] = await db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, params.msg.userId))
+        .limit(1);
+      targetEmail = u?.email || "";
+    }
+    if (!isDeliverableEmail(targetEmail)) return;
+
+    const identity = await resolveSendingIdentityForUser(params.msg.userId);
+    const bogotaStr = formatBogotaTimestamp(params.occurredAt);
+    const actionLabel =
+      params.eventType === "click"
+        ? `hizo clic en un enlace (${params.targetUrl || "enlace"})`
+        : "abrió tu correo certificado";
+
+    const alertHtml = wrapInBrandedEmailShell({
+      bodyHtml: `<p>Hola,</p><p><strong>${escapeHtml(params.msg.toEmail)}</strong> ${escapeHtml(actionLabel)}.</p><p><strong>Asunto:</strong> ${escapeHtml(params.msg.subject)}<br/><strong>Fecha y hora:</strong> ${escapeHtml(bogotaStr)}<br/><strong>IP registrada:</strong> ${escapeHtml(params.ip || "N/D")}<br/><strong>CUV Ley 527:</strong> ${escapeHtml(params.msg.certificateCode || "N/D")}</p>`,
+      brandName: identity.agencyName,
+      primaryColor: identity.primaryColor,
+    });
+    const sender = params.alertSender || defaultNodemailerSend;
+    await sender(
+      {
+        from: identity.fromEmail,
+        to: targetEmail,
+        replyTo: identity.replyToEmail,
+        subject: `👁️ Aviso de lectura: ${params.msg.toEmail} — ${params.msg.subject}`.slice(0, 280),
+        html: alertHtml,
+        text: `${params.msg.toEmail} ${actionLabel} (${bogotaStr}). Asunto: ${params.msg.subject}`,
+      },
+      identity,
+    );
+  } catch (err) {
+    console.warn("[EMAIL-TRACKING] Error enviando alerta de apertura:", err);
+  }
+}
+
+export async function recordEmailOpenEvent(params: {
+  token: string;
+  ip?: string | null;
+  userAgent?: string | null;
+  now?: Date;
+  alertSender?: TransportSenderFn;
+}): Promise<{ found: boolean; openCount: number; messageId?: number }> {
+  const cleanToken = String(params.token || "").replace(/\.png$/i, "").trim();
+  if (!cleanToken) return { found: false, openCount: 0 };
+
+  const db = await getDb();
+  if (!db) return { found: false, openCount: 0 };
+
+  const [msg] = await db
+    .select()
+    .from(emailMessages)
+    .where(eq(emailMessages.trackingToken, cleanToken))
+    .limit(1);
+
+  if (!msg) return { found: false, openCount: 0 };
+
+  const now = params.now ?? new Date();
+  const prevCount = Number(msg.openCount ?? 0);
+  const nextCount = prevCount + 1;
+  const firstOpenedAt = msg.firstOpenedAt ?? now;
+  const sentAt = msg.sentAt ?? msg.createdAt ?? now;
+
+  const existingEvents = Array.isArray(msg.trackingEventsJson)
+    ? (msg.trackingEventsJson as EmailTrackingEvent[])
+    : [];
+  const nextEvents: EmailTrackingEvent[] = [
+    ...existingEvents,
+    {
+      type: "open" as const,
+      occurredAtIso: now.toISOString(),
+      occurredAtBogota: formatBogotaTimestamp(now),
+      ip: params.ip ? String(params.ip).slice(0, 64) : null,
+      userAgent: params.userAgent ? String(params.userAgent).slice(0, 400) : null,
+    },
+  ].slice(-100);
+
+  const contentSha256 =
+    msg.contentSha256 ||
+    computeCertifiedEmailHash({
+      fromEmail: msg.fromEmail,
+      toEmail: msg.toEmail,
+      replyToEmail: msg.replyToEmail,
+      subject: msg.subject,
+      bodyHtml: msg.bodyHtml,
+      bodyText: msg.bodyText,
+      attachments: Array.isArray(msg.attachmentsJson)
+        ? (msg.attachmentsJson as EmailAttachmentDigest[])
+        : [],
+      sentAt,
+    });
+  const certificateCode =
+    msg.certificateCode || generateEmailCertificateCode(contentSha256, sentAt);
+  const evidenceSha256 = computeEvidenceChainHash({
+    contentSha256,
+    certificateCode,
+    providerMessageId: msg.providerMessageId,
+    sentAtIso: sentAt.toISOString(),
+    firstOpenedAtIso: firstOpenedAt.toISOString(),
+    lastOpenedAtIso: now.toISOString(),
+    openCount: nextCount,
+    firstClickedAtIso: msg.firstClickedAt ? msg.firstClickedAt.toISOString() : null,
+    lastClickedAtIso: msg.lastClickedAt ? msg.lastClickedAt.toISOString() : null,
+    clickCount: Number(msg.clickCount ?? 0),
+    eventsCount: nextEvents.length,
+  });
+
+  const shouldNotify = Boolean(msg.notifyOnOpen && !msg.openNotifiedAt);
+
+  await db
+    .update(emailMessages)
+    .set({
+      openCount: nextCount,
+      firstOpenedAt,
+      lastOpenedAt: now,
+      lastOpenIp: params.ip ? String(params.ip).slice(0, 64) : msg.lastOpenIp,
+      lastOpenUserAgent: params.userAgent
+        ? String(params.userAgent).slice(0, 400)
+        : msg.lastOpenUserAgent,
+      contentSha256,
+      certificateCode,
+      evidenceSha256,
+      trackingEventsJson: nextEvents,
+      openNotifiedAt: shouldNotify ? now : msg.openNotifiedAt,
+      updatedAt: now,
+    })
+    .where(eq(emailMessages.id, msg.id));
+
+  if (prevCount === 0 && msg.leadId) {
+    await db.insert(crmActivities).values({
+      leadId: msg.leadId,
+      agentId: msg.userId,
+      agencyId: msg.agencyId,
+      activityType: "email",
+      title: `👁️ Correo abierto por destinatario: ${msg.subject}`.slice(0, 250),
+      body: `Apertura certificada registrada el ${formatBogotaTimestamp(now)} desde IP ${params.ip || "N/D"}. CUV: ${certificateCode}.`,
+      metadata: {
+        emailMessageId: msg.id,
+        eventType: "open",
+        ip: params.ip ?? null,
+        certificateCode,
+      },
+    });
+  }
+
+  if (shouldNotify) {
+    await dispatchOpenNotificationAlert({
+      msg: { ...msg, certificateCode },
+      eventType: "open",
+      occurredAt: now,
+      ip: params.ip,
+      alertSender: params.alertSender,
+    });
+  }
+
+  return { found: true, openCount: nextCount, messageId: msg.id };
+}
+
+export async function recordEmailClickEvent(params: {
+  token: string;
+  ip?: string | null;
+  userAgent?: string | null;
+  now?: Date;
+  alertSender?: TransportSenderFn;
+}): Promise<{ found: boolean; targetUrl: string | null; clickCount?: number }> {
+  const cleanToken = String(params.token || "").trim();
+  if (!cleanToken) return { found: false, targetUrl: null };
+
+  const db = await getDb();
+  if (!db) return { found: false, targetUrl: null };
+
+  const [link] = await db
+    .select()
+    .from(emailTrackedLinks)
+    .where(eq(emailTrackedLinks.token, cleanToken))
+    .limit(1);
+
+  if (!link || !/^https?:\/\//i.test(link.targetUrl)) {
+    return { found: false, targetUrl: null };
+  }
+
+  const now = params.now ?? new Date();
+  const nextLinkCount = Number(link.clickCount ?? 0) + 1;
+
+  await db
+    .update(emailTrackedLinks)
+    .set({
+      clickCount: nextLinkCount,
+      firstClickedAt: link.firstClickedAt ?? now,
+      lastClickedAt: now,
+      lastIp: params.ip ? String(params.ip).slice(0, 64) : link.lastIp,
+      lastUserAgent: params.userAgent ? String(params.userAgent).slice(0, 400) : link.lastUserAgent,
+    })
+    .where(eq(emailTrackedLinks.id, link.id));
+
+  const [msg] = await db
+    .select()
+    .from(emailMessages)
+    .where(eq(emailMessages.id, link.emailMessageId))
+    .limit(1);
+
+  if (msg) {
+    const prevMsgClicks = Number(msg.clickCount ?? 0);
+    const nextMsgClicks = prevMsgClicks + 1;
+    const firstClickedAt = msg.firstClickedAt ?? now;
+    const sentAt = msg.sentAt ?? msg.createdAt ?? now;
+    const existingEvents = Array.isArray(msg.trackingEventsJson)
+      ? (msg.trackingEventsJson as EmailTrackingEvent[])
+      : [];
+    const nextEvents: EmailTrackingEvent[] = [
+      ...existingEvents,
+      {
+        type: "click" as const,
+        occurredAtIso: now.toISOString(),
+        occurredAtBogota: formatBogotaTimestamp(now),
+        ip: params.ip ? String(params.ip).slice(0, 64) : null,
+        userAgent: params.userAgent ? String(params.userAgent).slice(0, 400) : null,
+        targetUrl: link.targetUrl,
+      },
+    ].slice(-100);
+
+    const contentSha256 =
+      msg.contentSha256 ||
+      computeCertifiedEmailHash({
+        fromEmail: msg.fromEmail,
+        toEmail: msg.toEmail,
+        replyToEmail: msg.replyToEmail,
+        subject: msg.subject,
+        bodyHtml: msg.bodyHtml,
+        bodyText: msg.bodyText,
+        attachments: Array.isArray(msg.attachmentsJson)
+          ? (msg.attachmentsJson as EmailAttachmentDigest[])
+          : [],
+        sentAt,
+      });
+    const certificateCode =
+      msg.certificateCode || generateEmailCertificateCode(contentSha256, sentAt);
+    const evidenceSha256 = computeEvidenceChainHash({
+      contentSha256,
+      certificateCode,
+      providerMessageId: msg.providerMessageId,
+      sentAtIso: sentAt.toISOString(),
+      firstOpenedAtIso: msg.firstOpenedAt ? msg.firstOpenedAt.toISOString() : null,
+      lastOpenedAtIso: msg.lastOpenedAt ? msg.lastOpenedAt.toISOString() : null,
+      openCount: Number(msg.openCount ?? 0),
+      firstClickedAtIso: firstClickedAt.toISOString(),
+      lastClickedAtIso: now.toISOString(),
+      clickCount: nextMsgClicks,
+      eventsCount: nextEvents.length,
+    });
+
+    const shouldNotify = Boolean(msg.notifyOnOpen && !msg.openNotifiedAt);
+
+    await db
+      .update(emailMessages)
+      .set({
+        clickCount: nextMsgClicks,
+        firstClickedAt,
+        lastClickedAt: now,
+        lastClickIp: params.ip ? String(params.ip).slice(0, 64) : msg.lastClickIp,
+        lastClickUserAgent: params.userAgent
+          ? String(params.userAgent).slice(0, 400)
+          : msg.lastClickUserAgent,
+        contentSha256,
+        certificateCode,
+        evidenceSha256,
+        trackingEventsJson: nextEvents,
+        openNotifiedAt: shouldNotify ? now : msg.openNotifiedAt,
+        updatedAt: now,
+      })
+      .where(eq(emailMessages.id, msg.id));
+
+    if (prevMsgClicks === 0 && msg.leadId) {
+      await db.insert(crmActivities).values({
+        leadId: msg.leadId,
+        agentId: msg.userId,
+        agencyId: msg.agencyId,
+        activityType: "email",
+        title: `🔗 Enlace abierto en correo: ${msg.subject}`.slice(0, 250),
+        body: `Clic certificado sobre ${link.targetUrl} el ${formatBogotaTimestamp(now)} desde IP ${params.ip || "N/D"}. CUV: ${certificateCode}.`,
+        metadata: {
+          emailMessageId: msg.id,
+          eventType: "click",
+          targetUrl: link.targetUrl,
+          ip: params.ip ?? null,
+          certificateCode,
+        },
+      });
+    }
+
+    if (shouldNotify) {
+      await dispatchOpenNotificationAlert({
+        msg: { ...msg, certificateCode },
+        eventType: "click",
+        occurredAt: now,
+        ip: params.ip,
+        targetUrl: link.targetUrl,
+        alertSender: params.alertSender,
+      });
+    }
+  }
+
+  return {
+    found: true,
+    targetUrl: link.targetUrl,
+    clickCount: nextLinkCount,
+  };
+}
+
+export function buildEmailEvidencePayloadFromRow(
+  msg: EmailMessage,
+  leadName?: string | null,
+): CertifiedEmailEvidencePayload {
+  const sentDate = msg.sentAt ?? msg.createdAt ?? new Date();
+  const attachments = Array.isArray(msg.attachmentsJson)
+    ? (msg.attachmentsJson as EmailAttachmentDigest[])
+    : [];
+  const events = Array.isArray(msg.trackingEventsJson)
+    ? (msg.trackingEventsJson as EmailTrackingEvent[])
+    : [];
+
+  const contentSha256 =
+    msg.contentSha256 ||
+    computeCertifiedEmailHash({
+      fromEmail: msg.fromEmail,
+      toEmail: msg.toEmail,
+      replyToEmail: msg.replyToEmail,
+      subject: msg.subject,
+      bodyHtml: msg.bodyHtml,
+      bodyText: msg.bodyText,
+      attachments,
+      sentAt: sentDate,
+    });
+  const certificateCode =
+    msg.certificateCode || generateEmailCertificateCode(contentSha256, sentDate);
+  const evidenceSha256 =
+    msg.evidenceSha256 ||
+    computeEvidenceChainHash({
+      contentSha256,
+      certificateCode,
+      providerMessageId: msg.providerMessageId,
+      sentAtIso: sentDate.toISOString(),
+      firstOpenedAtIso: msg.firstOpenedAt ? msg.firstOpenedAt.toISOString() : null,
+      lastOpenedAtIso: msg.lastOpenedAt ? msg.lastOpenedAt.toISOString() : null,
+      openCount: Number(msg.openCount ?? 0),
+      firstClickedAtIso: msg.firstClickedAt ? msg.firstClickedAt.toISOString() : null,
+      lastClickedAtIso: msg.lastClickedAt ? msg.lastClickedAt.toISOString() : null,
+      clickCount: Number(msg.clickCount ?? 0),
+      eventsCount: events.length,
+    });
+
+  return {
+    messageId: msg.id,
+    certificateCode,
+    contentSha256,
+    evidenceSha256,
+    fromEmail: msg.fromEmail,
+    replyToEmail: msg.replyToEmail ?? null,
+    toEmail: msg.toEmail,
+    leadName: leadName ?? null,
+    subject: msg.subject,
+    status: msg.status,
+    providerMessageId: msg.providerMessageId ?? null,
+    sentAtIso: sentDate.toISOString(),
+    sentAtBogota: formatBogotaTimestamp(sentDate),
+    openCount: Number(msg.openCount ?? 0),
+    firstOpenedAtBogota: msg.firstOpenedAt ? formatBogotaTimestamp(msg.firstOpenedAt) : null,
+    lastOpenedAtBogota: msg.lastOpenedAt ? formatBogotaTimestamp(msg.lastOpenedAt) : null,
+    lastOpenIp: msg.lastOpenIp ?? null,
+    lastOpenUserAgent: msg.lastOpenUserAgent ?? null,
+    clickCount: Number(msg.clickCount ?? 0),
+    firstClickedAtBogota: msg.firstClickedAt ? formatBogotaTimestamp(msg.firstClickedAt) : null,
+    lastClickedAtBogota: msg.lastClickedAt ? formatBogotaTimestamp(msg.lastClickedAt) : null,
+    lastClickIp: msg.lastClickIp ?? null,
+    lastClickUserAgent: msg.lastClickUserAgent ?? null,
+    attachments,
+    bodyExcerpt: (msg.bodyText || htmlToPlainText(msg.bodyHtml)).slice(0, 600),
+    events,
+    generatedAtBogota: formatBogotaTimestamp(new Date()),
+  };
 }

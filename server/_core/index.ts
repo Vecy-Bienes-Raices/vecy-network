@@ -1498,6 +1498,190 @@ Dirección obligatoria:
     }
   });
 
+  // 🌐 SEO Canónico en vecygroup.com (/robots.txt y /sitemap.xml)
+  app.get('/robots.txt', async (_req, res) => {
+    try {
+      const { buildRobotsTxt } = await import('./seoService');
+      return res
+        .status(200)
+        .set({
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+        })
+        .send(buildRobotsTxt());
+    } catch {
+      return res
+        .status(200)
+        .set({ 'Content-Type': 'text/plain; charset=utf-8' })
+        .send('User-agent: *\nAllow: /\nSitemap: https://vecygroup.com/sitemap.xml\n');
+    }
+  });
+
+  app.get('/sitemap.xml', async (_req, res) => {
+    try {
+      const { getDynamicSitemapXml } = await import('./seoService');
+      const xml = await getDynamicSitemapXml();
+      return res
+        .status(200)
+        .set({
+          'Content-Type': 'application/xml; charset=utf-8',
+          'Cache-Control': 'public, max-age=1800',
+        })
+        .send(xml);
+    } catch {
+      return res
+        .status(200)
+        .set({ 'Content-Type': 'application/xml; charset=utf-8' })
+        .send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://vecygroup.com/</loc></url></urlset>');
+    }
+  });
+
+  // 📬 Rastreo tipo Mailsuite y Constancia Probatoria Ley 527 de 1999
+  app.get('/api/email/track/open/:token', async (req, res) => {
+    const { TRANSPARENT_1X1_PNG_BUFFER, extractClientIpFromHeaders, recordEmailOpenEvent } =
+      await import('./emailAutomationEngine');
+    try {
+      await recordEmailOpenEvent({
+        token: req.params.token,
+        ip: extractClientIpFromHeaders(req.headers as Record<string, string | string[] | undefined>, req.ip),
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : null,
+      });
+    } catch (err) {
+      console.warn('[EMAIL-TRACK-OPEN] Error registrando apertura:', err);
+    }
+    return res
+      .status(200)
+      .set({
+        'Content-Type': 'image/png',
+        'Content-Length': String(TRANSPARENT_1X1_PNG_BUFFER.length),
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        Pragma: 'no-cache',
+        Expires: '0',
+      })
+      .send(TRANSPARENT_1X1_PNG_BUFFER);
+  });
+
+  app.get('/api/email/track/click/:token', async (req, res) => {
+    try {
+      const { extractClientIpFromHeaders, recordEmailClickEvent } = await import('./emailAutomationEngine');
+      const result = await recordEmailClickEvent({
+        token: req.params.token,
+        ip: extractClientIpFromHeaders(req.headers as Record<string, string | string[] | undefined>, req.ip),
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : null,
+      });
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      if (result.found && result.targetUrl) {
+        return res.redirect(302, result.targetUrl);
+      }
+      return res.redirect(302, 'https://vecygroup.com/');
+    } catch {
+      return res.redirect(302, 'https://vecygroup.com/');
+    }
+  });
+
+  app.get('/api/email/certificate/verify/:cuv', async (req, res) => {
+    try {
+      const cuv = String(req.params.cuv || '').trim();
+      if (!cuv) return res.status(400).json({ verified: false, error: 'CUV requerido' });
+      const { getDb } = await import('../db');
+      const { emailMessages } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const { buildEmailEvidencePayloadFromRow } = await import('./emailAutomationEngine');
+      const db = await getDb();
+      if (!db) return res.status(503).json({ verified: false, error: 'BD no disponible' });
+
+      const [msg] = await db
+        .select()
+        .from(emailMessages)
+        .where(eq(emailMessages.certificateCode, cuv))
+        .limit(1);
+
+      if (!msg) return res.status(404).json({ verified: false, error: 'Certificado no encontrado' });
+
+      const evidence = buildEmailEvidencePayloadFromRow(msg);
+      const [localPart = '', domainPart = ''] = String(msg.toEmail || '').split('@');
+      const toEmailMasked = domainPart
+        ? `${localPart.slice(0, 2)}***@${domainPart}`
+        : '***';
+
+      return res.status(200).json({
+        verified: true,
+        standard: 'Ley 527 de 1999 y Decreto 2364 de 2012 (Colombia)',
+        certificateCode: evidence.certificateCode,
+        fromEmail: evidence.fromEmail,
+        toEmailMasked,
+        subject: evidence.subject,
+        status: evidence.status,
+        sentAtIso: evidence.sentAtIso,
+        sentAtBogota: evidence.sentAtBogota,
+        openCount: evidence.openCount,
+        firstOpenedAtBogota: evidence.firstOpenedAtBogota,
+        lastOpenedAtBogota: evidence.lastOpenedAtBogota,
+        clickCount: evidence.clickCount,
+        contentSha256: evidence.contentSha256,
+        evidenceSha256: evidence.evidenceSha256,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ verified: false, error: err?.message || 'Error verificando CUV' });
+    }
+  });
+
+  app.get('/api/email/certificate/:messageId/pdf', async (req, res) => {
+    try {
+      const msgId = Number(req.params.messageId);
+      if (!Number.isInteger(msgId) || msgId <= 0) {
+        return res.status(400).json({ ok: false, error: 'ID de mensaje inválido' });
+      }
+      const { sdk } = await import('./sdk');
+      const user = await sdk.authenticateRequest(req).catch(() => null);
+      if (!user) {
+        return res.status(401).json({ ok: false, error: 'No autenticado' });
+      }
+      const { resolveUserTenantScope, canAccessTenantOwnedRecord } = await import('./crmService');
+      const { getDb } = await import('../db');
+      const { emailMessages, leads } = await import('../../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const { buildEmailEvidencePayloadFromRow } = await import('./emailAutomationEngine');
+      const { createCertifiedEmailEvidencePdf } = await import('./emailContractService');
+
+      const db = await getDb();
+      if (!db) return res.status(503).json({ ok: false, error: 'BD no disponible' });
+
+      const [msg] = await db
+        .select()
+        .from(emailMessages)
+        .where(eq(emailMessages.id, msgId))
+        .limit(1);
+
+      if (!msg) return res.status(404).json({ ok: false, error: 'Correo no encontrado' });
+
+      const scope = await resolveUserTenantScope(user.id, user.role);
+      if (!canAccessTenantOwnedRecord(scope, msg)) {
+        return res.status(403).json({ ok: false, error: 'Sin permisos para este certificado' });
+      }
+
+      let leadName: string | null = null;
+      if (msg.leadId) {
+        const [lead] = await db.select({ name: leads.name }).from(leads).where(eq(leads.id, msg.leadId)).limit(1);
+        leadName = lead?.name ?? null;
+      }
+
+      const evidence = buildEmailEvidencePayloadFromRow(msg, leadName);
+      const pdfBytes = await createCertifiedEmailEvidencePdf(evidence);
+
+      return res
+        .status(200)
+        .set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="Constancia_Ley527_${evidence.certificateCode}.pdf"`,
+          'Cache-Control': 'no-store',
+        })
+        .send(Buffer.from(pdfBytes));
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: err?.message || 'Error generando constancia PDF' });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);

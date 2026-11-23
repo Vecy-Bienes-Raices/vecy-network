@@ -1,38 +1,62 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://vecy-bienes-raices.vercel.app/</loc>
-    <lastmod>2026-10-10</lastmod>
+    <loc>https://vecygroup.com/</loc>
+    <lastmod>2026-11-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://vecy-bienes-raices.vercel.app/ofertas</loc>
-    <lastmod>2026-10-10</lastmod>
+    <loc>https://vecygroup.com/ofertas</loc>
+    <lastmod>2026-11-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://vecy-bienes-raices.vercel.app/demandas</loc>
-    <lastmod>2026-10-10</lastmod>
+    <loc>https://vecygroup.com/demandas</loc>
+    <lastmod>2026-11-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://vecy-bienes-raices.vercel.app/jania</loc>
-    <lastmod>2026-10-10</lastmod>
+    <loc>https://vecygroup.com/planes</loc>
+    <lastmod>2026-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://vecygroup.com/services</loc>
+    <lastmod>2026-11-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://vecy-bienes-raices.vercel.app/terminos-y-condiciones</loc>
-    <lastmod>2026-10-10</lastmod>
+    <loc>https://vecygroup.com/jania</loc>
+    <lastmod>2026-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://vecygroup.com/red-colaboracion</loc>
+    <lastmod>2026-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://vecygroup.com/historia</loc>
+    <lastmod>2026-11-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://vecygroup.com/terminos-y-condiciones</loc>
+    <lastmod>2026-11-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://vecy-bienes-raices.vercel.app/politica-de-privacidad</loc>
-    <lastmod>2026-10-10</lastmod>
+    <loc>https://vecygroup.com/politica-privacidad</loc>
+    <lastmod>2026-11-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

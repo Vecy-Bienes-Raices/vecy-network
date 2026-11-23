@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
@@ -15,8 +15,29 @@ import {
   AlertCircle,
   RefreshCw,
   Plus,
+  Eye,
+  MousePointerClick,
+  FileDown,
+  Bell,
 } from "lucide-react";
 import { EMAIL_TEMPLATE_VARIABLES } from "@shared/crm";
+
+function downloadBase64Pdf(base64Data: string, filename: string) {
+  const binary = atob(base64Data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 export default function EmailAutomationPanel() {
   const [subTab, setSubTab] = useState<"identity" | "sequences" | "queue" | "templates">("identity");
@@ -43,16 +64,57 @@ export default function EmailAutomationPanel() {
   const [tplCategory, setTplCategory] = useState<"welcome" | "follow_up" | "match_alert" | "visit" | "custom">("follow_up");
   const [tplSubject, setTplSubject] = useState("");
   const [tplBody, setTplBody] = useState("");
+  const [liveOpenAlerts, setLiveOpenAlerts] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const prevTrackSnapshotRef = useRef<Map<number, { opens: number; clicks: number }>>(new Map());
+  const snapshotInitializedRef = useRef(false);
 
-  const { data: overview, refetch: refetchOverview } = trpc.emailAutomation.getOverview.useQuery();
+  const { data: overview, refetch: refetchOverview } = trpc.emailAutomation.getOverview.useQuery(
+    undefined,
+    { refetchInterval: liveOpenAlerts ? 30_000 : false },
+  );
   const { data: sequences, refetch: refetchSequences } = trpc.emailAutomation.listSequences.useQuery();
   const { data: templates, refetch: refetchTemplates } = trpc.emailAutomation.listTemplates.useQuery();
-  const { data: messages, refetch: refetchMessages } = trpc.emailAutomation.listMessages.useQuery({
-    status: msgStatusFilter,
-    limit: 60,
-  });
+  const { data: messages, refetch: refetchMessages } = trpc.emailAutomation.listMessages.useQuery(
+    {
+      status: msgStatusFilter,
+      limit: 60,
+    },
+    { refetchInterval: liveOpenAlerts ? 30_000 : false },
+  );
   const { data: enrollments, refetch: refetchEnrollments } = trpc.emailAutomation.listEnrollments.useQuery();
   const { data: myLeads } = trpc.crm.listLeads.useQuery({ limit: 100 });
+
+  useEffect(() => {
+    const trackedList = overview?.recentTrackingActivity;
+    if (!trackedList) return;
+    if (!snapshotInitializedRef.current) {
+      for (const item of trackedList) {
+        prevTrackSnapshotRef.current.set(item.id, {
+          opens: Number(item.openCount ?? 0),
+          clicks: Number(item.clickCount ?? 0),
+        });
+      }
+      snapshotInitializedRef.current = true;
+      return;
+    }
+    if (!liveOpenAlerts) return;
+    for (const item of trackedList) {
+      const prev = prevTrackSnapshotRef.current.get(item.id) || { opens: 0, clicks: 0 };
+      const curOpens = Number(item.openCount ?? 0);
+      const curClicks = Number(item.clickCount ?? 0);
+      if (curOpens > prev.opens) {
+        toast.info(`👁️ ${item.toEmail} abrió tu correo certificado`, {
+          description: item.subject,
+        });
+      } else if (curClicks > prev.clicks) {
+        toast.info(`🔗 ${item.toEmail} hizo clic en tu correo`, {
+          description: item.subject,
+        });
+      }
+      prevTrackSnapshotRef.current.set(item.id, { opens: curOpens, clicks: curClicks });
+    }
+  }, [overview?.recentTrackingActivity, liveOpenAlerts]);
 
   useEffect(() => {
     if (!overview) return;
@@ -140,6 +202,23 @@ export default function EmailAutomationPanel() {
     onError: (err) => toast.error("Error guardando plantilla", { description: err.message }),
   });
 
+  const getCertPdfMutation = trpc.emailAutomation.getCertificatePdf.useMutation({
+    onSuccess: (res) => {
+      downloadBase64Pdf(res.pdfBase64, res.filename);
+      toast.success(`Constancia Ley 527 descargada (${res.certificateCode})`);
+    },
+    onError: (err) => toast.error("Error descargando constancia PDF", { description: err.message }),
+    onSettled: () => setDownloadingId(null),
+  });
+
+  const toggleNotifyMutation = trpc.emailAutomation.toggleNotifyOnOpen.useMutation({
+    onSuccess: () => {
+      toast.success("Preferencia de aviso de apertura actualizada");
+      refetchMessages();
+    },
+    onError: (err) => toast.error("Error actualizando alerta", { description: err.message }),
+  });
+
   const handleSaveIdentity = (e: React.FormEvent) => {
     e.preventDefault();
     upsertAccountMutation.mutate({
@@ -215,12 +294,14 @@ export default function EmailAutomationPanel() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-center">
           {[
             { label: "Enviados", val: overview?.stats.sent ?? 0, cls: "text-emerald-400" },
+            { label: "Abiertos", val: overview?.stats.openedCount ?? 0, cls: "text-amber-300" },
+            { label: "Clics", val: overview?.stats.totalClicks ?? 0, cls: "text-cyan-300" },
             { label: "En Cola", val: overview?.stats.queued ?? 0, cls: "text-sky-400" },
             { label: "Secuencias Activas", val: overview?.stats.activeSequences ?? 0, cls: "text-primary" },
-            { label: "Inscripciones", val: overview?.stats.activeEnrollments ?? 0, cls: "text-amber-300" },
+            { label: "Inscripciones", val: overview?.stats.activeEnrollments ?? 0, cls: "text-zinc-200" },
           ].map((s) => (
             <div key={s.label} className="px-3 py-2 rounded-xl bg-secondary/70 border border-border">
               <div className={`text-lg font-black ${s.cls}`}>{s.val}</div>
@@ -632,7 +713,7 @@ export default function EmailAutomationPanel() {
       {subTab === "queue" && (
         <div className="panel-card p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <select
                 value={msgStatusFilter}
                 onChange={(e) => setMsgStatusFilter(e.target.value as any)}
@@ -644,6 +725,17 @@ export default function EmailAutomationPanel() {
                 <option value="failed">Fallidos</option>
                 <option value="quota_blocked">Bloqueados por Cuota</option>
               </select>
+
+              <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer select-none px-3 py-1.5 rounded-xl bg-background border border-border">
+                <input
+                  type="checkbox"
+                  checked={liveOpenAlerts}
+                  onChange={(e) => setLiveOpenAlerts(e.target.checked)}
+                  className="accent-amber-500"
+                />
+                <Bell className="w-3.5 h-3.5 text-amber-400" />
+                Alertas en vivo de apertura
+              </label>
             </div>
 
             <button
@@ -666,49 +758,129 @@ export default function EmailAutomationPanel() {
               <thead className="border-b border-border text-[10px] uppercase text-muted-foreground">
                 <tr>
                   <th className="py-2.5 pr-3">Destinatario</th>
-                  <th className="py-2.5 pr-3">Asunto</th>
+                  <th className="py-2.5 pr-3">Asunto / SHA-256</th>
                   <th className="py-2.5 pr-3">Estado</th>
-                  <th className="py-2.5">Fecha</th>
+                  <th className="py-2.5 pr-3">Rastreo Mailsuite</th>
+                  <th className="py-2.5 pr-3">Fecha</th>
+                  <th className="py-2.5">Certificado Ley 527</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
                 {(messages ?? []).length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
                       Sin mensajes registrados en esta vista.
                     </td>
                   </tr>
                 ) : (
-                  messages?.map((row: any) => (
-                    <tr key={row.message.id}>
-                      <td className="py-3 pr-3">
-                        <div className="font-bold text-white">{row.leadName || "Prospecto"}</div>
-                        <div className="text-[11px] text-muted-foreground">{row.message.toEmail}</div>
-                      </td>
-                      <td className="py-3 pr-3">
-                        <div className="text-zinc-200 font-semibold">{row.message.subject}</div>
-                        {row.message.errorMessage && (
-                          <div className="text-[11px] text-rose-400">{row.message.errorMessage}</div>
-                        )}
-                      </td>
-                      <td className="py-3 pr-3">
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                            row.message.status === "sent"
-                              ? "bg-emerald-500/20 text-emerald-300"
-                              : row.message.status === "queued"
-                                ? "bg-sky-500/20 text-sky-300"
-                                : "bg-rose-500/20 text-rose-300"
-                          }`}
-                        >
-                          {row.message.status}
-                        </span>
-                      </td>
-                      <td className="py-3 text-[11px] text-muted-foreground">
-                        {new Date(row.message.sentAt || row.message.scheduledFor || row.message.createdAt).toLocaleString("es-CO")}
-                      </td>
-                    </tr>
-                  ))
+                  messages?.map((row: any) => {
+                    const m = row.message;
+                    const opens = Number(m.openCount ?? 0);
+                    const clicks = Number(m.clickCount ?? 0);
+                    return (
+                      <tr key={m.id}>
+                        <td className="py-3 pr-3">
+                          <div className="font-bold text-white">{row.leadName || "Prospecto"}</div>
+                          <div className="text-[11px] text-muted-foreground">{m.toEmail}</div>
+                        </td>
+                        <td className="py-3 pr-3 max-w-[260px]">
+                          <div className="text-zinc-200 font-semibold truncate">{m.subject}</div>
+                          {m.contentSha256 && (
+                            <div className="text-[10px] font-mono text-zinc-400">
+                              SHA-256: {String(m.contentSha256).slice(0, 14)}...
+                            </div>
+                          )}
+                          {m.errorMessage && (
+                            <div className="text-[11px] text-rose-400">{m.errorMessage}</div>
+                          )}
+                        </td>
+                        <td className="py-3 pr-3">
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                              m.status === "sent"
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : m.status === "queued"
+                                  ? "bg-sky-500/20 text-sky-300"
+                                  : "bg-rose-500/20 text-rose-300"
+                            }`}
+                          >
+                            {m.status}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-3">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold ${
+                                opens > 0
+                                  ? "bg-amber-500/20 text-amber-300"
+                                  : "bg-secondary text-zinc-400"
+                              }`}
+                            >
+                              <Eye className="w-3 h-3" />
+                              {opens > 0 ? `Abierto (${opens})` : "Sin abrir"}
+                            </span>
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold ${
+                                clicks > 0
+                                  ? "bg-cyan-500/20 text-cyan-300"
+                                  : "bg-secondary text-zinc-400"
+                              }`}
+                            >
+                              <MousePointerClick className="w-3 h-3" />
+                              {clicks}
+                            </span>
+                          </div>
+                          {m.lastOpenedAt && (
+                            <div className="text-[10px] text-zinc-400 mt-0.5">
+                              Última: {new Date(m.lastOpenedAt).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 pr-3 text-[11px] text-muted-foreground">
+                          {new Date(m.sentAt || m.scheduledFor || m.createdAt).toLocaleString("es-CO", {
+                            timeZone: "America/Bogota",
+                          })}
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={downloadingId === m.id}
+                              onClick={() => {
+                                setDownloadingId(m.id);
+                                getCertPdfMutation.mutate({ messageId: m.id });
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary text-[10px] font-black uppercase inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              {downloadingId === m.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <FileDown className="w-3 h-3" />
+                              )}
+                              PDF Ley 527
+                            </button>
+                            <button
+                              type="button"
+                              title={m.notifyOnOpen ? "Desactivar aviso por apertura" : "Avisarme cuando lo abran"}
+                              onClick={() =>
+                                toggleNotifyMutation.mutate({
+                                  messageId: m.id,
+                                  notifyOnOpen: !m.notifyOnOpen,
+                                })
+                              }
+                              className={`p-1.5 rounded-lg border text-[10px] cursor-pointer ${
+                                m.notifyOnOpen
+                                  ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
+                                  : "bg-secondary border-border text-zinc-400 hover:text-white"
+                              }`}
+                            >
+                              <Bell className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
