@@ -46,6 +46,43 @@ const ALLOWED_SMTP_PORTS = new Set([25, 465, 587, 2525]);
 export const CERTIFIED_SENDER_DEFAULT =
   process.env.SMTP_CERTIFIED_FROM_EMAIL || "notificaciones@vecygroup.com";
 
+export function isAuthenticatedVecySenderEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return /^[^\s@]+@vecygroup\.com$/i.test(email.trim());
+}
+
+export function resolveCustomSmtpSenderEmail(params: {
+  fromEmail?: string | null;
+  replyToEmail?: string | null;
+  fallbackCertifiedEmail?: string | null;
+}): string {
+  if (isAuthenticatedVecySenderEmail(params.replyToEmail)) {
+    return params.replyToEmail!.trim().toLowerCase();
+  }
+  if (isAuthenticatedVecySenderEmail(params.fromEmail)) {
+    return params.fromEmail!.trim().toLowerCase();
+  }
+  if (isAuthenticatedVecySenderEmail(params.fallbackCertifiedEmail)) {
+    return params.fallbackCertifiedEmail!.trim().toLowerCase();
+  }
+  return CERTIFIED_SENDER_DEFAULT.trim().toLowerCase();
+}
+
+export function formatEmailFromHeader(
+  displayName: string | null | undefined,
+  fromEmail: string,
+): string {
+  const cleanEmail = fromEmail.trim().toLowerCase();
+  const rawName = (displayName || "Vecy Bienes Raíces")
+    .replace(/[\r\n"<>]/g, "")
+    .trim();
+  const cleanName = rawName || "Vecy Bienes Raíces";
+  if (/[,;]/.test(cleanName)) {
+    return `"${cleanName}" <${cleanEmail}>`;
+  }
+  return `${cleanName} <${cleanEmail}>`;
+}
+
 export const TRANSPARENT_1X1_PNG_BUFFER = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   "base64",
@@ -822,7 +859,11 @@ export async function resolveSendingIdentityForUser(
     if (!safety.valid) {
       throw new Error(safety.reason || "Configuración SMTP propia bloqueada por seguridad.");
     }
-    const customFrom = accountRow.fromEmail || accountRow.smtpUser;
+    const customFrom = resolveCustomSmtpSenderEmail({
+      fromEmail: accountRow.fromEmail,
+      replyToEmail: fallbackReplyTo,
+      fallbackCertifiedEmail: certifiedRelayEmail,
+    });
     return {
       accountId: accountRow.id,
       mode: "custom_smtp",
@@ -875,7 +916,7 @@ async function defaultNodemailerSend(
       },
     });
     const info = await transporter.sendMail({
-      from: `"${identity.displayName.replace(/"/g, "")}" <${identity.fromEmail}>`,
+      from: formatEmailFromHeader(identity.displayName, identity.fromEmail),
       to: payload.to,
       replyTo: payload.replyTo,
       subject: payload.subject,

@@ -7,6 +7,16 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-23] — JanIA v34.45: Corrección Encabezado `from` `@vecygroup.com` en SMTP Propio (Brevo) y Limpieza Visual Webmail (v34.45 - 34.45.0)
+
+#### 1. Diagnóstico y Solicitud
+- Brevo rechazó envíos configurados con Servidor SMTP Propio (`c4ad31001@smtp-brevo.com`) porque `resolveSendingIdentityForUser` y `upsertAccount` usaban `smtpUser` como respaldo de `from_email`, produciendo `from: c4ad31001@smtp-brevo.com`. Adicionalmente, al limpiar el redactor tras enviar con éxito permanecían estados `:user-invalid` visuales en `EmailAutomationPanel.tsx`.
+
+#### 2. Acciones Ejecutadas en `v34.45`
+1. **Motor y Router (`server/_core/emailAutomationEngine.ts`, `server/routers/emailAutomation.ts`):** añadidos `isAuthenticatedVecySenderEmail`, `resolveCustomSmtpSenderEmail` (prioriza `replyToEmail` `@vecygroup.com` o `notificaciones@vecygroup.com`) y `formatEmailFromHeader` (`Vecy Bienes Raíces <notificaciones@vecygroup.com>`), conservando `smtpUser` en `auth.user`. Actualizada fila `email_accounts` en PostgreSQL VPS.
+2. **Reset Visual del Formulario (`client/src/components/crm/EmailAutomationPanel.tsx`):** añadidos `clearComposeValidationErrors`, `composeFormRef` y `composeFormKey` para limpiar estados visuales e `aria-invalid` tras enviar o generar borrador IA, además de sanear `fromEmail` en `handleSaveIdentity`.
+3. **Pruebas y Gobernanza:** `server/__tests__/customSmtpSenderFixV34_45.test.ts` (`$0 COP`), semilla `seed-custom-smtp-from-vecygroup-brevo-fix-v34-45`, **Suite 231** en `regression.test.ts` y bump a `v34.45` (`34.45.0`).
+
 ### 📅 [2026-11-23] — JanIA v34.44: PASO 7 — Gestor Webmail Simplificado en `vecygroup.com` y Chulitos Visuales tipo Mailsuite (`✓✓`) (v34.44 - 34.44.0)
 
 #### 1. Solicitud / Alcance PASO 7

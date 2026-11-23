@@ -16764,9 +16764,53 @@ A: BANCO DE BOGOTA
         (t) => t.id === "seed-paso7-webmail-mailsuite-checks-v34-44",
       );
       expect(seed44?.active).toBe(true);
-      expect(VECY_VERSION).toBe("v34.44");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:4[4-9]|[5-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.44.0");
+      expect(pkg.version).toMatch(/^34\.(?:4[4-9]|[5-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 231: CORRECCIÓN FROM @vecygroup.com EN SMTP PROPIO (BREVO) Y RESET FORMULARIO WEBMAIL (v34.45)
+  // =========================================================================
+  describe("Suite 231: Remitente @vecygroup.com en SMTP propio (Brevo) y reset visual webmail (v34.45)", () => {
+    it("1. Verifica separación auth.user vs from @vecygroup.com y limpieza visual en EmailAutomationPanel", async () => {
+      const fs = await import("fs");
+      const { resolveCustomSmtpSenderEmail, formatEmailFromHeader } = await import(
+        "../_core/emailAutomationEngine"
+      );
+
+      expect(
+        resolveCustomSmtpSenderEmail({
+          fromEmail: "c4ad31001@smtp-brevo.com",
+          replyToEmail: "notificaciones@vecygroup.com",
+        }),
+      ).toBe("notificaciones@vecygroup.com");
+
+      expect(
+        formatEmailFromHeader("Vecy Bienes Raíces", "notificaciones@vecygroup.com"),
+      ).toBe("Vecy Bienes Raíces <notificaciones@vecygroup.com>");
+
+      const routerSrc = fs.readFileSync("server/routers/emailAutomation.ts", "utf-8");
+      expect(routerSrc).toContain("resolveCustomSmtpSenderEmail(");
+
+      const panelSrc = fs.readFileSync("client/src/components/crm/EmailAutomationPanel.tsx", "utf-8");
+      expect(panelSrc).toContain("clearComposeValidationErrors");
+      expect(panelSrc).toContain("setComposeFormKey");
+    });
+
+    it("2. Verifica semilla v34.45 y versión oficial v34.45 (34.45.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      const seed45 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-custom-smtp-from-vecygroup-brevo-fix-v34-45",
+      );
+      expect(seed45?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.45");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.45.0");
     });
   });
 });

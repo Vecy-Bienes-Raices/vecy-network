@@ -330,6 +330,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.45 — Noviembre 2026
+- **Corrección Encabezado `from` `@vecygroup.com` en SMTP Propio (Brevo) y Limpieza Visual Webmail (`v34.45.0`):**
+  - `server/_core/emailAutomationEngine.ts` + `server/routers/emailAutomation.ts`: `resolveCustomSmtpSenderEmail` y `formatEmailFromHeader` separan el login técnico `auth.user` (`c4ad31001@smtp-brevo.com`) del remitente visible `Vecy Bienes Raíces <notificaciones@vecygroup.com>` (priorizando `replyToEmail` cuando pertenece a `@vecygroup.com`), saneando además `upsertAccount` y `email_accounts` en PostgreSQL.
+  - `client/src/components/crm/EmailAutomationPanel.tsx`: `clearComposeValidationErrors` + `composeFormKey` limpian completamente errores visuales (`:user-invalid`, `user-invalid-fallback`, `aria-invalid`) tras envío exitoso o borrador IA.
+  - Gobernanza y Pruebas: `customSmtpSenderFixV34_45.test.ts` (`$0 COP`), semilla `seed-custom-smtp-from-vecygroup-brevo-fix-v34-45`, **Suite 231** en `regression.test.ts`, bump `v34.45` (`34.45.0`), cero cambios en `whatsapp-match.ts`.
+
 ### 🔖 v34.44 — Noviembre 2026
 - **PASO 7 — Gestor Webmail Simplificado en `vecygroup.com` y Chulitos Visuales tipo Mailsuite (`v34.44.0`):**
   - `shared/mailsuiteStatus.ts`, `client/src/components/crm/MailsuiteCheckIndicator.tsx`, `client/src/index.css`: resolución pura y componente SVG reutilizable para `sent_unread` (`✓` `#10B981` + `✓` `#9CA3AF` · `"Enviado · Pendiente de lectura"`), `opened_read` (`✓✓` `#10B981` con detalle horario `America/Bogota`, total lecturas y clics vía `popover="hint"` + `interestfor` + fallback) y estados `queued`/`draft`/`error`.

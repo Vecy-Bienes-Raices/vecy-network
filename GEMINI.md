@@ -1,4 +1,13 @@
-### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.44.0 — 2026-11-23)
+### 🚀 ESTADO ACTIVO DEL SISTEMA (v34.45.0 — 2026-11-23)
+- **JanIA Server & Web Portal:** `v34.45` (`34.45.0`) — **Corrección Encabezado `from` `@vecygroup.com` en SMTP Propio (Brevo) y Limpieza Visual Post-Envío Webmail** (100% aditivo sin modificar `server/_core/whatsapp-match.ts`).
+  1. **Remitente Autenticado `@vecygroup.com` (`server/_core/emailAutomationEngine.ts`, `server/routers/emailAutomation.ts`):**
+     - Separado `auth.user` (`smtpUser`, ej. `c4ad31001@smtp-brevo.com`) del encabezado `from`: `resolveCustomSmtpSenderEmail()` usa el `replyTo` configurado si termina en `@vecygroup.com` o `notificaciones@vecygroup.com` por defecto, y `formatEmailFromHeader()` emite el formato limpio `"Vecy Bienes Raíces <notificaciones@vecygroup.com>"`.
+     - `upsertAccount` y `email_accounts` en PostgreSQL sanean `from_email` para no persistir logins técnicos SMTP como remitente visible.
+  2. **Reset Limpio del Formulario (`client/src/components/crm/EmailAutomationPanel.tsx`):**
+     - Tras enviar con éxito o generar borrador IA, `clearComposeValidationErrors` y `composeFormKey` limpian todos los controles (`:user-invalid`, `user-invalid-fallback`, `aria-invalid` y mensajes visuales de error).
+- **Gobernanza y Regresión:** Semilla `seed-custom-smtp-from-vecygroup-brevo-fix-v34-45`, `customSmtpSenderFixV34_45.test.ts`, **Suite 231** en `regression.test.ts`, bump `v34.45` (`34.45.0`).
+
+### 📦 HISTÓRICO RECIENTE (v34.44.0 — 2026-11-23)
 - **JanIA Server & Web Portal:** `v34.44` (`34.44.0`) — **PASO 7: Gestor de Correos Simplificado en `vecygroup.com` y Chulitos Visuales tipo Mailsuite (`✓✓`)** (100% aditivo sin modificar `server/_core/whatsapp-match.ts`).
   1. **Indicadores Visuales tipo Mailsuite (`shared/mailsuiteStatus.ts`, `client/src/components/crm/MailsuiteCheckIndicator.tsx`, `client/src/index.css`):**
      - `sent_unread` (`openCount === 0`): dos chulitos (`✓` `#10B981` + `✓` `#9CA3AF`) con etiqueta `"Enviado · Pendiente de lectura"`.

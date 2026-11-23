@@ -26,6 +26,7 @@ import {
   ensureDefaultEmailSequencesForUser,
   generateAiEmailDraft,
   processDueEmailAutomations,
+  resolveCustomSmtpSenderEmail,
   sendOrQueueCrmEmail,
   validateSmtpHostSafety,
   verifySmtpConnection,
@@ -192,6 +193,14 @@ export const emailAutomationRouter = router({
       }
 
       const now = new Date();
+      const resolvedFromEmail =
+        input.mode === "custom_smtp"
+          ? resolveCustomSmtpSenderEmail({
+              fromEmail: input.fromEmail,
+              replyToEmail: input.replyToEmail,
+            })
+          : null;
+
       if (existing) {
         const [updated] = await db
           .update(emailAccounts)
@@ -199,7 +208,7 @@ export const emailAutomationRouter = router({
             agencyId: scope.defaultAgencyId,
             mode: input.mode,
             displayName: input.displayName.trim(),
-            fromEmail: input.fromEmail?.trim().toLowerCase() ?? (input.mode === "custom_smtp" ? input.smtpUser?.trim().toLowerCase() ?? null : null),
+            fromEmail: resolvedFromEmail,
             replyToEmail: input.replyToEmail.trim().toLowerCase(),
             signatureHtml: input.signatureHtml ?? null,
             smtpHost: input.mode === "custom_smtp" ? input.smtpHost?.trim().toLowerCase() ?? null : null,
@@ -222,7 +231,7 @@ export const emailAutomationRouter = router({
           agencyId: scope.defaultAgencyId,
           mode: input.mode,
           displayName: input.displayName.trim(),
-          fromEmail: input.fromEmail?.trim().toLowerCase() ?? (input.mode === "custom_smtp" ? input.smtpUser?.trim().toLowerCase() ?? null : null),
+          fromEmail: resolvedFromEmail,
           replyToEmail: input.replyToEmail.trim().toLowerCase(),
           signatureHtml: input.signatureHtml ?? null,
           smtpHost: input.mode === "custom_smtp" ? input.smtpHost?.trim().toLowerCase() ?? null : null,

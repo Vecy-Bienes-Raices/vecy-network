@@ -88,6 +88,18 @@ function syncValidationAria(
   }
 }
 
+function clearComposeValidationErrors(formEl: HTMLFormElement | null) {
+  if (!formEl) return;
+  const controls = Array.from(
+    formEl.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      "input, textarea",
+    ),
+  );
+  for (const ctrl of controls) {
+    syncValidationAria(ctrl, false);
+  }
+}
+
 export default function EmailAutomationPanel() {
   const composeTabId = useId();
   const configTabId = useId();
@@ -95,6 +107,8 @@ export default function EmailAutomationPanel() {
   const toErrorId = useId();
   const subjectErrorId = useId();
   const bodyErrorId = useId();
+  const composeFormRef = useRef<HTMLFormElement>(null);
+  const [composeFormKey, setComposeFormKey] = useState(0);
 
   const [mainTab, setMainTab] = useState<"compose_sent" | "config_automation">(
     "compose_sent",
@@ -299,6 +313,7 @@ export default function EmailAutomationPanel() {
       setComposeSubject(draft.subject);
       setComposeBodyText(draft.bodyText);
       setComposeAiGenerated(true);
+      clearComposeValidationErrors(composeFormRef.current);
       toast.success("Borrador redactado con JanIA");
     },
     onError: (err) =>
@@ -311,10 +326,15 @@ export default function EmailAutomationPanel() {
         description:
           "Ya aparece en tu bandeja con sello SHA-256 y seguimiento ✓✓ tipo Mailsuite.",
       });
+      setComposeLeadId(0);
+      setComposeRecipientName("");
+      setComposeToEmail("");
       setComposeSubject("");
       setComposeBodyText("");
       setComposeAiGenerated(false);
       setComposeAiInstructions("");
+      clearComposeValidationErrors(composeFormRef.current);
+      setComposeFormKey((k) => k + 1);
       refetchMessages();
       refetchOverview();
     },
@@ -481,7 +501,9 @@ export default function EmailAutomationPanel() {
       mode,
       displayName: displayName.trim(),
       replyToEmail: replyToEmail.trim(),
-      fromEmail: fromEmail.trim() || null,
+      fromEmail: fromEmail.trim().toLowerCase().endsWith("@vecygroup.com")
+        ? fromEmail.trim().toLowerCase()
+        : null,
       signatureHtml: signatureHtml.trim() || null,
       smtpHost: mode === "custom_smtp" ? smtpHost.trim() : null,
       smtpPort: Number(smtpPort) || 587,
@@ -686,6 +708,8 @@ export default function EmailAutomationPanel() {
           <div className="space-y-6">
             {/* Redactor directo estilo webmail */}
             <form
+              key={composeFormKey}
+              ref={composeFormRef}
               onSubmit={handleSendDirectEmail}
               noValidate
               className="panel-card p-6 space-y-4"

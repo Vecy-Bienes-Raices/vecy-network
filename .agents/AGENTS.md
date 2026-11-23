@@ -184,7 +184,17 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.44 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.45 — Noviembre 2026
+
+### Novedades v34.45 (Corrección `from` `@vecygroup.com` en SMTP Propio Brevo y Limpieza Visual Post-Envío):
+- **Remitente SMTP Propio (`server/_core/emailAutomationEngine.ts`, `server/routers/emailAutomation.ts`):**
+  1. `auth.user` mantiene `smtpUser` (`c4ad31001@smtp-brevo.com`), mientras `from` y `from_email` usan `resolveCustomSmtpSenderEmail()` (`replyTo` si `@vecygroup.com`, o `notificaciones@vecygroup.com`) formateado vía `formatEmailFromHeader()` como `"Vecy Bienes Raíces <notificaciones@vecygroup.com>"`.
+  2. Saneamiento de `from_email` en `upsertAccount` y en tabla `email_accounts` de producción.
+- **Limpieza de Validación Visual (`client/src/components/crm/EmailAutomationPanel.tsx`):**
+  1. `clearComposeValidationErrors` + `composeFormKey` limpian completamente bordes rojos y errores tras envío exitoso.
+- **Gobernanza y Validación:** `customSmtpSenderFixV34_45.test.ts`, semilla `seed-custom-smtp-from-vecygroup-brevo-fix-v34-45`, **Suite 231**, bump `v34.45` (`34.45.0`), cero cambios en `whatsapp-match.ts`.
+
+## 🔖 VERSIÓN ANTERIOR: v34.44 — Noviembre 2026
 
 ### Novedades v34.44 (PASO 7 — Gestor Webmail Simplificado y Chulitos Visuales tipo Mailsuite `✓✓`):
 - **Indicadores tipo Mailsuite (`shared/mailsuiteStatus.ts`, `MailsuiteCheckIndicator.tsx`, `client/src/index.css`):**

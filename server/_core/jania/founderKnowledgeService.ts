@@ -1166,6 +1166,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "PASO 7 v34.44: Webmail simplificado ('Redactar y Enviados' vs 'Configuración y Automatización') en vecygroup.com y chulitos visuales ✓✓ tipo Mailsuite.",
     createdAt: "2026-11-23T06:50:00.000Z",
     active: true
+  },
+  {
+    id: "seed-custom-smtp-from-vecygroup-brevo-fix-v34-45",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Corrección Remitente Autenticado @vecygroup.com en SMTP Propio (Brevo) y Reset de Formulario Webmail (v34.45)",
+    directive:
+      "Cuando se envía con Servidor SMTP Propio (por ejemplo Brevo con login técnico c4ad31001@smtp-brevo.com), auth.user mantiene smtpUser para autenticar el túnel SMTP, pero el encabezado 'from' y 'from_email' jamás usan ese login técnico: resolveCustomSmtpSenderEmail() selecciona siempre la dirección autenticada @vecygroup.com (priorizando replyToEmail si termina en @vecygroup.com o notificaciones@vecygroup.com por defecto) con formato limpio 'Vecy Bienes Raíces <notificaciones@vecygroup.com>'. Además, tras un envío exitoso en EmailAutomationPanel.tsx se limpia todo estado de validación visual (:user-invalid y user-invalid-fallback).",
+    rawText:
+      "v34.45: Encabezado 'from' @vecygroup.com en SMTP propio (Brevo) separado de auth.user y limpieza visual completa tras envío webmail.",
+    createdAt: "2026-11-23T15:18:00.000Z",
+    active: true
   }
 ];
 
