@@ -11,6 +11,8 @@ import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { getLoginUrl } from '@/const';
+import { isAdminUser } from '../../../shared/authRouting';
 
 interface NavbarProps {
   logoUrl?: string;
@@ -22,7 +24,7 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
   const [, navigate] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -43,7 +45,7 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
     { label: 'AGENTES', href: '/agent-dashboard' },
   ];
 
-  if (user && user.role === 'admin') {
+  if (isAdminUser(user)) {
     navItems.push({ label: 'ADMINISTRACIÓN', href: '/admin' });
   }
 
@@ -95,11 +97,13 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
 
         {/* CTA Buttons */}
         <div className="hidden lg:flex items-center gap-3">
-          {!user && (
-            <button onClick={() => navigate('/login')} className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
+          {loading && !user ? (
+            <div className="w-[84px] h-[34px] rounded-lg bg-white/5 animate-pulse" aria-hidden="true" />
+          ) : !user ? (
+            <button onClick={() => navigate(getLoginUrl())} className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
               ACCEDER
             </button>
-          )}
+          ) : null}
           <button onClick={() => navigate('/jania')} className="btn-gold text-sm">CONSULTAR</button>
         </div>
 
@@ -134,9 +138,9 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
                 {item.label}
               </a>
             ))}
-            {!user && (
+            {!loading && !user && (
               <button 
-                onClick={() => { navigate('/login'); setIsOpen(false); }} 
+                onClick={() => { navigate(getLoginUrl()); setIsOpen(false); }} 
                 className="btn-gold-outline w-full text-xs font-bold uppercase tracking-wider py-3 mt-2"
               >
                 ACCEDER AL PANEL

@@ -27,15 +27,31 @@ export function useAuth(options?: UseAuthOptions) {
   });
 
   const [sbUser, setSbUser] = useState<any>(null);
+  const [sbChecked, setSbChecked] = useState<boolean>(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setSbUser(user);
-    });
+    let mounted = true;
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!mounted) return;
+        if (session?.user) {
+          setSbUser(session.user);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setSbChecked(true);
+      });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (!mounted) return;
       setSbUser(session?.user || null);
+      setSbChecked(true);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
@@ -109,10 +125,16 @@ export function useAuth(options?: UseAuthOptions) {
         );
       } catch (e) {}
     }
+    const isRoleResolving = Boolean(meQuery.isLoading && !meQuery.data);
+    const isAuthSettled = Boolean(sbChecked && !meQuery.isLoading);
     return {
       user: activeUser,
       hasBackendUser: Boolean(meQuery.data),
-      loading: (meQuery.isLoading && !sbUser && !cachedUser) || logoutMutation.isPending,
+      isRoleResolving,
+      isAuthSettled,
+      loading:
+        ((meQuery.isLoading || !sbChecked) && !meQuery.data && !sbUser && !cachedUser) ||
+        logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(activeUser),
     };
@@ -122,6 +144,7 @@ export function useAuth(options?: UseAuthOptions) {
     meQuery.data,
     meQuery.error,
     meQuery.isLoading,
+    sbChecked,
     sbUser,
     logoutMutation.error,
     logoutMutation.isPending,

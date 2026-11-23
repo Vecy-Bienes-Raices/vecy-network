@@ -108,3 +108,55 @@ export function resolvePostLoginDestination(params: {
   return "/jania";
 }
 
+export function isAdminUser(
+  user?: { email?: string | null; role?: string | null } | null,
+): boolean {
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  const emailLower = (user.email || "").trim().toLowerCase();
+  return Boolean(emailLower && ADMIN_EMAILS_LIST.includes(emailLower));
+}
+
+export function hasOAuthCallbackParams(
+  search?: string | null,
+  hash?: string | null,
+): boolean {
+  const combined = `${search || ""}${hash || ""}`;
+  return /(?:^|[?&#])(?:access_token|refresh_token|code|error|error_description)=/i.test(combined);
+}
+
+export function hasOAuthSuccessParams(
+  search?: string | null,
+  hash?: string | null,
+): boolean {
+  const combined = `${search || ""}${hash || ""}`;
+  return /(?:^|[?&#])(?:access_token|refresh_token|code)=/i.test(combined);
+}
+
+export function shouldHoldInitialRenderForAuth(params: {
+  pathname: string;
+  hasOAuthSuccess: boolean;
+  hasPendingAgendaReturn: boolean;
+  hasPendingLoginReturn: boolean;
+  hasBackendSessionToken: boolean;
+  hasSupabaseStoredSession: boolean;
+}): boolean {
+  if (params.pathname === "/login" || params.pathname.startsWith("/login/")) {
+    return false;
+  }
+  if (params.hasOAuthSuccess) {
+    return true;
+  }
+  if (params.hasPendingAgendaReturn && params.hasSupabaseStoredSession) {
+    return true;
+  }
+  if (
+    params.hasPendingLoginReturn &&
+    !params.hasBackendSessionToken &&
+    params.hasSupabaseStoredSession
+  ) {
+    return true;
+  }
+  return false;
+}
+

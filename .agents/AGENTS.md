@@ -184,7 +184,18 @@ es, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v34.41 — Noviembre 2026
+## 🔖 VERSIÓN ACTUAL: v34.42 — Noviembre 2026
+
+### Novedades v34.42 (Auditoría `Navbar.tsx` / OAuth `vecygroup.com`, Compuerta Anti-Parpadeo `/` -> `/admin` y Verificación Supabase `Site URL`):
+- **Auditoría Confirmada (`Navbar.tsx`, `.env`, Nginx, Supabase Live Probe):**
+  1. `Navbar.tsx` usa `getLoginUrl()` (`'/login'`) sin referencias a `vecy-bienes-raices.vercel.app`; el `.env` del VPS y Nginx `:443` apuntan correctamente a `vecygroup.com`.
+  2. Confirmado en vivo (`GET /auth/v1/callback?error=access_denied` -> `303 Location: https://vecy-bienes-raices.vercel.app?...`) que el `Site URL` en Supabase Dashboard sigue configurado en `https://vecy-bienes-raices.vercel.app`.
+- **Cero Parpadeo `/` -> `/admin` (`shared/authRouting.ts`, `client/src/lib/supabase.ts`, `AuthLoadingScreen.tsx`, `index.css`, `useAuth.ts`, `App.tsx`, `Login.tsx`, `Admin.tsx`, `Navbar.tsx`, `AuthModal.jsx`):**
+  1. Captura síncrona previa a `createClient()` (`INITIAL_URL_HAS_OAUTH_CALLBACK`, `INITIAL_URL_HAS_OAUTH_SUCCESS`, `hasStoredSupabaseSession`), compuerta `shouldHoldInitialRenderForAuth()` en `OAuthRedirectRestorer` (`App.tsx`) con `<AuthLoadingScreen />` (`<progress className="vecy-loading-spinner">`) y navegación `replace: true` sin recargas ni pintado previo de `<Home />`.
+  2. Estados `sbChecked`, `isRoleResolving` e `isAuthSettled` en `useAuth.ts` eliminando flashes en `Login.tsx`, `Admin.tsx` y `Navbar.tsx`, además de `cleanRedirectTo` en `AuthModal.jsx`.
+- **Gobernanza y Validación:** Semilla `seed-auth-zero-flicker-vecygroup-navbar-oauth-v34-42`, **Suite 228** en `regression.test.ts`, bump `v34.42` (`34.42.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v34.41 — Noviembre 2026
 
 ### Novedades v34.41 (PASO 5 — Agente JanIA Privado RAG / WhatsApp Cloud BYO-Number, Suite Legal SaaS y Base/Rutina de JanIA):
 - **Base de Datos y Cuotas IA / Legales (`drizzle/0017_private_jania_channels_and_legal_quotas.sql`, `drizzle/schema.ts`, `planEntitlements.ts`):**

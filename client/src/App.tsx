@@ -1,16 +1,24 @@
 // @ts-nocheck
-import React, { useEffect, Suspense, lazy } from "react";
-import { supabase } from "@/lib/supabase";
+import React, { useEffect, useState, Suspense, lazy } from "react";
+import { hasStoredSupabaseSession, INITIAL_URL_HAS_OAUTH_SUCCESS, supabase } from "@/lib/supabase";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingScrollToTop from "./components/FloatingScrollToTop";
 import JanIAFloatingButton from "./components/JanIAFloatingButton";
+import AuthLoadingScreen from "./components/AuthLoadingScreen";
+import { trpc } from "@/lib/trpc";
 import { extractTenantSlugFromHost, isCustomWhiteLabelHost } from "../../shared/whitelabel";
-import { isSameOriginUrl, sanitizeInternalRedirectPath } from "../../shared/authRouting";
+import {
+  hasOAuthSuccessParams,
+  isSameOriginUrl,
+  resolvePostLoginDestination,
+  sanitizeInternalRedirectPath,
+  shouldHoldInitialRenderForAuth,
+} from "../../shared/authRouting";
 
 // Rutas críticas cargadas de forma prioritaria
 import Home from "./pages/Home";
@@ -41,10 +49,10 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoadingFallback() {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
-      <div className="w-9 h-9 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-      <p className="text-zinc-400 text-xs font-mono uppercase tracking-widest animate-pulse">Cargando...</p>
-    </div>
+    <AuthLoadingScreen
+      title="Cargando plataforma..."
+      subtitle="Preparando módulo en VECY Bienes Raíces..."
+    />
   );
 }
 
@@ -103,64 +111,206 @@ function Router() {
 //   to keep consistent foreground/background color across components
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
+function readSafeAgendaReturnUrl(currentOrigin: string): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const agendaReturnUrl = localStorage.getItem('vecy_agenda_return_url');
+    if (!agendaReturnUrl) return "";
+    if (!isSameOriginUrl(agendaReturnUrl, currentOrigin)) {
+      localStorage.removeItem('vecy_agenda_return_url');
+      return "";
+    }
+    return agendaReturnUrl !== window.location.href ? agendaReturnUrl : "";
+  } catch {
+    return "";
+  }
+}
+
+function readSafePendingLoginReturn(currentOrigin: string): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const raw =
+      sessionStorage.getItem('vecy_login_return_url') ||
+      localStorage.getItem('vecy_login_return_url');
+    if (!raw) return "";
+    const safe = sanitizeInternalRedirectPath(raw, currentOrigin);
+    if (!safe) {
+      localStorage.removeItem('vecy_login_return_url');
+      sessionStorage.removeItem('vecy_login_return_url');
+      return "";
+    }
+    return safe;
+  } catch {
+    return "";
+  }
+}
+
+function clearPendingLoginReturn() {
+  try {
+    localStorage.removeItem('vecy_login_return_url');
+    sessionStorage.removeItem('vecy_login_return_url');
+  } catch (_) {}
+}
+
 /**
- * Restaurador de URL post-OAuth.
- * Si el usuario hizo OAuth desde /agenda/13?nombre=...&codigo=...
- * y Supabase los redirigió a la raíz, este componente los devuelve al lugar correcto.
+ * Restaurador síncrono de URL post-OAuth sin parpadeos.
+ * Retiene el pintado inicial de '/' mientras intercambia el token OAuth en el mismo origen
+ * y navega directamente al destino final (/admin, /agent-dashboard, /agenda/... o /jania).
  */
-function OAuthRedirectRestorer() {
+function OAuthRedirectRestorer({ children }: { children: React.ReactNode }) {
+  const [, navigate] = useLocation();
+  const utils = trpc.useUtils();
+  const loginMutation = trpc.auth.loginWithSupabaseToken.useMutation();
+
+  const [isHoldingForAuth, setIsHoldingForAuth] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const currentOrigin = window.location.origin;
+    const landedWithOAuthParams =
+      INITIAL_URL_HAS_OAUTH_SUCCESS ||
+      hasOAuthSuccessParams(window.location.search, window.location.hash);
+    const pendingAgendaReturn = Boolean(readSafeAgendaReturnUrl(currentOrigin));
+    const pendingLoginReturn = Boolean(readSafePendingLoginReturn(currentOrigin));
+    const hasBackendSessionToken = Boolean(localStorage.getItem('jania-session-token'));
+    const hasSupabaseStoredSession = hasStoredSupabaseSession();
+
+    return shouldHoldInitialRenderForAuth({
+      pathname: window.location.pathname,
+      hasOAuthSuccess: landedWithOAuthParams,
+      hasPendingAgendaReturn: pendingAgendaReturn,
+      hasPendingLoginReturn: pendingLoginReturn,
+      hasBackendSessionToken,
+      hasSupabaseStoredSession,
+    });
+  });
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+    let active = true;
     const currentOrigin = window.location.origin;
+    const agendaReturnUrl = readSafeAgendaReturnUrl(currentOrigin);
+    const landedWithOAuthParams =
+      INITIAL_URL_HAS_OAUTH_SUCCESS ||
+      hasOAuthSuccessParams(window.location.search, window.location.hash);
+    const pendingLoginReturn = readSafePendingLoginReturn(currentOrigin);
+    const hasBackendToken = Boolean(localStorage.getItem('jania-session-token'));
+    const isLoginRoute =
+      window.location.pathname === '/login' || window.location.pathname.startsWith('/login/');
 
-    const agendaReturnUrl = localStorage.getItem('vecy_agenda_return_url');
-    if (agendaReturnUrl) {
-      if (!isSameOriginUrl(agendaReturnUrl, currentOrigin)) {
-        localStorage.removeItem('vecy_agenda_return_url');
-      } else {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (session && agendaReturnUrl !== window.location.href) {
-            localStorage.removeItem('vecy_agenda_return_url');
-            window.location.href = agendaReturnUrl;
-          }
+    const shouldProcess =
+      Boolean(agendaReturnUrl) ||
+      (!isLoginRoute &&
+        (landedWithOAuthParams ||
+          (Boolean(pendingLoginReturn) && !hasBackendToken && hasStoredSupabaseSession())));
+
+    if (!shouldProcess) {
+      if (isHoldingForAuth) setIsHoldingForAuth(false);
+      return;
+    }
+
+    const failSafeTimer = window.setTimeout(() => {
+      if (active) setIsHoldingForAuth(false);
+    }, 6500);
+
+    const waitForSupabaseSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) return session;
+      if (!landedWithOAuthParams) return null;
+      return await new Promise<any>((resolve) => {
+        let settled = false;
+        const finish = (nextSession: any) => {
+          if (settled) return;
+          settled = true;
+          subscription.unsubscribe();
+          window.clearTimeout(waitTimer);
+          resolve(nextSession);
+        };
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+          if (nextSession) finish(nextSession);
         });
-        return;
-      }
-    }
-
-    // Si Supabase retornó a la raíz ('/') tras OAuth con sesión activa pero sin cookie/token backend aún,
-    // completar el intercambio en /login dentro del mismo dominio para redirigir al panel correspondiente.
-    const combinedUrl = `${window.location.search}${window.location.hash}`;
-    const landedWithOAuthParams = /(?:^|[?&#])(?:access_token|refresh_token|code)=/i.test(combinedUrl);
-    let pendingLoginReturn = "";
-    try {
-      const raw =
-        sessionStorage.getItem('vecy_login_return_url') ||
-        localStorage.getItem('vecy_login_return_url');
-      const safe = sanitizeInternalRedirectPath(raw, currentOrigin);
-      if (raw && !safe) {
-        localStorage.removeItem('vecy_login_return_url');
-        sessionStorage.removeItem('vecy_login_return_url');
-      } else if (safe) {
-        pendingLoginReturn = safe;
-      }
-    } catch (_) {}
-
-    if (
-      window.location.pathname !== '/login' &&
-      (landedWithOAuthParams || (pendingLoginReturn && !localStorage.getItem('jania-session-token')))
-    ) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          const targetLogin = pendingLoginReturn
-            ? `/login?redirect=${encodeURIComponent(pendingLoginReturn)}`
-            : '/login';
-          window.location.replace(targetLogin);
-        }
+        const waitTimer = window.setTimeout(() => finish(null), 4000);
       });
-    }
+    };
+
+    const run = async () => {
+      try {
+        const session = await waitForSupabaseSession();
+        if (!active) return;
+
+        if (agendaReturnUrl && session) {
+          localStorage.removeItem('vecy_agenda_return_url');
+          if (agendaReturnUrl.startsWith('/')) {
+            navigate(agendaReturnUrl, { replace: true });
+          } else {
+            const parsed = new URL(agendaReturnUrl);
+            navigate(`${parsed.pathname}${parsed.search}${parsed.hash}`, { replace: true });
+          }
+          return;
+        }
+
+        if (
+          session?.access_token &&
+          !isLoginRoute &&
+          (landedWithOAuthParams || (pendingLoginReturn && !hasBackendToken))
+        ) {
+          const exchangePromise = loginMutation.mutateAsync({ accessToken: session.access_token });
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout de sincronización')), 10000),
+          );
+          const res: any = await Promise.race([exchangePromise, timeoutPromise]).catch(() => null);
+          if (!active) return;
+
+          if (res?.sessionToken) {
+            localStorage.setItem('jania-session-token', res.sessionToken);
+          }
+          if (res?.user) {
+            utils.auth.me.setData(undefined, res.user);
+            try {
+              localStorage.setItem('manus-runtime-user-info', JSON.stringify(res.user));
+            } catch (_) {}
+          }
+
+          const userEmail = (res?.user?.email || session.user?.email || '').toLowerCase();
+          const userRole = res?.user?.role as string | undefined;
+          const dest = resolvePostLoginDestination({
+            userEmail,
+            userRole,
+            savedReturn: pendingLoginReturn,
+            currentOrigin,
+          });
+          clearPendingLoginReturn();
+          navigate(dest, { replace: true });
+          return;
+        }
+
+        if (landedWithOAuthParams) {
+          window.history.replaceState({}, document.title, window.location.pathname || '/');
+        }
+      } catch (err) {
+        console.warn('[OAuthRedirectRestorer] Error resolviendo retorno OAuth:', err);
+      } finally {
+        window.clearTimeout(failSafeTimer);
+        if (active) setIsHoldingForAuth(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      active = false;
+      window.clearTimeout(failSafeTimer);
+    };
   }, []);
-  return null;
+
+  if (isHoldingForAuth) {
+    return (
+      <AuthLoadingScreen
+        title="Verificando sesión segura..."
+        subtitle="Preparando tu panel en VECY..."
+      />
+    );
+  }
+
+  return <>{children}</>;
 }
 
 function App() {
@@ -172,11 +322,12 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
-          <OAuthRedirectRestorer />
-          <ScrollToTop />
-          <Router />
-          <FloatingScrollToTop />
-          <JanIAFloatingButton />
+          <OAuthRedirectRestorer>
+            <ScrollToTop />
+            <Router />
+            <FloatingScrollToTop />
+            <JanIAFloatingButton />
+          </OAuthRedirectRestorer>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

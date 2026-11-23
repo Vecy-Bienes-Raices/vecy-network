@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import {
+  hasStoredSupabaseSession,
+  INITIAL_URL_HASH,
+  INITIAL_URL_HAS_OAUTH_CALLBACK,
+  INITIAL_URL_HAS_OAUTH_SUCCESS,
+  INITIAL_URL_SEARCH,
+  supabase,
+} from '@/lib/supabase';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { getLoginUrl } from '@/const';
-import { Shield, Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import AuthLoadingScreen from '@/components/AuthLoadingScreen';
+import { Shield, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   ADMIN_EMAILS_LIST,
   buildAuthCallbackUrl,
+  hasOAuthCallbackParams,
+  hasOAuthSuccessParams,
   resolvePostLoginDestination,
   sanitizeInternalRedirectPath,
 } from '../../../shared/authRouting';
@@ -16,26 +25,32 @@ import {
 export { ADMIN_EMAILS_LIST, resolvePostLoginDestination };
 
 const hasOAuthCallbackInUrl = (): boolean => {
+  if (INITIAL_URL_HAS_OAUTH_CALLBACK) return true;
   if (typeof window === 'undefined') return false;
-  const combined = `${window.location.search}${window.location.hash}`;
-  return /(?:^|[?&#])(?:access_token|refresh_token|code|error|error_description)=/i.test(combined);
+  return hasOAuthCallbackParams(window.location.search, window.location.hash);
 };
 
 const readUrlAuthError = (): string | null => {
   if (typeof window === 'undefined') return null;
   const search = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const initSearch = new URLSearchParams(INITIAL_URL_SEARCH);
+  const initHash = new URLSearchParams(INITIAL_URL_HASH.replace(/^#/, ''));
   return (
     search.get('error_description') ||
     hash.get('error_description') ||
+    initSearch.get('error_description') ||
+    initHash.get('error_description') ||
     search.get('error') ||
-    hash.get('error')
+    hash.get('error') ||
+    initSearch.get('error') ||
+    initHash.get('error')
   );
 };
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { user, hasBackendUser, refresh } = useAuth();
+  const { user, hasBackendUser, loading: authLoading, isAuthSettled, refresh } = useAuth();
   const utils = trpc.useUtils();
   const loginMutation = trpc.auth.loginWithSupabaseToken.useMutation();
 
@@ -53,6 +68,15 @@ export default function Login() {
   const [isRegister, setIsRegister] = useState(initialModeRegister);
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const [initializingAuth, setInitializingAuth] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      hasOAuthCallbackInUrl() ||
+      hasStoredSupabaseSession() ||
+      Boolean(localStorage.getItem('jania-session-token'))
+    );
+  });
   const isExchangingRef = React.useRef(false);
   const hasCompletedExchangeRef = React.useRef(false);
 
@@ -128,6 +152,9 @@ export default function Login() {
       }
       if (res && res.user) {
         utils.auth.me.setData(undefined, res.user);
+        try {
+          localStorage.setItem("manus-runtime-user-info", JSON.stringify(res.user));
+        } catch (_) {}
       }
 
       // Validar si el usuario tiene rol admin/agent o si viene desde /jania
@@ -139,19 +166,21 @@ export default function Login() {
 
       if (isAdmin || res?.user || sbUser) {
         hasCompletedExchangeRef.current = true;
+        setRedirecting(true);
         if (typeof window !== 'undefined' && hasOAuthCallbackInUrl()) {
           const cleanLoginUrl = redirectQuery ? `/login?redirect=${encodeURIComponent(redirectQuery)}` : '/login';
           window.history.replaceState({}, document.title, cleanLoginUrl);
         }
         toast.success('Sesión iniciada correctamente');
-        navigate(resolveDestination(userEmail, res?.user?.role));
+        navigate(resolveDestination(userEmail, res?.user?.role), { replace: true });
       }
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
       const { data: { user: sbUser } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
       if (sbUser) {
         hasCompletedExchangeRef.current = true;
-        navigate(resolveDestination(sbUser.email || '', undefined));
+        setRedirecting(true);
+        navigate(resolveDestination(sbUser.email || '', undefined), { replace: true });
       } else if (!isSilent) {
         toast.error('Error al iniciar sesión. Intenta nuevamente.');
       }
@@ -176,34 +205,83 @@ export default function Login() {
         window.history.replaceState({}, document.title, cleanLoginUrl);
       }
       setLoading(false);
+      setInitializingAuth(false);
     }
+
+    const safetyTimer = window.setTimeout(() => {
+      if (isMounted) setInitializingAuth(false);
+    }, 5500);
+
+    let oauthWaitTimer: number | null = null;
 
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session && isMounted && !isExchangingRef.current) {
           await exchangeToken(session.access_token, false);
+          if (isMounted) setInitializingAuth(false);
+          return;
+        }
+        const awaitingOAuthCallback =
+          !urlAuthError &&
+          (INITIAL_URL_HAS_OAUTH_SUCCESS ||
+            (typeof window !== 'undefined' &&
+              hasOAuthSuccessParams(window.location.search, window.location.hash)));
+        if (awaitingOAuthCallback && isMounted) {
+          oauthWaitTimer = window.setTimeout(() => {
+            if (isMounted && !isExchangingRef.current) {
+              setInitializingAuth(false);
+            }
+          }, 4000);
+          return;
         }
       } catch (err) {
         console.error('[Login] Error checking session:', err);
       }
+      if (isMounted && !localStorage.getItem('jania-session-token')) {
+        setInitializingAuth(false);
+      }
     };
 
     // Check on mount
-    checkSession();
+    void checkSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session && isMounted && !isExchangingRef.current) {
+      if (
+        (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') &&
+        session &&
+        isMounted &&
+        !isExchangingRef.current &&
+        !hasCompletedExchangeRef.current
+      ) {
+        if (oauthWaitTimer) {
+          window.clearTimeout(oauthWaitTimer);
+          oauthWaitTimer = null;
+        }
         await exchangeToken(session.access_token, false);
+        if (isMounted) setInitializingAuth(false);
       }
     });
 
     return () => {
       isMounted = false;
+      window.clearTimeout(safetyTimer);
+      if (oauthWaitTimer) window.clearTimeout(oauthWaitTimer);
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!initializingAuth) return;
+    const awaitingOAuth =
+      INITIAL_URL_HAS_OAUTH_SUCCESS ||
+      (typeof window !== 'undefined' &&
+        hasOAuthSuccessParams(window.location.search, window.location.hash));
+    if (isAuthSettled && !authLoading && !isExchangingRef.current && !awaitingOAuth) {
+      setInitializingAuth(false);
+    }
+  }, [initializingAuth, isAuthSettled, authLoading]);
 
   // Redirect if already authenticated (esperando siempre que finalice el intercambio con el backend)
   useEffect(() => {
@@ -211,7 +289,8 @@ export default function Login() {
     if (isExchangingRef.current) return;
     if (hasOAuthCallbackInUrl() && !hasCompletedExchangeRef.current) return;
     if (!hasBackendUser && !hasCompletedExchangeRef.current) return;
-    navigate(resolveDestination(user.email || '', user.role as string));
+    setRedirecting(true);
+    navigate(resolveDestination(user.email || '', user.role as string), { replace: true });
   }, [user, hasBackendUser]);
 
   const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
@@ -283,6 +362,34 @@ export default function Login() {
 
   const isFromJania = redirectQuery.includes('/jania');
 
+  const handleManualReset = async () => {
+    setInitializingAuth(false);
+    setLoading(false);
+    setRedirecting(false);
+    isExchangingRef.current = false;
+    hasCompletedExchangeRef.current = false;
+    try {
+      await supabase.auth.signOut();
+    } catch (_) {}
+    localStorage.removeItem("jania-session-token");
+    localStorage.removeItem("manus-runtime-user-info");
+  };
+
+  if (initializingAuth || loading || redirecting || (Boolean(user) && hasBackendUser)) {
+    return (
+      <AuthLoadingScreen
+        title="Estableciendo conexión segura..."
+        subtitle={
+          redirecting
+            ? 'Ingresando a tu panel en VECY Bienes Raíces...'
+            : 'Validando sesión y permisos en el servidor...'
+        }
+        actionLabel="¿Tarda demasiado? Haz clic aquí para ingresar manualmente"
+        onAction={handleManualReset}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
       {/* Background decoration */}
@@ -318,25 +425,7 @@ export default function Login() {
             </p>
           </div>
 
-          {loading ? (
-            <div className="py-12 text-center flex flex-col items-center gap-4">
-              <Loader2 className="w-8 h-8 text-accent animate-spin" />
-              <p className="text-sm text-muted-foreground">Estableciendo conexión segura...</p>
-              <button
-                type="button"
-                onClick={async () => {
-                  setLoading(false);
-                  isExchangingRef.current = false;
-                  try { await supabase.auth.signOut(); } catch (_) {}
-                  localStorage.removeItem("jania-session-token");
-                }}
-                className="mt-2 text-xs text-zinc-400 hover:text-white underline transition-colors"
-              >
-                ¿Tarda demasiado? Haz clic aquí para ingresar manualmente
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
+          <div className="space-y-4">
               {/* OAuth Buttons */}
               <div className="w-full">
                 <button
@@ -450,7 +539,6 @@ export default function Login() {
                 </button>
               </div>
             </div>
-          )}
         </div>
       </div>
     </div>

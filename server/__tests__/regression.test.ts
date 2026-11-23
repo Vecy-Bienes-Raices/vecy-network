@@ -16495,9 +16495,159 @@ A: BANCO DE BOGOTA
       expect(seed41B?.active).toBe(true);
       expect(privateJaniaSrc).not.toContain("whatsapp-match");
       expect(cloudServiceSrc).not.toContain("whatsapp-match");
-      expect(VECY_VERSION).toBe("v34.41");
+      expect(VECY_VERSION).toMatch(/^v34\.(?:4[1-9]|[5-9]\d)$/);
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("34.41.0");
+      expect(pkg.version).toMatch(/^34\.(?:4[1-9]|[5-9]\d)\.\d+$/);
+    });
+  });
+
+  // =========================================================================
+  // SUITE 228: AUTH CERO PARPADEO EN vecygroup.com, Navbar.tsx Y COMPUERTA OAUTH SÍNCRONA (v34.42)
+  // =========================================================================
+  describe("Suite 228: Auth Cero Parpadeo vecygroup.com, Navbar.tsx y Compuerta OAuth Síncrona (v34.42)", () => {
+    it("1. shared/authRouting.ts detecta parámetros OAuth, evalúa isAdminUser y decide shouldHoldInitialRenderForAuth sin bloquear visitas anónimas", async () => {
+      const {
+        hasOAuthCallbackParams,
+        hasOAuthSuccessParams,
+        isAdminUser,
+        shouldHoldInitialRenderForAuth,
+      } = await import("../../shared/authRouting");
+
+      expect(hasOAuthCallbackParams("?code=abc-123", "")).toBe(true);
+      expect(hasOAuthCallbackParams("", "#access_token=jwt&refresh_token=r")).toBe(true);
+      expect(hasOAuthCallbackParams("?error=access_denied", "")).toBe(true);
+      expect(hasOAuthCallbackParams("?tab=ofertas", "")).toBe(false);
+
+      expect(hasOAuthSuccessParams("?code=abc-123", "")).toBe(true);
+      expect(hasOAuthSuccessParams("", "#access_token=jwt")).toBe(true);
+      expect(hasOAuthSuccessParams("?error=access_denied", "")).toBe(false);
+
+      expect(isAdminUser({ email: "edduainnova@gmail.com", role: "user" })).toBe(true);
+      expect(isAdminUser({ email: "otro@inmobiliaria.co", role: "admin" })).toBe(true);
+      expect(isAdminUser({ email: "agente@inmobiliaria.co", role: "agent" })).toBe(false);
+      expect(isAdminUser(null)).toBe(false);
+
+      // Visita anónima en '/': no debe retener el render inicial
+      expect(
+        shouldHoldInitialRenderForAuth({
+          pathname: "/",
+          hasOAuthSuccess: false,
+          hasPendingAgendaReturn: false,
+          hasPendingLoginReturn: false,
+          hasBackendSessionToken: false,
+          hasSupabaseStoredSession: false,
+        }),
+      ).toBe(false);
+
+      // Retorno OAuth en '/': retiene síncronamente para evitar parpadeo '/' -> '/admin'
+      expect(
+        shouldHoldInitialRenderForAuth({
+          pathname: "/",
+          hasOAuthSuccess: true,
+          hasPendingAgendaReturn: false,
+          hasPendingLoginReturn: false,
+          hasBackendSessionToken: false,
+          hasSupabaseStoredSession: false,
+        }),
+      ).toBe(true);
+
+      // Ruta /login: Login.tsx maneja su propia compuerta síncrona
+      expect(
+        shouldHoldInitialRenderForAuth({
+          pathname: "/login",
+          hasOAuthSuccess: true,
+          hasPendingAgendaReturn: false,
+          hasPendingLoginReturn: true,
+          hasBackendSessionToken: false,
+          hasSupabaseStoredSession: true,
+        }),
+      ).toBe(false);
+
+      // Pending login return con sesión Supabase y sin token backend: retiene
+      expect(
+        shouldHoldInitialRenderForAuth({
+          pathname: "/",
+          hasOAuthSuccess: false,
+          hasPendingAgendaReturn: false,
+          hasPendingLoginReturn: true,
+          hasBackendSessionToken: false,
+          hasSupabaseStoredSession: true,
+        }),
+      ).toBe(true);
+    });
+
+    it("2. Navbar.tsx usa getLoginUrl()/isAdminUser, espera loading y no referencia vecy-bienes-raices.vercel.app", async () => {
+      const fs = await import("fs");
+      const navbarSrc = fs.readFileSync("client/src/components/Navbar.tsx", "utf-8");
+
+      expect(navbarSrc).toContain("getLoginUrl");
+      expect(navbarSrc).toContain("isAdminUser");
+      expect(navbarSrc).toContain("loading");
+      expect(navbarSrc).not.toContain("vecy-bienes-raices.vercel.app");
+    });
+
+    it("3. supabase.ts captura INITIAL_URL_HAS_OAUTH_CALLBACK / INITIAL_URL_HAS_OAUTH_SUCCESS antes de createClient", async () => {
+      const fs = await import("fs");
+      const sbSrc = fs.readFileSync("client/src/lib/supabase.ts", "utf-8");
+
+      const captureIdx = sbSrc.indexOf("INITIAL_URL_HAS_OAUTH_SUCCESS");
+      const createClientIdx = sbSrc.indexOf("export const supabase = createClient(");
+      expect(captureIdx).toBeGreaterThan(-1);
+      expect(createClientIdx).toBeGreaterThan(captureIdx);
+      expect(sbSrc).toContain("INITIAL_URL_HAS_OAUTH_CALLBACK");
+      expect(sbSrc).toContain("hasStoredSupabaseSession");
+    });
+
+    it("4. App.tsx, Login.tsx, Admin.tsx, AuthLoadingScreen.tsx, useAuth.ts, AuthModal.jsx e index.css aplican compuerta anti-parpadeo y spinner accesible <progress>", async () => {
+      const fs = await import("fs");
+      const appSrc = fs.readFileSync("client/src/App.tsx", "utf-8");
+      const loginSrc = fs.readFileSync("client/src/pages/Login.tsx", "utf-8");
+      const adminSrc = fs.readFileSync("client/src/pages/Admin.tsx", "utf-8");
+      const loadingSrc = fs.readFileSync("client/src/components/AuthLoadingScreen.tsx", "utf-8");
+      const useAuthSrc = fs.readFileSync("client/src/_core/hooks/useAuth.ts", "utf-8");
+      const authModalSrc = fs.readFileSync("client/src/components/agenda-pro/AuthModal.jsx", "utf-8");
+      const cssSrc = fs.readFileSync("client/src/index.css", "utf-8");
+
+      expect(appSrc).toContain("shouldHoldInitialRenderForAuth");
+      expect(appSrc).toContain("isHoldingForAuth");
+      expect(appSrc).toContain("AuthLoadingScreen");
+      expect(appSrc).toContain("replace: true");
+
+      expect(loginSrc).toContain("initializingAuth");
+      expect(loginSrc).toContain("AuthLoadingScreen");
+      expect(loginSrc).toContain("INITIAL_URL_HAS_OAUTH_SUCCESS");
+      expect(loginSrc).toContain("replace: true");
+
+      expect(adminSrc).toContain("isRoleResolving");
+      expect(adminSrc).toContain("AuthLoadingScreen");
+      expect(adminSrc).toContain("isAdminUser");
+
+      expect(loadingSrc).toContain("<progress");
+      expect(loadingSrc).toContain('className="vecy-loading-spinner"');
+      expect(loadingSrc).not.toContain("value=");
+
+      expect(useAuthSrc).toContain("sbChecked");
+      expect(useAuthSrc).toContain("isRoleResolving");
+      expect(useAuthSrc).toContain("isAuthSettled");
+
+      expect(authModalSrc).toContain("cleanRedirectTo");
+      expect(cssSrc).toContain("progress.vecy-loading-spinner:indeterminate");
+      expect(cssSrc).toContain("forced-color-adjust: none");
+      expect(cssSrc).toContain("prefers-reduced-motion: reduce");
+    });
+
+    it("5. Verifica semilla de gobernanza v34.42 y versión oficial v34.42 (34.42.0)", async () => {
+      const fs = await import("fs");
+      const { SEED_TEACHINGS } = await import("../_core/jania/founderKnowledgeService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      const seed42 = SEED_TEACHINGS.find(
+        (t) => t.id === "seed-auth-zero-flicker-vecygroup-navbar-oauth-v34-42",
+      );
+      expect(seed42?.active).toBe(true);
+      expect(VECY_VERSION).toBe("v34.42");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("34.42.0");
     });
   });
 });

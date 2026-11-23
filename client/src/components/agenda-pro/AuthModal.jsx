@@ -28,13 +28,14 @@ const AuthModal = ({ isOpen, onClose }) => {
         setLoading(true);
         setError('');
         try {
+            const cleanRedirectTo = `${window.location.origin}${window.location.pathname}`;
             // Guardar URL actual para restaurar después del OAuth (incluye nombre y codigo del inmueble)
             if (window.location.search) {
                 localStorage.setItem('vecy_agenda_return_url', window.location.href);
             }
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
-                options: { redirectTo: window.location.href },
+                options: { redirectTo: cleanRedirectTo },
             });
             if (error) throw error;
         } catch (err) {
@@ -67,7 +68,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                     email,
                     password,
                     options: { 
-                        emailRedirectTo: window.location.href,
+                        emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
                         data: { full_name: fullName }
                     },
                 });
@@ -113,7 +114,7 @@ const AuthModal = ({ isOpen, onClose }) => {
         setError('');
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.href,
+                redirectTo: `${window.location.origin}${window.location.pathname}`,
             });
             if (error) throw error;
             setSuccessMsg(`📧 Enviamos un enlace de recuperación a ${email}.`);

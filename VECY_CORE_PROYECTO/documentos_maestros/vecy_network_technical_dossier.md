@@ -330,6 +330,13 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 ---
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+### 🔖 v34.42 — Noviembre 2026
+- **Auditoría `Navbar.tsx` / OAuth `vecygroup.com`, Compuerta Anti-Parpadeo `/` -> `/admin` y Confirmación Supabase `Site URL` (`v34.42.0`):**
+  - Confirmado que `Navbar.tsx` navega internamente (`getLoginUrl()`), `.env` y Nginx `:443` del VPS apuntan a `vecygroup.com`, y que el salto hacia Vercel proviene de `Site URL = https://vecy-bienes-raices.vercel.app` en el panel de Supabase (`HTTP/2 303` verificado en `/auth/v1/callback`).
+  - `shared/authRouting.ts` + `client/src/lib/supabase.ts`: captura síncrona pre-`createClient` (`INITIAL_URL_HAS_OAUTH_CALLBACK`, `INITIAL_URL_HAS_OAUTH_SUCCESS`, `hasStoredSupabaseSession`), `isAdminUser` y `shouldHoldInitialRenderForAuth`.
+  - `AuthLoadingScreen.tsx`, `client/src/index.css`, `useAuth.ts`, `App.tsx`, `Login.tsx`, `Admin.tsx`, `Navbar.tsx`, `AuthModal.jsx`: spinner nativo accesible `<progress className="vecy-loading-spinner">`, retención síncrona en `OAuthRedirectRestorer` con intercambio + `navigate(..., { replace: true })` sin montar `<Home />`, estados `sbChecked`/`isRoleResolving`/`isAuthSettled` y `cleanRedirectTo` en modal Agenda Pro.
+  - Gobernanza y Pruebas: semilla `seed-auth-zero-flicker-vecygroup-navbar-oauth-v34-42`, **Suite 228** en `regression.test.ts`, bump `v34.42` (`34.42.0`).
+
 ### 🔖 v34.41 — Noviembre 2026
 - **PASO 5 — Agente JanIA Privado por Suscripción, Suite Legal SaaS y Base/Rutina de JanIA (`v34.41.0`):**
   - `drizzle/0017_private_jania_channels_and_legal_quotas.sql`, `drizzle/schema.ts`, `server/_core/planEntitlements.ts`: tablas `agent_jania_channels` (cifrado `AES-256-GCM`) y `agent_legal_tool_logs`, plus cuotas IA/legales (`maxAiMessagesMonth`, `whatsappCloudByoEnabled`, `maxCtlStudiesMonth`, `maxIdentityChecksMonth`, `maxValuationsMonth`) respetando planes COP `$0`–`$189.900 <= $200.000/mes`.

@@ -7,6 +7,23 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+### 📅 [2026-11-22] — JanIA v34.42: Auditoría `Navbar.tsx` / OAuth `vecygroup.com`, Eliminación Total de Parpadeo `/` -> `/admin` y Confirmación Supabase `Site URL` (v34.42 - 34.42.0)
+
+#### 1. Solicitud de Eduardo A. Rivera y Diagnóstico Confirmado en Vivo
+- Eduardo reportó que desde `https://vecygroup.com/` al hacer clic en **ACCEDER** (`Navbar.tsx`) o iniciar sesión hacia el panel administrador, la URL saltaba a `https://vecy-bienes-raices.vercel.app/admin` y además se observaba un parpadeo cargando `/` antes de pasar a `/admin`.
+- **Hallazgos Confirmados:**
+  1. `Navbar.tsx` usa `navigate('/login')` (actualizado a `navigate(getLoginUrl())`), sin referencias a Vercel; `.env` del VPS (`APP_URL`, `VITE_APP_URL`, `VECY_ROOT_DOMAIN`) y Nginx `:443` están en `vecygroup.com`.
+  2. La sonda directa a `https://knzmpoprlmbonejshfys.supabase.co/auth/v1/callback?error=access_denied` retornó `HTTP/2 303` con `location: https://vecy-bienes-raices.vercel.app?...`, demostrando al 100% que `Site URL` en Supabase Dashboard continúa apuntando a Vercel.
+  3. El parpadeo `/` -> `/admin` ocurría porque `createClient()` (`detectSessionInUrl: true`) consumía los parámetros OAuth antes del `useEffect` de `OAuthRedirectRestorer` (`App.tsx`), el cual además dejaba montar `<Home />` primero y luego recargaba `/login` con `window.location.replace`, sumado a `loading: false` inicial en `Login.tsx` y falta de `sbChecked`/`isRoleResolving` en `useAuth.ts`.
+
+#### 2. Acciones Ejecutadas en `v34.42`
+1. **Ruteo y Captura OAuth Síncrona (`shared/authRouting.ts`, `client/src/lib/supabase.ts`):** añadidos `isAdminUser`, `hasOAuthCallbackParams`, `hasOAuthSuccessParams`, `shouldHoldInitialRenderForAuth`, `INITIAL_URL_HAS_OAUTH_CALLBACK`, `INITIAL_URL_HAS_OAUTH_SUCCESS` y `hasStoredSupabaseSession()` capturados antes de `createClient()`.
+2. **UI de Carga Accesible y Compuerta Anti-Parpadeo (`AuthLoadingScreen.tsx`, `client/src/index.css`, `useAuth.ts`, `App.tsx`, `Login.tsx`, `Admin.tsx`, `Navbar.tsx`, `AuthModal.jsx`):**
+   - Creado `AuthLoadingScreen.tsx` con `<progress aria-label=... className="vecy-loading-spinner" />` (Modern Web Guidance `spinner`, soporte `forced-colors` y `prefers-reduced-motion`).
+   - `OAuthRedirectRestorer` (`App.tsx`) retiene el render de `<Router />` de forma síncrona mientras intercambia el token y navega directo al destino final con `replace: true`.
+   - `useAuth.ts` expone `sbChecked`, `isRoleResolving` e `isAuthSettled`; `Login.tsx`, `Admin.tsx` y `Navbar.tsx` eliminan todo flash de formularios/botones/pantallas intermedias; `AuthModal.jsx` usa `cleanRedirectTo` sin query string.
+3. **Gobernanza y Validación:** semilla `seed-auth-zero-flicker-vecygroup-navbar-oauth-v34-42`, **Suite 228** en `regression.test.ts`, bump `v34.42` (`34.42.0`).
+
 ### 📅 [2026-11-22] — JanIA v34.41: PASO 5 — Agente JanIA Privado por Suscripción, Suite Legal SaaS y Base/Rutina de JanIA (v34.41 - 34.41.0)
 
 #### 1. Solicitud / Alcance PASO 5

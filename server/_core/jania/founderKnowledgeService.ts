@@ -1130,6 +1130,18 @@ export const SEED_TEACHINGS: FounderTeaching[] = [
       "Rutina v34.41: Contenido diario rotativo (noticias, enseñanzas, IA, propuesta VECY y sinergia grupos oficiales vs externos).",
     createdAt: "2026-11-22T22:02:00.000Z",
     active: true
+  },
+  {
+    id: "seed-auth-zero-flicker-vecygroup-navbar-oauth-v34-42",
+    founderName: "Eduardo Rivera",
+    phoneOrJid: "573192919978@s.whatsapp.net",
+    topic: "Blindaje Auth Cero Parpadeo en vecygroup.com, Navbar.tsx y Compuerta OAuth Síncrona (v34.42)",
+    directive:
+      "El botón ACCEDER de Navbar.tsx usa getLoginUrl() (/login mismo origen) y jamás apunta a Vercel. Para eliminar todo parpadeo entre '/' y '/admin', supabase.ts captura INITIAL_URL_HAS_OAUTH_CALLBACK / INITIAL_URL_HAS_OAUTH_SUCCESS antes de createClient(), App.tsx (OAuthRedirectRestorer) retiene síncronamente el render inicial con AuthLoadingScreen (<progress className='vecy-loading-spinner'>) mientras resuelve el intercambio OAuth y navega con replace: true, y useAuth/Admin/Login esperan la resolución del rol antes de mostrar UI definitiva. En Supabase Auth, Site URL debe ser https://vecygroup.com y Redirect URLs debe incluir https://vecygroup.com/**, https://www.vecygroup.com/** y https://*.vecygroup.com/**.",
+    rawText:
+      "Blindaje v34.42: Auth Cero Parpadeo en vecygroup.com, captura OAuth pre-createClient, AuthLoadingScreen con <progress> accesible y verificación Site URL en Supabase.",
+    createdAt: "2026-11-23T04:40:00.000Z",
+    active: true
   }
 ];
 

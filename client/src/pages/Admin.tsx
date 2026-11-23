@@ -2,7 +2,8 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl, VECY_VERSION } from '@/const';
-import { ADMIN_EMAILS_LIST } from '../../../shared/authRouting';
+import { ADMIN_EMAILS_LIST, isAdminUser } from '../../../shared/authRouting';
+import AuthLoadingScreen from '@/components/AuthLoadingScreen';
 import {
   LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, RefreshCw, CalendarCheck, Activity
 } from 'lucide-react';
@@ -80,7 +81,7 @@ function BotStatusWidget() {
 }
 
 export default function Admin() {
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading, isRoleResolving } = useAuth();
   const [, navigate] = useLocation();
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -133,14 +134,12 @@ export default function Admin() {
     });
   };
 
-  if (loading) {
+  if (loading || (!user && isRoleResolving)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-          <p className="text-muted-foreground text-sm">Verificando acceso...</p>
-        </div>
-      </div>
+      <AuthLoadingScreen
+        title="Verificando acceso..."
+        subtitle="Validando sesión y permisos de administrador..."
+      />
     );
   }
 
@@ -176,7 +175,18 @@ export default function Admin() {
 
   const ADMIN_EMAILS = ADMIN_EMAILS_LIST;
 
-  const isAuthorized = user && (ADMIN_EMAILS.includes((user.email || '').toLowerCase()) || ['admin', 'agent'].includes(user.role as string));
+  const isAuthorized = Boolean(
+    user && (isAdminUser(user) || ['admin', 'agent'].includes(user.role as string)),
+  );
+
+  if (user && !isAuthorized && isRoleResolving) {
+    return (
+      <AuthLoadingScreen
+        title="Verificando permisos..."
+        subtitle="Sincronizando tu rol con el servidor..."
+      />
+    );
+  }
 
   if (!isAuthorized) {
     return (
